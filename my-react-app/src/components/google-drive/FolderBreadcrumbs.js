@@ -14,14 +14,14 @@ export default function FolderBreadcrumbs({ currentFolder }) {
   return (
     <Breadcrumb
       className="flex-grow-1"
-      listProps={{ className: "bg-white pl-0 m-0" }}
+      listProps={{ className: "bg-white pl-0 m-0"}}
     >
       {/* Map through the path */}
       {path.map((folder, index) => (
         <Breadcrumb.Item
           key={folder.id || index} // Fallback to index if id is missing
           className="text-truncate d-inline-block"
-          style={{ maxWidth: "200px" }}
+          style={{ maxWidth: "200px", fontSize: '2rem'}}
           linkAs={Link}
           linkProps={{
             to: {
@@ -38,7 +38,7 @@ export default function FolderBreadcrumbs({ currentFolder }) {
       {currentFolder && (
         <Breadcrumb.Item
           className="text-truncate d-inline-block"
-          style={{ maxWidth: "200px" }}
+          style={{ maxWidth: "200px", fontSize: '2rem'}}
           active
         >
           {currentFolder.name || "Unnamed Folder"} {/* Fallback for undefined name */}
