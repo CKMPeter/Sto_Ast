@@ -1,5 +1,6 @@
 # Google Clone with Node.js, React, Firebase, AI Chatbot, and File Summarizer
 
+Author: Cao Khải Minh
 This guide walks you through the steps to create a simple Google clone application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot** with a text summarizer. 
 
 ## Prerequisites
