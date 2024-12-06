@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/newTech_react_app/static/css/main.57a97725.css",
+    "main.js": "/newTech_react_app/static/js/main.11025848.js",
+    "index.html": "/newTech_react_app/index.html",
+    "main.57a97725.css.map": "/newTech_react_app/static/css/main.57a97725.css.map",
+    "main.11025848.js.map": "/newTech_react_app/static/js/main.11025848.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.57a97725.css",
+    "static/js/main.11025848.js"
+  ]
+}
