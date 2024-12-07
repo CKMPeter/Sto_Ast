@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getDatabase } from 'firebase/database'; // Import Realtime Database
+import { getDatabase, ref, remove, update } from 'firebase/database';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -42,4 +42,5 @@ export const addFolder = (folderName, uId, pId, pth) => {
   });
 };
 
+export { ref, remove, update };
 export default app;

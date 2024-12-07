@@ -1,28 +1,32 @@
-import { faFile } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import React, { useState, useEffect } from "react";
-import { Modal, Button } from "react-bootstrap";
-import '../../include/App.css'; // Adjust the relative path if necessary
-import { GoogleGenerativeAI } from '@google/generative-ai'; // Correct import
+import { faFile, faFileAlt, faSearch, faTrash, faEdit } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Modal, Button, Form } from "react-bootstrap";
+import '../../include/App.css';
+import { database, ref, remove, update } from "../../../src/firebase";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getDatabase } from "firebase/database";
+import { useAuth } from "../../contexts/AuthContext";
 
 console.log('API Key:', process.env.REACT_APP_GEMINI_API_KEY);
 
 const client = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
 
-// Function to interact with Google's Generative AI model
-async function run(input) {
+// Function to run AI tasks (summarize or extract keywords)
+async function run(input, task) {
   const model = client.getGenerativeModel({
-    model: 'gemini-1.5-flash', // Specify the correct model
+    model: 'gemini-1.5-flash',
   });
 
-  const prompt = `${input}
-  from the given text sumarize the content of the file
-  `;
+  const prompt =
+    task === "summarize"
+      ? `${input}\nSummarize the content of the file.`
+      : `${input}\nExtract the main keywords from the file content.`;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = await response.text(); // Await the text content of the response
+    const text = await response.text();
     console.log(text);
     return text;
   } catch (error) {
@@ -31,79 +35,126 @@ async function run(input) {
   }
 }
 
-export default function File({ file }) {
-  const [showModal, setShowModal] = useState(false);
-  const [fileContent, setFileContent] = useState(""); // Start with empty string, not null
-  const [loading, setLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState(""); // State for AI response
+// Firebase delete function
+const handleDeleteFirebase = async (fileId, currentUser) => {
+  const db = getDatabase();  // Initialize Firebase Database
+  const fileRef = ref(db, `files/${currentUser.uid}/` + fileId);  // Get reference to the specific file
 
-  // Function to decode base64 content to plain text
+  try {
+    await remove(fileRef);  // Delete the file from Firebase
+    alert("File deleted successfully");
+  } catch (error) {
+    console.error("Error deleting file from Firebase:", error);
+    alert("Error deleting file.");
+  }
+};
+
+// Firebase update function
+const handleUpdateFirebase = async (fileId, updatedName, currentUser) => {
+  const db = getDatabase();  // Initialize Firebase Database
+  const fileRef =  ref(db, `files/${currentUser.uid}/` + fileId); // Get reference to the specific file
+
+  try {
+    await update(fileRef, { name: updatedName });  // Update file name in Firebase
+    alert("File updated successfully");
+  } catch (error) {
+    console.error("Error updating file in Firebase:", error);
+    alert("Error updating file.");
+  }
+};
+export default function File({ file, onDelete, onUpdate }) {
+  const [showModal, setShowModal] = useState(false);
+  const [fileContent, setFileContent] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+  const [task, setTask] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [updatedFileName, setUpdatedFileName] = useState(file.name);
+  const {currentUser} = useAuth()
+
+  // Decode base64 content if necessary
   const decodeBase64Content = (base64Content) => {
     try {
-      // Decode the base64 string to get actual content (text)
       const decodedContent = atob(base64Content);
-      setFileContent(decodedContent); // Set the decoded content
+      setFileContent(decodedContent);
     } catch (error) {
       console.error("Error decoding base64 content:", error);
       setFileContent("Error decoding content.");
     }
   };
 
-  // This function will be triggered when the file is clicked
   const handleFileClick = () => {
     if (file.content) {
       setLoading(true);
-      // Check if the file is a .txt file
       if (file.name.endsWith("_txt")) {
-        decodeBase64Content(file.content); // Decode base64 content for .txt files
+        decodeBase64Content(file.content);
       } else {
-        setFileContent(file.content); // For non-txt files, use as is
+        setFileContent(file.content);
       }
       setLoading(false);
-      setShowModal(true); // Show the modal
+      setShowModal(true);
     } else {
       console.error("No content found for this file.");
     }
   };
 
-  // Use effect to trigger AI request once fileContent has been updated
   useEffect(() => {
-    if (fileContent) {
-      handleClick(); // Call the AI function once the content is set
+    if (fileContent && task) {
+      fetchAIResponse(task);
     }
-  }, [fileContent]); // Depend on fileContent state
+  }, [fileContent, task]);
 
-  // Function to handle right-click and interact with Google's Generative AI API
-  const handleClick = async () => {
+  const fetchAIResponse = async (task) => {
     if (!fileContent) {
       setAiResponse("No content to send to AI.");
       return;
     }
 
-    if (isImage) return;
-    setLoading(true); // Indicate loading state
+    setLoading(true);
 
     try {
-      // Send the decoded content to Google's Generative AI API using the run function
-      const aiText = await run(fileContent);
+      const aiText = await run(fileContent, task);
       console.log(aiText);
-      setAiResponse(aiText); // Update AI response state with generated content
+      setAiResponse(aiText);
     } catch (error) {
       console.error("Error calling Google Generative AI API:", error);
       setAiResponse("Error processing content with AI.");
     }
 
-    setLoading(false); // End loading state
+    setLoading(false);
   };
 
-  // Close the modal
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this file?")) {
+      handleDeleteFirebase(file.id, currentUser); // Call Firebase delete function
+      onDelete(file); // Call the onDelete prop to remove the file from UI
+      setShowModal(false); // Close the modal after deletion
+    }
+  };
+
+  const handleUpdate = () => {
+    setIsEditing(true); // Enable editing mode for file name
+  };
+
+  const handleSaveUpdate = () => {
+    if (updatedFileName.trim()) {
+      handleUpdateFirebase(file.id, updatedFileName, currentUser); // Update file name in Firebase
+      const updatedFile = { ...file, name: updatedFileName }; // Update local file state
+      onUpdate(updatedFile); // Call onUpdate prop to update the file list in parent
+      setIsEditing(false); // Exit editing mode
+    } else {
+      alert("File name cannot be empty.");
+    }
+  };
+
   const closeModal = () => {
     setShowModal(false);
-    setFileContent(""); // Clear content when the modal is closed
-    setAiResponse(""); // Clear AI response when the modal is closed
+    setFileContent("");
+    setAiResponse("");
+    setTask("");
+    setIsEditing(false);
   };
 
-  // Check if the file is an image by checking the file extension
   const isImage =
     file.name && (file.name.endsWith("_png") || file.name.endsWith("_jpg") || file.name.endsWith("_jpeg"));
   const isText = file.name && file.name.endsWith("_txt");
@@ -111,30 +162,39 @@ export default function File({ file }) {
   return (
     <>
       <a
-        onClick={handleFileClick} // Trigger handleFileClick on click
+        onClick={handleFileClick}
         className="btn btn-outline-dark text-truncate w-100 mr-2"
-        style={{ cursor: "pointer", fontFamily: "'Roboto', sans-serif" }} // Inline font for Vietnamese support
+        style={{ cursor: "pointer", fontFamily: "'Roboto', sans-serif" }}
       >
-        <FontAwesomeIcon icon={faFile}  style={{ marginRight: 4 }} />
+        <FontAwesomeIcon icon={faFile} style={{ marginRight: 4 }} />
         {file.name}
       </a>
 
-      {/* Modal to show the file content */}
       <Modal show={showModal} onHide={closeModal}>
         <Modal.Header closeButton>
-          <Modal.Title>File Content: {file.name}</Modal.Title>
+          <Modal.Title>
+            {isEditing ? (
+              <Form.Control
+                type="text"
+                value={updatedFileName}
+                onChange={(e) => setUpdatedFileName(e.target.value)}
+                style={{ fontSize: "16px" }}
+              />
+            ) : (
+              `File Content: ${file.name}`
+            )}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body
           style={{
-            fontFamily: "'Roboto', sans-serif", // Apply inline font here too
-            fontSize: "14px", // Ensure proper font size
+            fontFamily: "'Roboto', sans-serif",
+            fontSize: "14px",
           }}
         >
           {loading ? (
-            <p>Loading...</p> // Show loading message while decoding or fetching content
+            <p>Loading...</p>
           ) : (
             <>
-              {/* Check if it's an image */}
               {isImage ? (
                 <img
                   src={`data:image/${file.name.split(".").pop()};base64,${file.content}`}
@@ -142,14 +202,54 @@ export default function File({ file }) {
                   style={{ maxWidth: "100%", maxHeight: "400px" }}
                 />
               ) : isText ? (
-                // If it's a .txt file, display the decoded content
                 <pre>{fileContent}</pre>
               ) : (
-                // For other file types (non-image, non-text)
                 <p>{fileContent}</p>
               )}
 
-              {/* Display AI Response if available */}
+              {isText && (
+                <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => setTask("summarize")}
+                  >
+                    <FontAwesomeIcon icon={faFileAlt} style={{ marginRight: "5px" }} />
+                    Summarize File
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setTask("keywords")}
+                  >
+                    <FontAwesomeIcon icon={faSearch} style={{ marginRight: "5px" }} />
+                    Find Keywords
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={handleDelete}
+                  >
+                    <FontAwesomeIcon icon={faTrash} style={{ marginRight: "5px" }} />
+                    Delete
+                  </Button>
+                  {isEditing ? (
+                    <Button
+                      variant="success"
+                      onClick={handleSaveUpdate}
+                    >
+                      <FontAwesomeIcon icon={faEdit} style={{ marginRight: "5px" }} />
+                      Save
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="warning"
+                      onClick={handleUpdate}
+                    >
+                      <FontAwesomeIcon icon={faEdit} style={{ marginRight: "5px" }} />
+                      Update
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {aiResponse && (
                 <div>
                   <h5>AI Response:</h5>
@@ -159,7 +259,6 @@ export default function File({ file }) {
             </>
           )}
         </Modal.Body>
-
         <Modal.Footer>
           <Button variant="secondary" onClick={closeModal}>
             Close

@@ -1,0 +1,10 @@
+/* In App.css */
+
+body {
+    font-family: 'Roboto', sans-serif;
+  }
+  
+  pre, p {
+    font-family: 'Roboto', sans-serif; /* Ensure Vietnamese support in text */
+    font-size: 16px;
+  }
