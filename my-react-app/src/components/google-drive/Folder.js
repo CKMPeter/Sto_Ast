@@ -5,10 +5,7 @@ import { Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 export default function Folder({ folder }) {
-  // Safeguard for null or undefined folder
-  if (!folder) {
-    return null; // Optionally, return a placeholder or empty state instead
-  }
+  if (!folder) return null;
 
   return (
     <Button
@@ -18,10 +15,11 @@ export default function Folder({ folder }) {
       }}
       as={Link}
       variant="outline-dark"
-      className="text-truncate 2-100"
+      className="text-truncate w-100"
     >
-      <FontAwesomeIcon icon={faFolder} style={{ marginRight: 2 }} />
-      {folder.name || "Unnamed Folder"} {/* Fallback if folder.name is missing */}
+      <FontAwesomeIcon icon={faFolder} style={{ marginRight: 6 }} />
+      {/* Show highlighted name if exists, fallback to normal name */}
+      <span dangerouslySetInnerHTML={{ __html: folder.highlightedName || folder.name || "Unnamed Folder" }} />
     </Button>
   );
 }
