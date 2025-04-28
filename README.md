@@ -1,9 +1,10 @@
-# Google Clone with Node.js, React, Firebase, AI Chatbot, and File Summarizer
+# Storage And Assistant
+## Node.js, React, Firebase, AI Chatbot
 
 Author: Cao Khải Minh </br>
 This guide walks you through the steps to create a simple Google clone application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot** with a text summarizer. 
 
-## Prerequisites
+### Prerequisites
 
 Before starting, ensure you have the following installed:
 - **Node.js** (Latest LTS version)
@@ -14,7 +15,7 @@ Before starting, ensure you have the following installed:
 - **@google/generative-AI** (for AI related content)
 - **bootstrap** (For icon and front end related matter)
 
-## Step 1: Setting up Firebase
+### Step 1: Setting up Firebase
 
 1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
 2. In your Firebase project:
@@ -30,14 +31,14 @@ markdown
 Copy code
 4. Initialize Firebase in your Node.js backend and React app by creating a `firebase.js` file.
 
-## Step 2: Building the Frontend with React
+### Step 2: Building the Frontend with React
 ```bash
 npx create-react-app google-clone
 cd google-clone
 npm start
 ```
 
-## Step 3: Get your Gemini API Key and Change its value in the .env.local
+### Step 3: Get your Gemini API Key and Change its value in the .env.local
 ### How to Get Gemini API Key
 
 Gemini is a cryptocurrency exchange platform that allows you to interact with their platform programmatically using API keys. Follow the steps below to obtain your Gemini API key.
@@ -73,7 +74,7 @@ Gemini is a cryptocurrency exchange platform that allows you to interact with th
    - You can now use the **API Key** and **API Secret** in y
 
 
-## Step 4: Gitclone this repository and run
+### Step 4: Gitclone this repository and run
 
 
 

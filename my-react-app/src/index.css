@@ -1,0 +1,134 @@
+/* Hide utility class */
+body{
+    overflow: hidden;
+}
+
+.hide {
+    display: none;
+}
+
+/* Main Page Container */
+.fullPage {
+    font-family: 'Roboto', sans-serif;
+    width: 150vw; /* Double the viewport for sliding effect */
+    height: 100vh;
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    transition: transform 0.5s ease-in-out;
+    transform: translateX(0); /* Initial position */    
+}
+
+/* Static TextBox (Always Visible) */
+.textBox {
+    width: 60vw;
+    height: 90vh;
+    background-image: url("./include/new-bg.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #074799;
+    position: absolute;
+    left: 0;
+    z-index: 2; /* Keeps textBox on top */
+    transition: all 2s ease;
+}
+
+/* Styling for subText */
+.subText {
+    justify-items: center;
+    color: #3674B5;
+}
+
+.subText h4 {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.subText span {
+    color: #DF9755;
+    transition: all 0.3s ease;
+}
+
+.subText span:hover {
+    cursor: pointer;
+    text-shadow: 0 0 20px #EDF4C2;
+    font-size: 2.5rem;
+}
+
+/* Typing Animation */
+@keyframes cursor {
+    50% {
+        border-color: transparent;
+    }
+}
+
+@keyframes typing {
+    from {
+        width: 0px;
+    }
+}
+
+.mainText h1 {
+    font-size: 4rem;
+    font-weight: bold;
+    letter-spacing: 9px;
+    border-right: 4px solid;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    animation:
+        typing 3s steps(16, end) infinite,
+        cursor 0.4s step-end infinite alternate;
+}
+
+/* Login and SignUp Sections */
+
+
+.logIn {
+    width: 53vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    transition: all 2s ease;
+}
+
+.signUp {
+    margin-left: 0;
+    width: 53vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    transform: translateX(-53vw);
+    transition: all 2s ease;
+}
+
+/* Slide to the Right */
+.slide_right {
+    transform: translateX(40vw); /* Moves to the right */
+}
+.slide_right_1{
+    transform: translateX(-6vw);
+}
+.slide_left {
+    transform: translateX(-40vw); /* Moves to the right */
+}
+.slide_left_1{
+    transform: translateX(6vw);
+}
+/* Clickable text */
+.test {
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
