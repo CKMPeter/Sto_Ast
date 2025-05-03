@@ -2,7 +2,7 @@ import React from "react";
 import Signup from "./authentication/Signup";
 import Profile from "./authentication/Profile";
 import Login from "./authentication/Login";
-import Dashboard from "./google-drive/Dashboard";
+import Dashboard from "./storage/Dashboard";
 import { AuthProvider } from "../contexts/AuthContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./authentication/PrivateRoutes"; // Renamed for clarity
@@ -16,7 +16,8 @@ function App() {
         <Routes>
           {/* Drive */}
           <Route
-            exact path="/"
+            exact
+            path="/"
             element={
               <PrivateRoute>
                 <Dashboard />
@@ -24,7 +25,8 @@ function App() {
             }
           />
           <Route
-            exact path="/folder/:folderId"
+            exact
+            path="/folder/:folderId"
             element={
               <PrivateRoute>
                 <Dashboard />
@@ -40,7 +42,7 @@ function App() {
               </PrivateRoute>
             }
           />
-            <Route
+          <Route
             path="/update-profile"
             element={
               <PrivateRoute>
