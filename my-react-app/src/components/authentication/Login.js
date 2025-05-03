@@ -16,14 +16,13 @@ export default function Login() {
     const loginRef = useRef();
     const signUpRef = useRef();
     const textBoxRef = useRef();
-    const { login } = useAuth()
+    const { login, signup, loginWithGoogle } = useAuth()
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
     const [mode, setMode ] =useState(false)
     const navigate = useNavigate()
 
     const passConlRef = useRef()
-    const { signup } = useAuth()
 
     async function handleSubmit(e){
         e.preventDefault()
@@ -65,6 +64,23 @@ export default function Login() {
             setError('')
             setLoading(true)
             await signup(emailRef_.current.value, passRef_.current.value)
+            navigate("/")
+        }
+        catch{
+            setError('Fail to create an account')
+        }
+        setLoading(false)
+    }
+
+    async function handleGoogleLogin(e){
+        e.preventDefault()
+
+        if (passRef.current.value !== passConlRef.current.value) 
+            return setError('Password do not match')
+        try {
+            setError('')
+            setLoading(true)
+            await loginWithGoogle()
             navigate("/")
         }
         catch{
@@ -154,7 +170,7 @@ export default function Login() {
                         </div>
                         
                         <div class= "otherLogin">
-                            <Button disabled={loading} className="w-100 mt-3 fw-bold" type= "submit" style={{backgroundColor: '#578FCA', borderStyle: 'none'}}>
+                            <Button onClick={handleGoogleLogin} disabled={loading} className="w-100 mt-3 fw-bold" type= "submit" style={{backgroundColor: '#578FCA', borderStyle: 'none'}}>
                                 <FontAwesomeIcon icon={faG} style={{ marginRight: "5px" }}/>Login with Google
                             </Button>
                         </div>
