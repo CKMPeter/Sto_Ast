@@ -62,9 +62,37 @@ export default function File({ file, onDelete, onUpdate }) {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [updatedFileName, setUpdatedFileName] = useState(file.name);
-  const { currentUser } = useAuth();
+  const {currentUser} = useAuth()
 
-  const handleFileClick = () => setShowModal(true);
+  // Decode base64 content if necessary
+  const decodeBase64Content = (base64Content) => {
+    try {
+      const decodedContent = atob(base64Content);
+      setFileContent(decodedContent);
+    } catch (error) {
+      console.error("Error decoding base64 content:", error);
+      setFileContent("Error decoding content.");
+    }
+  };
+
+  const handleFileClick = () => {
+    if (file.content) {
+      setLoading(true);
+      if (file.name.endsWith("_txt")) {
+        decodeBase64Content(file.content);
+      } else {
+        setFileContent(file.content);
+      }
+      setLoading(false);
+      setShowModal(true);
+    } else {
+      console.error("No content found for this file.");
+    }
+  };
+  const isImage =
+    file.name && (file.name.endsWith("_png") || file.name.endsWith("_jpg") || file.name.endsWith("_jpeg"));
+  const isText = file.name && file.name.endsWith("_txt");
+
 
   const fetchAIResponse = async (task) => {
     setLoading(true);
@@ -126,7 +154,7 @@ export default function File({ file, onDelete, onUpdate }) {
           }}
         />
       </Button>
-
+      
       <Modal show={showModal} onHide={closeModal}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -148,43 +176,56 @@ export default function File({ file, onDelete, onUpdate }) {
             <p>Loading...</p>
           ) : (
             <>
-              <textarea
-                className="form-control"
-                value={fileContent}
-                onChange={(e) => setFileContent(e.target.value)}
-                rows="10"
-                disabled={!isEditing}
-              />
-              <div className="mt-3 d-flex flex-wrap gap-2">
-                <Button variant="primary" onClick={() => fetchAIResponse("summarize")}>
-                  <FontAwesomeIcon icon={faFileAlt} className="me-2" />
-                  Summarize
-                </Button>
-                <Button variant="secondary" onClick={() => fetchAIResponse("keywords")}>
-                  <FontAwesomeIcon icon={faSearch} className="me-2" />
-                  Find Keywords
-                </Button>
-                <Button variant="danger" onClick={handleDelete}>
-                  <FontAwesomeIcon icon={faTrash} className="me-2" />
-                  Delete
-                </Button>
-                {isEditing ? (
-                  <Button variant="success" onClick={handleSaveUpdate}>
-                    <FontAwesomeIcon icon={faSave} className="me-2" />
-                    Save Changes
-                  </Button>
-                ) : (
-                  <Button variant="warning" onClick={handleUpdate}>
-                    <FontAwesomeIcon icon={faEdit} className="me-2" />
-                    Edit
-                  </Button>
-                )}
-              </div>
-              {aiResponse && (
-                <div className="mt-3">
-                  <h5>AI Response:</h5>
-                  <p>{aiResponse}</p>
-                </div>
+              {isImage ? (
+                <img
+                  src={`data:image/${file.name.split(".").pop()};base64,${file.content}`}
+                  alt="file content"
+                  style={{ maxWidth: "100%", maxHeight: "400px" }}
+                />
+              ) : isText ? (
+                <>
+                  <pre>{fileContent}</pre>
+                  <textarea
+                    className="form-control"
+                    value={fileContent}
+                    onChange={(e) => setFileContent(e.target.value)}
+                    rows="10"
+                    disabled={!isEditing}
+                  />
+                  <div className="mt-3 d-flex flex-wrap gap-2">
+                    <Button variant="primary" onClick={() => fetchAIResponse("summarize")}>
+                      <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                      Summarize
+                    </Button>
+                    <Button variant="secondary" onClick={() => fetchAIResponse("keywords")}>
+                      <FontAwesomeIcon icon={faSearch} className="me-2" />
+                      Find Keywords
+                    </Button>
+                    <Button variant="danger" onClick={handleDelete}>
+                      <FontAwesomeIcon icon={faTrash} className="me-2" />
+                      Delete
+                    </Button>
+                    {isEditing ? (
+                      <Button variant="success" onClick={handleSaveUpdate}>
+                        <FontAwesomeIcon icon={faSave} className="me-2" />
+                        Save Changes
+                      </Button>
+                    ) : (
+                      <Button variant="warning" onClick={handleUpdate}>
+                        <FontAwesomeIcon icon={faEdit} className="me-2" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                  {aiResponse && (
+                    <div className="mt-3">
+                      <h5>AI Response:</h5>
+                      <p>{aiResponse}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p>{fileContent}</p>
               )}
             </>
           )}

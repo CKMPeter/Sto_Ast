@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { auth } from '../firebase'; // Ensure the correct relative path
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, signInWithPopup, GoogleAuthProvider  } from 'firebase/auth';
 
 const AuthContext = React.createContext();
 
@@ -83,6 +83,16 @@ export function AuthProvider({ children }) {
         }
     }
 
+    async function loginWithGoogle() {
+        const provider = new GoogleAuthProvider();
+        try {
+            setError(null); // Clear previous errors
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            setError(error.message); // Store error message
+        }    
+    }
+
     // Listen for authentication state changes
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
@@ -102,6 +112,7 @@ export function AuthProvider({ children }) {
         resetPassword,
         updateEmail,
         updatePassword,
+        loginWithGoogle,
         error, // Pass error state to components using the context
     };
 
