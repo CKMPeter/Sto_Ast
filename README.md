@@ -1,5 +1,5 @@
 # Storage And Assistant
-## Node.js, React, Firebase, AI Chatbot
+## Node.js, React, Express, Firebase, AI Chatbot
 
 Author: Cao Khải Minh </br>
 This guide walks you through the steps to create a simple Google clone application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot** with a text summarizer. 
@@ -14,6 +14,10 @@ Before starting, ensure you have the following installed:
 - **React** (for front-end development)
 - **@google/generative-AI** (for AI related content)
 - **bootstrap** (For icon and front end related matter)
+- **mkcert** (For https services)
+- **choco**
+- **dotenv**
+- **cors**
 
 ### Step 1: Setting up Firebase
 
@@ -22,23 +26,16 @@ Before starting, ensure you have the following installed:
    - Enable **Firebase Authentication** and set up your preferred sign-in method (e.g., Email/Password).
    - Enable **Firebase Readtime Database** for file uploads.
 3. Install Firebase SDK in your project:
-   ```bash
+```bash
    npm install firebase
-4. Change the value in the .env.local the your on starting value:</br>
-![image](https://github.com/user-attachments/assets/fbe0878c-8d50-45fa-ae2b-44febd8ba2fa)
-
-markdown
-Copy code
+```
 4. Initialize Firebase in your Node.js backend and React app by creating a `firebase.js` file.
 
-### Step 2: Building the Frontend with React
-```bash
-npx create-react-app google-clone
-cd google-clone
-npm start
-```
 
-### Step 3: Get your Gemini API Key and Change its value in the .env.local
+### Step 2: Gitclone the repository:
+- The usual code is fine.
+
+### Step 3: Get your Gemini API Key and Create .env file:
 ### How to Get Gemini API Key
 
 Gemini is a cryptocurrency exchange platform that allows you to interact with their platform programmatically using API keys. Follow the steps below to obtain your Gemini API key.
@@ -70,11 +67,46 @@ Gemini is a cryptocurrency exchange platform that allows you to interact with th
    - After configuring the permissions, click **Generate API Key**.
    - Gemini will generate an API key (the **API Key** and **API Secret**). Copy them and save them securely as you will not be able to retrieve the secret key again.
 
-6. **Use the API Key:**
-   - You can now use the **API Key** and **API Secret** in y
-
-
-### Step 4: Gitclone this repository and run
-
+6. **Create an .env file in both the my-react-app and server folder:**
+In my-react-app/.env:
+```bash
+https = true
+SSL_CRT_FILE = cert.pem
+SSL_KEY_FILE = key.pem
+REACT_APP_FIREBASE_API_KEY = [your-api-key]
+REACT_APP_FIREBASE_AUTH_DOMAIN = [your-api-key]
+REACT_APP_FIREBASE_PROJECT_ID = [your-api-key]
+REACT_APP_FIREBASE_STORAGE_BUCKET = [your-api-key]
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID = [your-api-key]
+REACT_APP_FIREBASE_APP_ID = [your-api-key]
+REACT_APP_FIREBASE_DATABASE_URL = [your-api-key]
+```
+In server/.env:
+```bash
+https = true
+SSL_CRT_FILE = cert.pem
+SSL_KEY_FILE = key.pem
+REACT_APP_GEMINI_API_KEY = [your-api-key]
+```
+### Step 4: Set up the enviroment:
+Navigate into the my-react-app & server to install:
+```bash
+npm install
+```
+### Step 5: Set up mkcert for https:
+1. Install mkcert:
+```bash
+choco install mkcert
+mkcert -install
+```
+2.  Create a key and cretificate (in my-react-app):
+```bash
+mkcert -cert-file cert.pem -key-file key.pem localhost
+```
+### Step 6: Run the web:
+int both server and my-react-app folder:
+```bash
+npm run start
+```
 
 

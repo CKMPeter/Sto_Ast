@@ -3,29 +3,50 @@ import { faFile, faFileAlt, faSearch, faTrash, faEdit, faSave } from "@fortaweso
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Modal, Button, Form } from "react-bootstrap";
 import { ref, remove, update } from "../../../src/firebase";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
 
-const client = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-
-async function run(input, task) {
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+//const client = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
+/*
+async function run(input, task, isImage = false, mimeType = "image/jpeg") {
+  const model = client.getGenerativeModel({
+    model: isImage ? "gemini-pro-vision" : "gemini-2.0-flash",
+  });
   const prompt =
-    task === "summarize"
+    isImage && task === "describe"
+      ? "Describe the image content."
+      : isImage && task === "objects"
+      ? "Identify key objects or elements in the image."
+      : task === "summarize"
       ? `${input}\nSummarize the content of the file.`
       : `${input}\nExtract the main keywords from the file content.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return await response.text();
+    if (isImage) {
+      const imagePart = {
+        inlineData: {
+          mimeType: mimeType,
+          data: input, // base64 without data:image/...;base64,
+        },
+      };
+
+      const result = await model.generateContent({
+        contents: [{ parts: [prompt, imagePart] }],
+      });
+
+      const response = await result.response;
+      return await response.text();
+    } else {
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return await response.text();
+    }
   } catch (error) {
     console.error("Error generating AI content:", error);
     return "Error processing content with AI.";
   }
 }
-
+*/
 const handleDeleteFirebase = async (fileId, currentUser) => {
   const db = getDatabase();
   const fileRef = ref(db, `files/${currentUser.uid}/${fileId}`);
@@ -62,7 +83,7 @@ export default function File({ file, onDelete, onUpdate }) {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [updatedFileName, setUpdatedFileName] = useState(file.name);
-  const {currentUser} = useAuth()
+  const { currentUser } = useAuth();
 
   // Decode base64 content if necessary
   const decodeBase64Content = (base64Content) => {
@@ -89,18 +110,59 @@ export default function File({ file, onDelete, onUpdate }) {
       console.error("No content found for this file.");
     }
   };
+
   const isImage =
-    file.name && (file.name.endsWith("_png") || file.name.endsWith("_jpg") || file.name.endsWith("_jpeg"));
+    file.name &&
+    (file.name.endsWith("_png") ||
+      file.name.endsWith("_jpg") ||
+      file.name.endsWith("_jpeg"));
   const isText = file.name && file.name.endsWith("_txt");
 
-
-  const fetchAIResponse = async (task) => {
+  const getMimeType = (filename) => {
+    if (filename.endsWith("_png")) return "image/png";
+    if (filename.endsWith("_jpg") || filename.endsWith("_jpeg")) return "image/jpeg";
+    return "image/jpeg";
+  };
+/*
+  const fetchAIResponse = async (task, isImageRequest = false) => {
     setLoading(true);
     try {
-      const aiText = await run(fileContent, task);
+      const mimeType = isImageRequest ? getMimeType(file.name) : null;
+      const base64Data = isImageRequest
+        ? file.content // already base64, no need to decode
+        : fileContent;
+      const aiText = await run(base64Data, task, isImageRequest, mimeType);
       setAiResponse(aiText);
     } catch (error) {
       console.error("Error calling Google Generative AI API:", error);
+      setAiResponse("Error processing content with AI.");
+    }
+    setLoading(false);
+  };
+*/
+  const fetchAIResponse = async (task, isImageRequest = false) => {
+    setLoading(true);
+    try {
+      const mimeType = isImageRequest ? getMimeType(file.name) : null;
+      const base64Data = isImageRequest ? file.content : fileContent;
+
+      const response = await fetch("http://localhost:5000/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: base64Data,
+          task,
+          isImage: isImageRequest,
+          mimeType,
+        }),
+      });
+
+      const data = await response.json();
+      setAiResponse(data.result || "No result returned.");
+    } catch (error) {
+      console.error("Error calling backend AI API:", error);
       setAiResponse("Error processing content with AI.");
     }
     setLoading(false);
@@ -148,13 +210,14 @@ export default function File({ file, onDelete, onUpdate }) {
         <FontAwesomeIcon icon={faFile} style={{ marginRight: 6 }} />
         <span
           dangerouslySetInnerHTML={{
-            __html: file.highlightedName && typeof file.highlightedName === 'string' 
-              ? file.highlightedName 
-              : file.name
+            __html:
+              file.highlightedName && typeof file.highlightedName === "string"
+                ? file.highlightedName
+                : file.name,
           }}
         />
       </Button>
-      
+
       <Modal show={showModal} onHide={closeModal}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -177,11 +240,33 @@ export default function File({ file, onDelete, onUpdate }) {
           ) : (
             <>
               {isImage ? (
-                <img
-                  src={`data:image/${file.name.split(".").pop()};base64,${file.content}`}
-                  alt="file content"
-                  style={{ maxWidth: "100%", maxHeight: "400px" }}
-                />
+                <>
+                  <img
+                    src={`data:image/${file.name.split(".").pop()};base64,${file.content}`}
+                    alt="file content"
+                    style={{ maxWidth: "100%", maxHeight: "400px" }}
+                  />
+                  <div className="mt-3 d-flex flex-wrap gap-2">
+                    <Button variant="primary" onClick={() => fetchAIResponse("describe", true)}>
+                      <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                      Describe Image
+                    </Button>
+                    <Button variant="secondary" onClick={() => fetchAIResponse("objects", true)}>
+                      <FontAwesomeIcon icon={faSearch} className="me-2" />
+                      Identify Objects
+                    </Button>
+                    <Button variant="danger" onClick={handleDelete}>
+                      <FontAwesomeIcon icon={faTrash} className="me-2" />
+                      Delete
+                    </Button>
+                  </div>
+                  {aiResponse && (
+                    <div className="mt-3">
+                      <h5>AI Response:</h5>
+                      <p>{aiResponse}</p>
+                    </div>
+                  )}
+                </>
               ) : isText ? (
                 <>
                   <pre>{fileContent}</pre>

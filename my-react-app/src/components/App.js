@@ -16,8 +16,7 @@ function App() {
         <Routes>
           {/* Drive */}
           <Route
-            exact
-            path="/"
+            exact path="/"
             element={
               <PrivateRoute>
                 <Dashboard />
@@ -25,8 +24,7 @@ function App() {
             }
           />
           <Route
-            exact
-            path="/folder/:folderId"
+            exact path="/folder/:folderId"
             element={
               <PrivateRoute>
                 <Dashboard />
@@ -42,7 +40,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route
+            <Route
             path="/update-profile"
             element={
               <PrivateRoute>
