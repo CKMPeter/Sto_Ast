@@ -4,14 +4,13 @@ import { useFolder } from "../../hooks/useFolder";
 import AddFolderButton from "./AddFolderButton";
 import Folder from "./Folder";
 import Navbar from "./Navbar";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams} from "react-router-dom";
 import FolderBreadcrumbs from "./FolderBreadcrumbs";
 import AddFileButton from "./AddFileButton";
 import File from "./File";
 import Chatbot from "./ChatBot";
 
 export default function Dashboard() {
-  const { state = {} } = useLocation();
   const { folderId } = useParams();
   const { folder, childFolders, childFiles } = useFolder(folderId);
 

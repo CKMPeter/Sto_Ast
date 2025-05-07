@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { Button, Modal, Form } from "react-bootstrap"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faFolderPlus } from "@fortawesome/free-solid-svg-icons"
-import { addFolder, database } from "../../firebase"
+import { addFolder } from "../../firebase"
 import { useAuth } from "../../contexts/AuthContext"
 import { ROOT_FOLDER } from "../../hooks/useFolder"
 

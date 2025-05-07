@@ -26,23 +26,6 @@ export default function Login() {
 
     async function handleSubmit(e){
         e.preventDefault()
-
-        if (passRef.current.value !== passConlRef.current.value) 
-            return setError('Password do not match')
-        try {
-            setError('')
-            setLoading(true)
-            await signup(emailRef.current.value, passRef.current.value)
-            navigate("/")
-        }
-        catch{
-            setError('Fail to create an account')
-        }
-        setLoading(false)
-    }
-
-    async function handleSubmit(e){
-        e.preventDefault()
         try {
             setError('')
             setLoading(true)
@@ -74,9 +57,6 @@ export default function Login() {
 
     async function handleGoogleLogin(e){
         e.preventDefault()
-
-        if (passRef.current.value !== passConlRef.current.value) 
-            return setError('Password do not match')
         try {
             setError('')
             setLoading(true)

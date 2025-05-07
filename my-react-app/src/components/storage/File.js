@@ -2,51 +2,11 @@ import React, { useState } from "react";
 import { faFile, faFileAlt, faSearch, faTrash, faEdit, faSave } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Modal, Button, Form } from "react-bootstrap";
-import { ref, remove, update } from "../../../src/firebase";
-import { getDatabase } from "firebase/database";
+//import { ref, remove, update } from "../../../src/firebase";
+//import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
-
-//const client = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-/*
-async function run(input, task, isImage = false, mimeType = "image/jpeg") {
-  const model = client.getGenerativeModel({
-    model: isImage ? "gemini-pro-vision" : "gemini-2.0-flash",
-  });
-  const prompt =
-    isImage && task === "describe"
-      ? "Describe the image content."
-      : isImage && task === "objects"
-      ? "Identify key objects or elements in the image."
-      : task === "summarize"
-      ? `${input}\nSummarize the content of the file.`
-      : `${input}\nExtract the main keywords from the file content.`;
-
-  try {
-    if (isImage) {
-      const imagePart = {
-        inlineData: {
-          mimeType: mimeType,
-          data: input, // base64 without data:image/...;base64,
-        },
-      };
-
-      const result = await model.generateContent({
-        contents: [{ parts: [prompt, imagePart] }],
-      });
-
-      const response = await result.response;
-      return await response.text();
-    } else {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return await response.text();
-    }
-  } catch (error) {
-    console.error("Error generating AI content:", error);
-    return "Error processing content with AI.";
-  }
-}
-*/
+import { FileObject } from "../objects/FileObject";
+/* //old version delete
 const handleDeleteFirebase = async (fileId, currentUser) => {
   const db = getDatabase();
   const fileRef = ref(db, `files/${currentUser.uid}/${fileId}`);
@@ -59,7 +19,8 @@ const handleDeleteFirebase = async (fileId, currentUser) => {
     alert("Error deleting file.");
   }
 };
-
+*/
+/* //old version add
 const handleUpdateFirebase = async (fileId, updatedName, updatedContent, currentUser) => {
   const db = getDatabase();
   const fileRef = ref(db, `files/${currentUser.uid}/${fileId}`);
@@ -75,122 +36,55 @@ const handleUpdateFirebase = async (fileId, updatedName, updatedContent, current
     alert("Error updating file.");
   }
 };
-
+*/
 export default function File({ file, onDelete, onUpdate }) {
+  const { currentUser } = useAuth();
+  const fileObj = new FileObject({ ...file, user: currentUser });
+
   const [showModal, setShowModal] = useState(false);
-  const [fileContent, setFileContent] = useState(atob(file.content || ""));
+  const [fileContent, setFileContent] = useState(fileObj.decodeContent());
   const [aiResponse, setAiResponse] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [updatedFileName, setUpdatedFileName] = useState(file.name);
-  const { currentUser } = useAuth();
-
-  // Decode base64 content if necessary
-  const decodeBase64Content = (base64Content) => {
-    try {
-      const decodedContent = atob(base64Content);
-      setFileContent(decodedContent);
-    } catch (error) {
-      console.error("Error decoding base64 content:", error);
-      setFileContent("Error decoding content.");
-    }
-  };
+  const [updatedFileName, setUpdatedFileName] = useState(fileObj.name);
 
   const handleFileClick = () => {
-    if (file.content) {
-      setLoading(true);
-      if (file.name.endsWith("_txt")) {
-        decodeBase64Content(file.content);
-      } else {
-        setFileContent(file.content);
-      }
-      setLoading(false);
-      setShowModal(true);
-    } else {
-      console.error("No content found for this file.");
-    }
+    setFileContent(fileObj.isText ? fileObj.decodeContent() : fileObj.content);
+    setShowModal(true);
   };
 
-  const isImage =
-    file.name &&
-    (file.name.endsWith("_png") ||
-      file.name.endsWith("_jpg") ||
-      file.name.endsWith("_jpeg"));
-  const isText = file.name && file.name.endsWith("_txt");
-
-  const getMimeType = (filename) => {
-    if (filename.endsWith("_png")) return "image/png";
-    if (filename.endsWith("_jpg") || filename.endsWith("_jpeg")) return "image/jpeg";
-    return "image/jpeg";
-  };
-/*
-  const fetchAIResponse = async (task, isImageRequest = false) => {
-    setLoading(true);
-    try {
-      const mimeType = isImageRequest ? getMimeType(file.name) : null;
-      const base64Data = isImageRequest
-        ? file.content // already base64, no need to decode
-        : fileContent;
-      const aiText = await run(base64Data, task, isImageRequest, mimeType);
-      setAiResponse(aiText);
-    } catch (error) {
-      console.error("Error calling Google Generative AI API:", error);
-      setAiResponse("Error processing content with AI.");
-    }
-    setLoading(false);
-  };
-*/
-  const fetchAIResponse = async (task, isImageRequest = false) => {
-    setLoading(true);
-    try {
-      const mimeType = isImageRequest ? getMimeType(file.name) : null;
-      const base64Data = isImageRequest ? file.content : fileContent;
-
-      const response = await fetch("http://localhost:5000/ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          input: base64Data,
-          task,
-          isImage: isImageRequest,
-          mimeType,
-        }),
-      });
-
-      const data = await response.json();
-      setAiResponse(data.result || "No result returned.");
-    } catch (error) {
-      console.error("Error calling backend AI API:", error);
-      setAiResponse("Error processing content with AI.");
-    }
-    setLoading(false);
-  };
-
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this file?")) {
-      handleDeleteFirebase(file.id, currentUser);
-      onDelete?.(file);
-      setShowModal(false);
+      const result = await fileObj.delete();
+      if (result.success) {
+        onDelete?.(file);
+        setShowModal(false);
+      } else {
+        alert("Error deleting file.");
+      }
     }
   };
 
   const handleUpdate = () => setIsEditing(true);
 
-  const handleSaveUpdate = () => {
-    if (!updatedFileName.trim()) {
-      alert("File name cannot be empty.");
-      return;
-    }
-    if (!fileContent.trim()) {
-      alert("File content cannot be empty.");
-      return;
-    }
+  const handleSaveUpdate = async () => {
+    if (!updatedFileName.trim()) return alert("File name cannot be empty.");
+    if (!fileContent.trim()) return alert("File content cannot be empty.");
 
-    handleUpdateFirebase(file.id, updatedFileName, fileContent, currentUser);
-    onUpdate?.({ ...file, name: updatedFileName, content: btoa(fileContent) });
-    setIsEditing(false);
+    const result = await fileObj.update(updatedFileName, fileContent);
+    if (result.success) {
+      onUpdate?.({ ...file, name: updatedFileName, content: btoa(fileContent) });
+      setIsEditing(false);
+    } else {
+      alert("Error updating file.");
+    }
+  };
+
+  const fetchAIResponse = async (task, isImage = false) => {
+    setLoading(true);
+    const response = await fileObj.fetchAI(task, isImage);
+    setAiResponse(response.result);
+    setLoading(false);
   };
 
   const closeModal = () => {
@@ -207,7 +101,7 @@ export default function File({ file, onDelete, onUpdate }) {
         className="text-truncate w-100"
         style={{ cursor: "pointer" }}
       >
-        <FontAwesomeIcon icon={faFile} style={{ marginRight: 6 }} />
+        <FontAwesomeIcon icon={faFile} className="me-2" />
         <span
           dangerouslySetInnerHTML={{
             __html:
@@ -229,7 +123,7 @@ export default function File({ file, onDelete, onUpdate }) {
                 autoFocus
               />
             ) : (
-              `File: ${file.name}`
+              `File: ${fileObj.name}`
             )}
           </Modal.Title>
         </Modal.Header>
@@ -239,11 +133,11 @@ export default function File({ file, onDelete, onUpdate }) {
             <p>Loading...</p>
           ) : (
             <>
-              {isImage ? (
+              {fileObj.isImage ? (
                 <>
                   <img
-                    src={`data:image/${file.name.split(".").pop()};base64,${file.content}`}
-                    alt="file content"
+                    src={`data:${fileObj.mimeType};base64,${fileObj.content}`}
+                    alt="file"
                     style={{ maxWidth: "100%", maxHeight: "400px" }}
                   />
                   <div className="mt-3 d-flex flex-wrap gap-2">
@@ -260,14 +154,8 @@ export default function File({ file, onDelete, onUpdate }) {
                       Delete
                     </Button>
                   </div>
-                  {aiResponse && (
-                    <div className="mt-3">
-                      <h5>AI Response:</h5>
-                      <p>{aiResponse}</p>
-                    </div>
-                  )}
                 </>
-              ) : isText ? (
+              ) : fileObj.isText ? (
                 <>
                   <pre>{fileContent}</pre>
                   <textarea
@@ -302,15 +190,15 @@ export default function File({ file, onDelete, onUpdate }) {
                       </Button>
                     )}
                   </div>
-                  {aiResponse && (
-                    <div className="mt-3">
-                      <h5>AI Response:</h5>
-                      <p>{aiResponse}</p>
-                    </div>
-                  )}
                 </>
               ) : (
                 <p>{fileContent}</p>
+              )}
+              {aiResponse && (
+                <div className="mt-3">
+                  <h5>AI Response:</h5>
+                  <p>{aiResponse}</p>
+                </div>
               )}
             </>
           )}
