@@ -1,125 +1,129 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { auth } from '../firebase'; // Ensure the correct relative path
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, signInWithPopup, GoogleAuthProvider  } from 'firebase/auth';
+import { auth } from '../firebase';
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  signInWithPopup,
+  GoogleAuthProvider
+} from 'firebase/auth';
 
 const AuthContext = React.createContext();
 
 export function useAuth() {
-    return useContext(AuthContext);
+  return useContext(AuthContext);
 }
 
 export function AuthProvider({ children }) {
-    const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true); // Start with loading as true to wait for auth initialization
-    const [error, setError] = useState(null); // Track error states for auth actions
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    // Function to sign up a new user
-    async function signup(email, password) {
-        try {
-            setError(null); // Clear previous errors
-            await createUserWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            setError(error.message); // Store error message
-        }
+  async function signup(email, password) {
+    try {
+      setError(null);
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    // Function to log in an existing user
-    async function login(email, password) {
-        try {
-            setError(null); // Clear previous errors
-            await signInWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            setError(error.message); // Store error message
-        }
+  async function login(email, password) {
+    try {
+      setError(null);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    // Function to log out the current user
-    async function logout() {
-        try {
-            setError(null); // Clear previous errors
-            await signOut(auth);
-            console.log('User logged out successfully');
-        } catch (error) {
-            setError(error.message); // Store error message
-            console.error('Error logging out:', error);
-        }
+  async function logout() {
+    try {
+      setError(null);
+      await signOut(auth);
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    // Function to reset password
-    async function resetPassword(email) {
-        try {
-            setError(null); // Clear previous errors
-            await sendPasswordResetEmail(auth, email);
-        } catch (error) {
-            setError(error.message); // Store error message
-        }
+  async function resetPassword(email) {
+    try {
+      setError(null);
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    // Function to update email
-    async function updateEmail(email) {
-        try {
-            setError(null); // Clear previous errors
-            if (currentUser) {
-                await currentUser.updateEmail(email);
-            } else {
-                throw new Error('User is not authenticated');
-            }
-        } catch (error) {
-            setError(error.message); // Store error message
-        }
+  async function updateEmail(email) {
+    try {
+      setError(null);
+      if (currentUser) {
+        await currentUser.updateEmail(email);
+      } else {
+        throw new Error('User is not authenticated');
+      }
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    // Function to update password
-    async function updatePassword(password) {
-        try {
-            setError(null); // Clear previous errors
-            if (currentUser) {
-                await currentUser.updatePassword(password);
-            } else {
-                throw new Error('User is not authenticated');
-            }
-        } catch (error) {
-            setError(error.message); // Store error message
-        }
+  async function updatePassword(password) {
+    try {
+      setError(null);
+      if (currentUser) {
+        await currentUser.updatePassword(password);
+      } else {
+        throw new Error('User is not authenticated');
+      }
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    async function loginWithGoogle() {
-        const provider = new GoogleAuthProvider();
-        try {
-            setError(null); // Clear previous errors
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            setError(error.message); // Store error message
-        }    
+  async function loginWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    try {
+      setError(null);
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      setError(error.message);
     }
+  }
 
-    // Listen for authentication state changes
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(user => {
-            console.log('Auth state changed:', user);
-            setCurrentUser(user); // Set current user after auth state change
-            setLoading(false); // Set loading to false after the initial auth check
-        });
+  async function getIdToken() {
+    if (currentUser) {
+      return await currentUser.getIdToken();
+    }
+    return null;
+  }
 
-        return unsubscribe; // Clean up the subscription when the component unmounts
-    }, []);
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setCurrentUser(user);
+      setLoading(false);
+    });
 
-    const value = {
-        currentUser,
-        logout,
-        login,
-        signup,
-        resetPassword,
-        updateEmail,
-        updatePassword,
-        loginWithGoogle,
-        error, // Pass error state to components using the context
-    };
+    return unsubscribe;
+  }, []);
 
-    // Render the children only after loading is complete
-    return (
-        <AuthContext.Provider value={value}>
-            {!loading && children} {/* Only render children once auth state is loaded */}
-        </AuthContext.Provider>
-    );
+  const value = {
+    currentUser,
+    signup,
+    login,
+    logout,
+    resetPassword,
+    updateEmail,
+    updatePassword,
+    loginWithGoogle,
+    getIdToken, // Expose token function
+    error
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 }

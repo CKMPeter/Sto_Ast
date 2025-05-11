@@ -1,6 +1,7 @@
 {
   "name": "my-react-app",
   "version": "0.1.0",
+  "proxy": "https://localhost:5000",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.1",
@@ -17,6 +18,7 @@
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.7",
     "firebase": "^11.0.2",
+    "http-proxy-middleware": "^3.0.5",
     "path-browserify": "^1.0.1",
     "react": "^18.3.1",
     "react-bootstrap": "^2.10.6",

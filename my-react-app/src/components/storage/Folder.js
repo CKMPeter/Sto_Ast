@@ -3,11 +3,11 @@ import { Button } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
-import { Folder as FolderClass } from "../objects/FolderObject"; // import renamed to avoid naming conflict
+import { FolderObject as FolderClass } from "../objects/FolderObject"; // import renamed to avoid naming conflict
 
 export default function Folder({ folder }) {
+  //console.log("Folder component", folder);
   if (!folder || !(folder instanceof FolderClass)) return null;
-
   return (
     <Button
       as={Link}

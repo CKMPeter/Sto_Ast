@@ -9,6 +9,7 @@ import FolderBreadcrumbs from "./FolderBreadcrumbs";
 import AddFileButton from "./AddFileButton";
 import File from "./File";
 import Chatbot from "./ChatBot";
+import { FolderObject as FolderClass } from "../objects/FolderObject"; // import renamed to avoid naming conflict
 
 export default function Dashboard() {
   const { folderId } = useParams();
@@ -88,20 +89,16 @@ export default function Dashboard() {
         {Array.isArray(childFolders) && (
           <div className="d-flex flex-wrap mt-3">
             {childFolders
-              .filter(
-                (folder) =>
-                  isNameMatch(folder.name) && isTagMatch(folder)
-              )
-              .map((child) => (
-                <div key={child.id} style={{ maxWidth: "200px" }} className="p-2">
-                  <Folder
-                    folder={{
-                      ...child,
-                      highlightedName: highlightText(child.name, searchQuery),
-                    }}
-                  />
-                </div>
-              ))}
+  .filter((f) => isNameMatch(f.name) && isTagMatch(f))
+  .map((child) => {
+    const folderInstance = FolderClass.fromObject(child); // convert to Folder instance
+    folderInstance.highlightedName = highlightText(child.name, searchQuery); // attach highlighted name
+    return (
+      <div key={child.id} style={{ maxWidth: "200px" }} className="p-2">
+        <Folder folder={folderInstance} />
+      </div>
+    );
+  })}
           </div>
         )}
 

@@ -1,7 +1,7 @@
 import { getDatabase, ref, remove, update } from "firebase/database";
 
 export class FileObject {
-  constructor({ id, name, content, path, createdAt, user, apiUrl = "http://localhost:5000/ai" }) {
+  constructor({ id, name, content, path, createdAt, user, apiUrl = "https://localhost:5000/ai" }) {
     this.id = id;
     this.name = name;
     this.content = content;
@@ -66,7 +66,7 @@ export class FileObject {
     try {
       const response = await fetch(this.apiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", mode : "cors" },
         body: JSON.stringify({
           input: isImageRequest ? this.content : this.decodeContent(),
           task,

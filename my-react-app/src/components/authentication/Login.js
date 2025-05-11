@@ -70,7 +70,7 @@ export default function Login() {
     }
 
     function slideSignUp() {
-        if (setMode) {
+        if (!mode) {
             textBoxRef.current.classList.toggle("slide_right");
             loginRef.current.classList.toggle("slide_right");
             signUpRef.current.classList.toggle("slide_right_1");
