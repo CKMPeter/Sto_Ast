@@ -4,18 +4,19 @@ module.exports = function (app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'https://localhost:5000',
+      target: 'https://localhost:3000', // Ensure this matches your development server
       changeOrigin: true,
+      secure: false, // Allow self-signed certificates for local HTTPS (if necessary)
       onProxyRes: function (proxyRes) {
         proxyRes.headers['X-Content-Type-Options'] = 'nosniff';
-        proxyRes.headers['X-Frame-Options'] = 'DENY'; // <- Add this
-        proxyRes.headers['Content-Security-Policy'] =
-          "default-src 'none'; " +
+        proxyRes.headers['X-Frame-Options'] = 'DENY'; // Anti-clickjacking
+        proxyRes.headers['Content-Security-Policy'] = 
+          "default-src 'self'; " +
           "script-src 'self'; " +
           "style-src 'self' 'unsafe-inline'; " +
-          "img-src 'self'; " +
+          "imgSrc 'self', 'data:', 'https://firebasestorage.googleapis.com', 'https://*.googleusercontent.com'" +
           "connect-src 'self'; " +
-          "frame-ancestors 'none';"; // <- Add this
+          "frame-ancestors 'none';"; // Prevent framing and clickjacking
       },
     })
   );

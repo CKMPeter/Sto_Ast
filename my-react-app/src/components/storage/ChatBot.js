@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const run = async (input) => {
   try {
-    const response = await fetch("http://localhost:5000/chatbot", {
+    const response = await fetch("https://localhost:5000/chatbot", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
