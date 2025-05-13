@@ -6,15 +6,12 @@ import { Link } from "react-router-dom";
 import { FolderObject as FolderClass } from "../objects/FolderObject"; // import renamed to avoid naming conflict
 
 export default function Folder({ folder }) {
-  //console.log("Folder component", folder);
   if (!folder || !(folder instanceof FolderClass)) return null;
+
   return (
     <Button
       as={Link}
-      to={{
-        pathname: `/folder/${folder.id}`,
-        state: { folder: folder },
-      }}
+      to={`/folder/${folder.id}`} // ✅ Removed circular structure from state
       variant="outline-dark"
       className="text-truncate w-100"
     >

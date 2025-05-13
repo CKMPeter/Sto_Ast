@@ -9,7 +9,7 @@ import { FileObject } from "../objects/FileObject";
 /* //old version delete
 const handleDeleteFirebase = async (fileId, currentUser) => {
   const db = getDatabase();
-  const fileRef = ref(db, `files/${currentUser.uid}/${fileId}`);
+  const fileRef = ref(db, files/${currentUser.uid}/${fileId});
 
   try {
     await remove(fileRef);
@@ -23,7 +23,7 @@ const handleDeleteFirebase = async (fileId, currentUser) => {
 /* //old version add
 const handleUpdateFirebase = async (fileId, updatedName, updatedContent, currentUser) => {
   const db = getDatabase();
-  const fileRef = ref(db, `files/${currentUser.uid}/${fileId}`);
+  const fileRef = ref(db, files/${currentUser.uid}/${fileId});
 
   try {
     await update(fileRef, {
