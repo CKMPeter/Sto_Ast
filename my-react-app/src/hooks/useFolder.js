@@ -171,7 +171,7 @@ export function useFolder(folderId = null, folder = null) {
       if (!token) return;
 
       // Construct the request for folders from backend
-      const response = await fetch(`https://localhost:5000/api/folders?parentId=${folderId}&userId=${currentUser.uid}`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/folders?parentId=${folderId}&userId=${currentUser.uid}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,

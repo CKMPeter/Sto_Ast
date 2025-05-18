@@ -1,7 +1,7 @@
 import { getDatabase, ref, remove, update } from "firebase/database";
 
 export class FileObject {
-  constructor({ id, name, content, path, createdAt, user, apiUrl = "https://localhost:5000/ai" }) {
+  constructor({ id, name, content, path, createdAt, user, apiUrl = `${process.env.REACT_APP_BACKEND_URL}/ai` }) {
     this.id = id;
     this.name = name;
     this.content = content;

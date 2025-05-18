@@ -11,7 +11,8 @@
       script-src 'self' https://localhost:3000 https://localhost:5000 https://www.gstatic.com https://www.googleapis.com https://apis.google.com https://auth-development-f6d07-default-rtdb.asia-southeast1.firebasedatabase.app https://s-apse1a-nss-2003.asia-southeast1.firebasedatabase.app;
       style-src 'self' 'unsafe-inline';
       connect-src 'self' https://localhost:5000 https://firestore.googleapis.com https://firebase.googleapis.com https://auth-development-f6d07-default-rtdb.asia-southeast1.firebasedatabase.app wss://*.firebaseio.com wss://s-apse1a-nss-2003.asia-southeast1.firebasedatabase.app https://*.googleapis.com;
-      img-src 'self' https://firebasestorage.googleapis.com https://*.googleusercontent.com;
+      img-src 'self' data:  https://firebasestorage.googleapis.com https://*.googleusercontent.com;
+      frameSrc: 'self' https://auth-development-f6d07.firebaseapp.com https://apis.google.com;
       object-src 'none';
     ">
     <meta

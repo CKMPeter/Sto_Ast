@@ -8,8 +8,21 @@ const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const firebaseAdmin = require('firebase-admin');
 
-// Firebase Admin SDK Initialization
-const serviceAccount = require('./firebase-admin-sdk.json');
+
+// ---Firebase Admin SDK Initialization---
+const serviceAccount = {
+  "type": "service_account",
+  "project_id": process.env.PROJECT_ID,
+  "private_key_id": process.env.PRIVATE_KEY_ID,
+  "private_key": process.env.PRIVATE_KEY.replace(/\\n/g, '\n'),
+  "client_email": process.env.CLIENT_EMAIL,
+  "client_id": process.env.CLIENT_ID,
+  "auth_uri": process.env.AUTH_URI,
+  "token_uri": process.env.TOKEN_URI,
+  "auth_provider_x509_cert_url": process.env.AUTH_PROVIDER_X509_CERT_URL,
+  "client_x509_cert_url": process.env.CLIENT_X509_CERT_URL,
+  "universe_domain": process.env.UNIVERSE_DOMAIN
+};
 firebaseAdmin.initializeApp({
   credential: firebaseAdmin.credential.cert(serviceAccount),
   databaseURL: process.env.FIREBASE_DATABASE_URL,
@@ -18,15 +31,20 @@ firebaseAdmin.initializeApp({
 
 const auth = firebaseAdmin.auth();
 const db = firebaseAdmin.firestore();
+
+
+// ---Gemini client setup---
+const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+
+// ---App Setup---
 const app = express();
 const PORT = 5000;
 
-// Gemini client setup
-const client = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
 
 // Middleware
 app.use(cors({
-  origin: ['https://localhost:3000'],
+  origin: ['https://localhost:3000', process.env.FRONTEND_URL],
   credentials: true,
 }));
 
@@ -37,10 +55,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://localhost:3000", "https://apis.google.com", "https://www.gstatic.com"],
-      styleSrc: ["'self'", "https://localhost:3000"],
+      scriptSrc: ["'self'", 
+        process.env.FRONTEND_URL, "https://localhost:3000", 
+        "https://apis.google.com", "https://www.gstatic.com"],
+      styleSrc: ["'self'", process.env.FRONTEND_URL, "https://localhost:3000"],
       imgSrc: ["'self'", "data:", "https://firebasestorage.googleapis.com", "https://*.googleusercontent.com"],
-      connectSrc: ["'self'", "https://localhost:5000", "https://generativelanguage.googleapis.com", "http://localhost:3000"],
+      connectSrc: ["'self'", 
+        process.env.BACKEND_URL, "https://localhost:5000", 
+        process.env.FRONTEND_URL, "http://localhost:3000", 
+        "https://generativelanguage.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       formAction: ["'self'"],
       objectSrc: ["'none'"],
@@ -53,27 +76,27 @@ app.use(helmet({
 app.disable('x-powered-by');
 
 // Authentication middleware
-async function authenticateToken(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
-  }
+// async function authenticateToken(req, res, next) {
+//   const authHeader = req.headers.authorization;
+//   if (!authHeader?.startsWith('Bearer ')) {
+//     return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+//   }
 
-  const idToken = authHeader.split('Bearer ')[1];
-  try {
-    const decodedToken = await auth.verifyIdToken(idToken);
-    req.user = decodedToken;
-    next();
-  } catch (error) {
-    console.error('Token verification failed:', error.message);
-    res.status(401).json({ error: 'Unauthorized' });
-  }
-}
+//   const idToken = authHeader.split('Bearer ')[1];
+//   try {
+//     const decodedToken = await auth.verifyIdToken(idToken);
+//     req.user = decodedToken;
+//     next();
+//   } catch (error) {
+//     console.error('Token verification failed:', error.message);
+//     res.status(401).json({ error: 'Unauthorized' });
+//   }
+// }
 
 // --- AI Routes ---
 
 // Gemini text or image processing
-app.post('/ai', authenticateToken, async (req, res) => {
+app.post('/ai', async (req, res) => {
   const { input, task, isImage = false, mimeType = "image/jpeg" } = req.body;
   if (!input || !task) return res.status(400).json({ error: 'Missing input or task' });
 
@@ -87,7 +110,7 @@ app.post('/ai', authenticateToken, async (req, res) => {
 });
 
 // Simple chatbot endpoint
-app.post('/chatbot', authenticateToken, async (req, res) => {
+app.post('/chatbot', async (req, res) => {
   const { input } = req.body;
   if (!input) return res.status(400).json({ error: 'Input required' });
 
@@ -120,7 +143,7 @@ async function runAI(input, task, isImage = false, mimeType = "image/jpeg") {
 
 // --- Folder/Files API ---
 
-app.get('/api/folder/:folderId', authenticateToken, async (req, res) => {
+app.get('/api/folder/:folderId', async (req, res) => {
   try {
     const doc = await db.collection('folders').doc(req.params.folderId).get();
     if (!doc.exists) return res.status(404).json({ error: 'Folder not found' });
@@ -131,7 +154,7 @@ app.get('/api/folder/:folderId', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/folders', authenticateToken, async (req, res) => {
+app.post('/api/folders', async (req, res) => {
   try {
     const { name, userId, parentId, path } = req.body;
 
@@ -158,7 +181,7 @@ app.post('/api/folders', authenticateToken, async (req, res) => {
 });
 
 
-app.get('/api/files', authenticateToken, async (req, res) => {
+app.get('/api/files', async (req, res) => {
   const { folderPath, userId } = req.query;
   if (!folderPath || !userId) return res.status(400).json({ error: 'Missing folderPath or userId' });
 
@@ -176,7 +199,7 @@ app.get('/api/files', authenticateToken, async (req, res) => {
 });
 
 // DELETE a file
-app.delete('/api/files/:userId/:fileId', authenticateToken, async (req, res) => {
+app.delete('/api/files/:userId/:fileId', async (req, res) => {
   const { userId, fileId } = req.params;
 
   try {
@@ -189,7 +212,7 @@ app.delete('/api/files/:userId/:fileId', authenticateToken, async (req, res) => 
 });
 
 // UPDATE a file
-app.put('/api/files/:userId/:fileId', authenticateToken, async (req, res) => {
+app.put('/api/files/:userId/:fileId', async (req, res) => {
   const { userId, fileId } = req.params;
   const { name, content } = req.body;
 
@@ -211,6 +234,7 @@ app.put('/api/files/:userId/:fileId', authenticateToken, async (req, res) => {
 
 
 // --- HTTPS Server ---
+if (process.env.HTTPS === 'true') {
 const options = {
   key: fs.readFileSync(path.join(__dirname, 'key.pem')),
   cert: fs.readFileSync(path.join(__dirname, 'cert.pem')),
@@ -218,4 +242,10 @@ const options = {
 
 https.createServer(options, app).listen(PORT, () => {
   console.log(`✅ HTTPS server running at https://localhost:${PORT}`);
-});
+}); 
+} else {
+  // --- HTTP Server ---
+  app.listen(PORT, () => {
+    console.log(`✅ HTTP server running at http://localhost:${PORT}`);
+  });
+}

@@ -26,10 +26,12 @@
     "react-router-dom": "^7.0.1",
     "react-scripts": "5.0.1",
     "readline-sync": "^1.4.10",
+    "serve": "^14.2.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
+    "start-render": "serve -s build",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
