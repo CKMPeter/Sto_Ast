@@ -11,7 +11,7 @@ node_modules
 dist
 dist-ssr
 .env
-.pem
+*.pem
 *.local
 
 # Editor directories and files

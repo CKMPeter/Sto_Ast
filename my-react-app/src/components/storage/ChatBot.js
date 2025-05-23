@@ -3,7 +3,11 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const run = async (input, token) => {
   try {
+<<<<<<< HEAD
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/chatbot`, {
+=======
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/chatbot`, {
+>>>>>>> 8e253eed6e7569779758e99574e4ef4a3e653a97
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

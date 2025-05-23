@@ -113,6 +113,7 @@ export function useFolder(folderId = null, folder = null) {
       if (!token) return;
 
       // Construct the request for folders from backend
+<<<<<<< HEAD
       const response = await fetch(
         `${process.env.REACT_APP_BACKEND_URL}/api/folders?parentId=${folderId}`,
         {
@@ -122,6 +123,14 @@ export function useFolder(folderId = null, folder = null) {
           },
         }
       );
+=======
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/folders?parentId=${folderId}&userId=${currentUser.uid}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+>>>>>>> 8e253eed6e7569779758e99574e4ef4a3e653a97
 
       const data = await response.json();
       if (data?.childFolders) {
