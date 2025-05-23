@@ -3,13 +3,6 @@ const express = require("express");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-const cors = require('cors');
-
-const corsOptions = {
-  origin: `${process.env.FRONTEND_URL}`,  // your React frontend origin
-  credentials: true,                  // if you need to send cookies or auth headers
-};
-
 
 // Import Controllers
 const { aiAnalyse, chatWithBot } = require("./controllers/AIController");
@@ -41,14 +34,11 @@ const app = express();
 const PORT = 5000;
 
 // Middlewares
-require("./middlewares")(app);
-
-app.use(express.json());
+require("./middlewares/middlewares")(app);
 
 // Theme API
 app.get("/api/user/theme", getDarkMode);
 app.put("/api/user/theme", setDarkMode);
-
 
 // --- User API ---
 app.put("/api/user", updateUser);
@@ -72,11 +62,7 @@ app.delete("/api/files/:fileId", deleteFile); // Delete file
 app.get("/api/files", fetchFilesByFolderPath); //Fetch files by folderPath
 app.get("/api/files/:folderId", fetchFilesByFolderId); //Fetch files by folderPath
 
-app.use(cors({
-  origin: `${process.env.FRONTEND_URL}`,  // your React frontend origin
-  methods: ['GET', 'PUT', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+
 // --- HTTPS Server ---
 if (process.env.HTTPS === "true") {
   const https = require("https");

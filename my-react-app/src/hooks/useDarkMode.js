@@ -17,8 +17,7 @@ export function useDarkMode() {
     async function fetchDarkMode() {
       setLoading(true);
       try {
-        const token = await getIdToken();
-        console.log("Firebase ID token:", token);    
+        const token = await currentUser.getIdToken(true); // <- force refreshs
         const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/theme`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -46,8 +45,9 @@ export function useDarkMode() {
     if (!currentUser) return;
 
     try {
-      const token = await getIdToken();
+      const token = await currentUser.getIdToken(true);
       if (!token) return;
+
       const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/theme`, {
         method: "PUT",
         headers: {
@@ -59,6 +59,8 @@ export function useDarkMode() {
 
       if (!res.ok) {
         console.error("Failed to update dark mode");
+      } else {
+        window.location.reload(); // ✅ Refresh after successful update
       }
     } catch (error) {
       console.error("Error updating dark mode:", error);

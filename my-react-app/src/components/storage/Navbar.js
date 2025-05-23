@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom';
 import { useDarkMode } from '../../hooks/useDarkMode'; // make sure the path is correct
 
 export default function NavbarComponent() {
-  const { darkMode, toggleDarkMode } = useDarkMode();
-
+  const { darkMode, toggleDarkMode, loading} = useDarkMode();
+  
+  if (loading) return null; // ⛔ avoid flicker on initial load
   return (
     <Navbar bg={darkMode ? 'dark' : 'light'} variant={darkMode ? 'dark' : 'light'} expand="sm">
       <Navbar.Brand
@@ -17,10 +18,17 @@ export default function NavbarComponent() {
           marginLeft: '10px',
         }}
       >
-        MY DRIVE
+        <div>
+          <h1 className='app-title'>
+            <span>Sto</span><span>rage</span>
+            &
+            <span>As</span><span>sis</span>
+            <span>t</span><span>ance</span>
+          </h1>
+        </div>
       </Navbar.Brand>
       <Nav className="ms-auto d-flex align-items-center">
-        <Nav.Link as={Link} to="/user" style={{ fontSize: '1rem' }}>
+        <Nav.Link as={Link} to="/user" style={{ fontSize: '1rem', fontWeight: 'bold' }}>
           Profile
         </Nav.Link>
         <Form.Check
@@ -30,6 +38,7 @@ export default function NavbarComponent() {
           checked={darkMode}
           onChange={toggleDarkMode}
           className="ms-3"
+          style={{fontSize: '1rem', fontWeight: 'bold', marginRight: '10px'}}
         />
       </Nav>
     </Navbar>

@@ -1,4 +1,4 @@
-const { db, verifyIdToken } = require("../firebase-admin-setup");
+const { db, auth } = require("../firebase-admin-setup");
 
 // Helper to extract UID from Bearer token
 async function getUidFromRequest(req, res) {
@@ -11,7 +11,7 @@ async function getUidFromRequest(req, res) {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decodedToken = await verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token); // ✅ FIXED
     return decodedToken.uid;
   } catch (err) {
     console.error("Error verifying token:", err);
@@ -19,6 +19,7 @@ async function getUidFromRequest(req, res) {
     return null;
   }
 }
+
 
 // GET /api/user/theme
 async function getDarkMode(req, res) {

@@ -5,6 +5,7 @@ import { faFolder } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
 import { FolderClass } from "../classes/FolderClass"; // import renamed to avoid naming conflict
 import { useAuth } from "../../contexts/AuthContext";
+import { useDarkMode } from "../../hooks/useDarkMode"; // adjust path if needed
 
 export default function Folder({ folder }) {
   const [showModals, setShowModals] = useState({ first: false, second: false });
@@ -13,6 +14,8 @@ export default function Folder({ folder }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const { getIdToken } = useAuth();
+  // Use the dark mode hook
+  const { darkMode } = useDarkMode(); // use dark mode context
 
   // Open modal on right-click
   const handleRightClick = (e) => {
@@ -115,19 +118,22 @@ export default function Folder({ folder }) {
     <>
       <Button
         as={Link}
-        to={`/folder/${folder.id}`} // Removed circular structure from state
-        variant="outline-dark"
-        className="text-truncate w-100"
-        onContextMenu={handleRightClick} // Add right-click handler
+        to={`/folder/${folder.id}`}
+        variant={darkMode ? "outline-light" : "outline-dark"}
+        className={`text-truncate w-100 invert-hover`}
+        onContextMenu={handleRightClick}
+        style={{fontWeight: "bold", textAlign: "left"}}
       >
-        <FontAwesomeIcon icon={faFolder} style={{ marginRight: 6 }} />
+        <FontAwesomeIcon
+          icon={faFolder}
+          style={{ marginRight: 6, color: "inherit" }}
+        />
         <span
           dangerouslySetInnerHTML={{
             __html: folder.highlightedName || folder.name || "Unnamed Folder",
           }}
         />
       </Button>
-
       {/* Right-click Modal */}
       <Modal show={showModals.first} onHide={handleCloseModals}>
         <Modal.Header closeButton>

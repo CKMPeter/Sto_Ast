@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 const run = async (input, token) => {
   try {
-<<<<<<< HEAD
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/chatbot`, {
-=======
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/chatbot`, {
->>>>>>> 8e253eed6e7569779758e99574e4ef4a3e653a97
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -21,7 +18,7 @@ const run = async (input, token) => {
     }
 
     const data = await response.json();
-    return data.result; // Access the 'result' field from the response
+    return data.result;
   } catch (error) {
     console.error("Error interacting with backend:", error);
     return "Sorry, an error occurred while processing your request.";
@@ -32,7 +29,13 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const {getIdToken} = useAuth();
+  const { getIdToken } = useAuth();
+  const { darkMode, loading: darkModeLoading } = useDarkMode();
+
+  // Don't render chatbot UI until darkMode loading is complete
+  if (darkModeLoading) {
+    return null; // or a loading spinner if you prefer
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,15 +57,14 @@ const Chatbot = () => {
         ...prev,
         { text: "Sorry, I couldn't get a response at the moment.", sender: 'bot' },
       ]);
-    } finally {
+    } finally { 
       setLoading(false);
       setInput('');
     }
   };
 
   return (
-    <div style={{
-      backgroundColor: '#fff',
+    <div className={`chatbot ${darkMode ? "dark-mode" : "light-mode"}`} style={{
       padding: '10px',
       borderRadius: '8px',
       height: '100%',
@@ -73,11 +75,12 @@ const Chatbot = () => {
         {messages.map((message, index) => (
           <div key={index} style={{ textAlign: message.sender === 'user' ? 'right' : 'left' }}>
             <p style={{
-              backgroundColor: message.sender === 'user' ? '#d1e7ff' : '#f0f0f0',
+              backgroundColor: message.sender === 'user' ? (darkMode ? '#264a8a' : '#d1e7ff') : (darkMode ? '#333' : '#f0f0f0'),
               padding: '8px',
               borderRadius: '8px',
               display: 'inline-block',
-              maxWidth: '80%'
+              maxWidth: '80%',
+              color: darkMode ? '#eee' : '#222'
             }}>
               {message.text}
             </p>
@@ -86,10 +89,11 @@ const Chatbot = () => {
         {loading && (
           <div style={{ textAlign: 'left', marginTop: '10px' }}>
             <p style={{
-              backgroundColor: '#f0f0f0',
+              backgroundColor: darkMode ? '#333' : '#f0f0f0',
               padding: '8px',
               borderRadius: '8px',
-              display: 'inline-block'
+              display: 'inline-block',
+              color: darkMode ? '#eee' : '#222'
             }}>
               Thinking...
             </p>
@@ -103,19 +107,19 @@ const Chatbot = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message"
+          className="form-control"
           style={{
             flex: 1,
-            padding: '8px',
             borderRadius: '8px',
-            border: '1px solid #ddd'
+            border: darkMode ? '1px solid #555' : '1px solid #ddd',
+            backgroundColor: darkMode ? '#333' : '#fff',
+            color: darkMode ? '#eee' : '#222',
+            padding: '8px'
           }}
         />
-        <button type="submit" style={{
+        <button type="submit" className="btn btn-primary" style={{
           marginLeft: '8px',
           padding: '8px 12px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
           borderRadius: '8px'
         }}>
           Send

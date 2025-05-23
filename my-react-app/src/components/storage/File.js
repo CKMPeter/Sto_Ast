@@ -13,6 +13,8 @@ import { Modal, Button, Form } from "react-bootstrap";
 //import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
 import { FileClass } from "../classes/FileClass";
+//darkmode
+import { useDarkMode } from "../../hooks/useDarkMode"; // Adjust path if needed
 
 export default function File({ file, onChange }) {
   const { currentUser, getIdToken } = useAuth();
@@ -24,6 +26,8 @@ export default function File({ file, onChange }) {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [updatedFileName, setUpdatedFileName] = useState(fileObj.name);
+  //darkmode context
+  const { darkMode } = useDarkMode(); // Use dark mode context
 
   const handleFileClick = () => {
     setFileContent(fileObj.isText ? fileObj.decodeContent() : fileObj.content);
@@ -217,11 +221,15 @@ export default function File({ file, onChange }) {
     <>
       <Button
         onClick={handleFileClick}
-        variant="outline-dark"
-        className="text-truncate w-100"
-        style={{ cursor: "pointer" }}
+        variant={darkMode ? "outline-light" : "outline-dark"}
+        className={`text-truncate w-100 invert-hover`}
+        style={{ cursor: "pointer", fontWeight: "bold" }}
       >
-        <FontAwesomeIcon icon={faFile} className="me-2" />
+        <FontAwesomeIcon
+          icon={faFile}
+          className="me-2 invert-hover"
+          style={{ color: "inherit" }}
+        />
         <span
           dangerouslySetInnerHTML={{
             __html:
@@ -232,6 +240,7 @@ export default function File({ file, onChange }) {
         />
       </Button>
 
+      {/* Modal for file details */}
       <Modal show={showModal} onHide={closeModal}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -283,7 +292,7 @@ export default function File({ file, onChange }) {
                 <>
                   <pre>{fileContent}</pre>
                   <textarea
-                    className="form-control"
+                    className={`form-control ${darkMode ? "bg-dark text-light border-light" : ""}`}
                     value={fileContent}
                     onChange={(e) => setFileContent(e.target.value)}
                     rows="10"
@@ -323,7 +332,7 @@ export default function File({ file, onChange }) {
                 <p>{fileContent}</p>
               )}
               {aiResponse && (
-                <div className="mt-3">
+                <div className={`mt-3 p-3 rounded ${darkMode ? "bg-secondary text-light" : "bg-light"}`}>
                   <h5>AI Response:</h5>
                   <p>{aiResponse}</p>
                 </div>
@@ -333,9 +342,9 @@ export default function File({ file, onChange }) {
         </Modal.Body>
 
         <Modal.Footer>
-          <Button variant="secondary" onClick={closeModal}>
-            Close
-          </Button>
+          <Button variant={darkMode ? "light" : "secondary"} onClick={closeModal}>
+          Close
+        </Button>
         </Modal.Footer>
       </Modal>
     </>

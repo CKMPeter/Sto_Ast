@@ -178,6 +178,26 @@ body{
   border-radius: 0.375rem;
 }
 
+/* Optional transition for smooth effect */
+.invert-hover {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+/* Light button → dark on hover */
+.btn-outline-dark.invert-hover:hover {
+  background-color: #212529 !important;
+  color: #fff !important;
+  border-color: #212529 !important;
+}
+
+/* Dark button → light on hover */
+.btn-outline-light.invert-hover:hover {
+  background-color: #f8f9fa !important;
+  color: #000 !important;
+  border-color: #f8f9fa !important;
+}
+
+
 .upload-label:hover {
   background-color: #28a745;
   color: white;
@@ -192,5 +212,195 @@ body{
   background-color: #fff;
   color: #222;
 }
+.dark-mode .modal-content {
+  background-color: #1e1e1e;
+  color: #eee;
+}
 
+.light-mode .modal-content {
+  background-color: #fff;
+  color: #222;
+}
+
+.dark-mode .form-control {
+  background-color: #333;
+  color: #eee;
+  border-color: #555;
+}
+
+.light-mode .form-control {
+  background-color: #fff;
+  color: #222;
+}
+.dark-mode .btn-close {
+  filter: invert(1);
+}
+/* Example CSS: */
+input::placeholder {
+  color: gray;
+}
+
+/* Dark mode placeholder */
+.dark-mode input::placeholder {
+  color: #bbb; /* lighter gray */
+}
+
+/*chat bot*/
+.chatbot.dark-mode {
+  background-color: #1e1e2f; /* lighter dark tint */
+  color: #eee;
+}
+
+.chatbot.dark-mode .chatbot-message-user {
+  background-color: #264a8a;
+  color: #eee;
+}
+
+.chatbot.dark-mode .chatbot-message-bot {
+  background-color: #333;
+  color: #eee;
+}
+
+.chatbot.dark-mode .form-control {
+  background-color: #44475a;
+  color: #eee;
+  border-color: #666;
+}
+
+.chatbot.dark-mode .form-control::placeholder {
+  color: #bbb;
+}
+/*loading*/
+/* LoadingScreen.css */
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #121212;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loader-box {
+  text-align: center;
+  color: #eee;
+  width: 100%;
+  max-width: 400px;
+}
+.loader-box h2{
+  font-size: 5vw;
+  margin-bottom: 1rem;
+}
+.loader {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  background: #121212;
+}
+.loader-title_1 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+  color: #121212;
+  -webkit-text-stroke: #00b4d8 2px;
+  text-transform: uppercase;
+}
+.loader-title_1::before{
+  content: attr(data-text);
+  position: absolute;
+  width: 0;
+  height: 100%;
+  color: #00b4d8;
+  -webkit-text-stroke: #121212 0px;
+  border-right: 2px solid #00b4d8;
+  overflow: hidden;
+  animation: animate 2s linear infinite;
+}
+.loader-title_2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+  color: #121212;
+  -webkit-text-stroke: #fff 2px;
+  text-transform: uppercase;
+}
+.loader-title_2::before{
+  content: attr(data-text);
+  position: absolute;
+  width: 0;
+  height: 100%;
+  color: #fff;
+  -webkit-text-stroke: #121212 0px;
+  border-right: 2px solid #fff;
+  overflow: hidden;
+  animation: animate 2s linear infinite;
+}
+@keyframes animate {
+  0%, 10% ,100% {
+    width: 0;
+  }
+  70%, 90% {
+    width: 100%;
+  }
+}
+.progress-bar-container {
+  height: 12px;
+  width: 100%;
+  background-color: #333;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(270deg, #00b4d8, #0077b6);
+  animation: progressAnim 2s infinite linear;
+}
+
+@keyframes progressAnim {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* title Styles */
+.app-title {
+  margin: 0;
+  padding: 0;
+  font-size: 60px;
+}
+.app-title span {
+  color: #00b4d8;
+  font-weight: bold;
+  display: inline-flex;
+}
+.app-title span:nth-child(even) {
+  overflow: hidden;
+  transition: ease-in-out 0.5s;
+  color: #fff;
+  letter-spacing: -1em;
+}
+.app-title:hover span:nth-child(even) {
+  letter-spacing: 0;
+}
+.app-title:hover span:nth-child(2) {
+  transition-delay:  0.5s;
+}
+.app-title:hover span:nth-child(4) {
+  transition-delay: 1s;
+}
+.app-title:hover span:nth-child(6) {
+  transition-delay: 1.5s;
+}
 /* Add any more styles for dark mode here */

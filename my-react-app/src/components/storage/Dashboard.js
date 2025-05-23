@@ -15,10 +15,11 @@ import { FolderClass } from "../classes/FolderClass";
 export default function Dashboard() {
   const { folderId } = useParams();
   const { folder, childFolders, childFiles, triggerRefresh } = useFolder(folderId);
-  const { darkMode } = useDarkMode(); // ✅ Use dark mode
-
   const [showChatbot, setShowChatbot] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { darkMode, loading } = useDarkMode(); // <-- updated
+
+  if (loading) return null; // ⛔ avoid flicker on initial load
 
   const toggleChatbot = () => setShowChatbot((prev) => !prev);
 
@@ -71,7 +72,7 @@ export default function Dashboard() {
       >
         <div className="d-flex align-items-center justify-content-between flex-wrap">
           <div className="d-flex align-items-center flex-grow-1">
-            <FolderBreadcrumbs currentFolder={folder} />
+            <FolderBreadcrumbs currentFolder={folder} style = {{marginLeft: '10px'}}/>
             <CreateFolderButton currentFolder={folder} />
             <AddFileButton currentFolder={folder} onAdd={triggerRefresh} />
             <Form.Control
@@ -81,7 +82,8 @@ export default function Dashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 maxWidth: 300,
-                marginTop: 8,
+                height: 40,
+                marginLeft: "10px",
                 backgroundColor: darkMode ? "#333" : "white",
                 color: darkMode ? "white" : "black",
                 borderColor: darkMode ? "#555" : "#ccc",
