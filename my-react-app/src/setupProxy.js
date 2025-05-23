@@ -1,10 +1,11 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function (app) {
+  target = process.env.REACT_APP_FRONTEND_URL || 'https://localhost:3000';
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'https://localhost:3000', // Ensure this matches your development server
+      target: `${target}`, // Ensure this matches your development server
       changeOrigin: true,
       secure: false, // Allow self-signed certificates for local HTTPS (if necessary)
       onProxyRes: function (proxyRes) {

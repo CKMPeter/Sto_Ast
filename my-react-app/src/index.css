@@ -182,3 +182,15 @@ body{
   background-color: #28a745;
   color: white;
 }
+
+.dark-mode {
+  background-color: #121212;
+  color: #eee;
+}
+
+.light-mode {
+  background-color: #fff;
+  color: #222;
+}
+
+/* Add any more styles for dark mode here */

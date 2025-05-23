@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
-const run = async (input) => {
+const run = async (input, token) => {
   try {
-    const response = await fetch("https://localhost:5000/chatbot", {
+    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/chatbot`, {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ input }),
@@ -26,16 +28,22 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const {getIdToken} = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
+    const token = await getIdToken();
+    if (!token) {
+      throw new Error('User not authenticated');
+    }
+
     setMessages(prev => [...prev, { text: input, sender: 'user' }]);
     setLoading(true);
 
     try {
-      const aiResponse = await run(input);
+      const aiResponse = await run(input, token);
       setMessages(prev => [...prev, { text: aiResponse, sender: 'bot' }]);
     } catch (error) {
       setMessages(prev => [

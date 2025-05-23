@@ -56,29 +56,29 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function updateEmail(email) {
+  async function updateUser(email, password) {
     try {
       setError(null);
-      if (currentUser) {
-        await currentUser.updateEmail(email);
-      } else {
-        throw new Error('User is not authenticated');
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('User not authenticated');
       }
-    } catch (error) {
-      setError(error.message);
-    }
-  }
 
-  async function updatePassword(password) {
-    try {
-      setError(null);
-      if (currentUser) {
-        await currentUser.updatePassword(password);
-      } else {
-        throw new Error('User is not authenticated');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newEmail: email, newPassword: password }),
+      });
+      if (response.status !== 200) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update user');
       }
     } catch (error) {
       setError(error.message);
+      throw error; // Re-throw the error to be handled by the caller
     }
   }
 
@@ -114,8 +114,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     resetPassword,
-    updateEmail,
-    updatePassword,
+    updateUser,
     loginWithGoogle,
     getIdToken, // Expose token function
     error

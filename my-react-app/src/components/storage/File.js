@@ -1,45 +1,22 @@
 import React, { useState } from "react";
-import { faFile, faFileAlt, faSearch, faTrash, faEdit, faSave } from "@fortawesome/free-solid-svg-icons";
+import {
+  faFile,
+  faFileAlt,
+  faSearch,
+  faTrash,
+  faEdit,
+  faSave,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Modal, Button, Form } from "react-bootstrap";
 //import { ref, remove, update } from "../../../src/firebase";
 //import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
-import { FileObject } from "../objects/FileObject";
-/* //old version delete
-const handleDeleteFirebase = async (fileId, currentUser) => {
-  const db = getDatabase();
-  const fileRef = ref(db, files/${currentUser.uid}/${fileId});
+import { FileClass } from "../classes/FileClass";
 
-  try {
-    await remove(fileRef);
-    alert("File deleted successfully.");
-  } catch (error) {
-    console.error("Error deleting file from Firebase:", error);
-    alert("Error deleting file.");
-  }
-};
-*/
-/* //old version add
-const handleUpdateFirebase = async (fileId, updatedName, updatedContent, currentUser) => {
-  const db = getDatabase();
-  const fileRef = ref(db, files/${currentUser.uid}/${fileId});
-
-  try {
-    await update(fileRef, {
-      name: updatedName.trim(),
-      content: btoa(updatedContent),
-    });
-    alert("File updated successfully.");
-  } catch (error) {
-    console.error("Error updating file in Firebase:", error);
-    alert("Error updating file.");
-  }
-};
-*/
-export default function File({ file, onDelete, onUpdate }) {
-  const { currentUser } = useAuth();
-  const fileObj = new FileObject({ ...file, user: currentUser });
+export default function File({ file, onChange }) {
+  const { currentUser, getIdToken } = useAuth();
+  const fileObj = new FileClass({ ...file, user: currentUser });
 
   const [showModal, setShowModal] = useState(false);
   const [fileContent, setFileContent] = useState(fileObj.decodeContent());
@@ -55,11 +32,34 @@ export default function File({ file, onDelete, onUpdate }) {
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this file?")) {
-      const result = await fileObj.delete();
-      if (result.success) {
-        onDelete?.(file);
-        setShowModal(false);
-      } else {
+      const token = await getIdToken();
+      if (!token) {
+        alert("User not authenticated");
+        return;
+      }
+      try {
+        const response = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/api/files/${fileObj.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              filePath: fileObj.path,
+            }),
+          }
+        );
+        if (response.ok) {
+          alert("File deleted successfully.");
+          setShowModal(false);
+          onChange();
+        } else {
+          alert("Error deleting file.");
+        }
+      } catch (error) {
+        console.error("Error deleting file:", error);
         alert("Error deleting file.");
       }
     }
@@ -71,26 +71,146 @@ export default function File({ file, onDelete, onUpdate }) {
     if (!updatedFileName.trim()) return alert("File name cannot be empty.");
     if (!fileContent.trim()) return alert("File content cannot be empty.");
 
-    const result = await fileObj.update(updatedFileName, fileContent);
-    if (result.success) {
-      onUpdate?.({ ...file, name: updatedFileName, content: btoa(fileContent) });
-      setIsEditing(false);
-    } else {
+    const token = await getIdToken();
+    if (!token) {
+      alert("User not authenticated");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/files/${fileObj.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: updatedFileName.trim(),
+            content: btoa(fileContent),
+            filePath: fileObj.path,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        console.log("File updated successfully.");
+        setIsEditing(false);
+        setShowModal(false);
+        onChange();
+      } else {
+        alert("Error updating file.");
+      }
+    } catch (error) {
+      console.error("Error updating file:", error);
       alert("Error updating file.");
     }
   };
 
   const fetchAIResponse = async (task, isImage = false) => {
+    const token = await getIdToken();
+    if (!token) {
+      throw new Error("User not authenticated");
+    }
+
+    let result = "Processing...";
     setLoading(true);
-    const response = await fileObj.fetchAI(task, isImage);
-    setAiResponse(response.result);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/ai`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: isImage ? fileObj.content : fileObj.decodeContent(),
+            task,
+            isImage,
+            mimeType: fileObj.mimeType,
+          }),
+        }
+      );
+      const data = await response.json();
+      result = data.result || "No result returned.";
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+      result = "Error processing content with AI.";
+    }
+    setAiResponse(result);
+    setLoading(false);
+  };
+
+  const fetchAIDesrcibe = async (task, isImage = true) => {
+    const token = await getIdToken();
+    if (!token) {
+      throw new Error("User not authenticated");
+    }
+
+    let result = "Processing...";
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/describe-image`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: isImage ? fileObj.content : fileObj.decodeContent(),
+            task,
+            isImage,
+            mimeType: fileObj.mimeType,
+          }),
+        }
+      );
+      const data = await response.json();
+      result = data.result || "No result returned.";
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+      result = "Error processing content with AI.";
+    }
+    setAiResponse(result);
     setLoading(false);
   };
 
   const closeModal = () => {
     setShowModal(false);
+    setUpdatedFileName("");
+    setFileContent("");
     setAiResponse("");
     setIsEditing(false);
+  };
+
+   const handleDownload = () => {
+    const element = document.createElement("a");
+    const originalName = fileObj.name;
+  
+    // Extract file type from right to left until "_"
+    const parts = originalName.split("_");
+    const inferredExtension = parts.length > 1 ? parts.at(-1) : "txt"; // fallback to txt
+  
+    const baseName = originalName.substring(0, originalName.lastIndexOf("_")) || "download";
+    const fileName = `${baseName}.${inferredExtension}`;
+  
+    if (fileObj.isText) {
+      const fileBlob = new Blob([fileContent], { type: fileObj.mimeType || "text/plain" });
+      element.href = URL.createObjectURL(fileBlob);
+    } else if (fileObj.isImage) {
+      element.href = `data:${fileObj.mimeType};base64,${fileObj.content}`;
+    } else {
+      const fileBlob = new Blob([fileObj.content], { type: fileObj.mimeType || "application/octet-stream" });
+      element.href = URL.createObjectURL(fileBlob);
+    }
+  
+    element.download = fileName;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
   return (
@@ -141,11 +261,15 @@ export default function File({ file, onDelete, onUpdate }) {
                     style={{ maxWidth: "100%", maxHeight: "400px" }}
                   />
                   <div className="mt-3 d-flex flex-wrap gap-2">
-                    <Button variant="primary" onClick={() => fetchAIResponse("describe", true)}>
+                    <Button variant="info" onClick={handleDownload}>
+                      <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                      Download
+                    </Button>
+                    <Button variant="primary" onClick={() => fetchAIDesrcibe("describe", true)}>
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Describe Image
                     </Button>
-                    <Button variant="secondary" onClick={() => fetchAIResponse("objects", true)}>
+                    <Button variant="secondary" onClick={() => fetchAIDesrcibe("main_objects", true)}>
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Identify Objects
                     </Button>
@@ -166,6 +290,10 @@ export default function File({ file, onDelete, onUpdate }) {
                     disabled={!isEditing}
                   />
                   <div className="mt-3 d-flex flex-wrap gap-2">
+                    <Button variant="info" onClick={handleDownload}>
+                      <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                      Download
+                    </Button>
                     <Button variant="primary" onClick={() => fetchAIResponse("summarize")}>
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Summarize
