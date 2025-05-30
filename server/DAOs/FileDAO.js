@@ -1,94 +1,113 @@
-const {
-  db,
-  realtimeDatabase,
-  ServerValue,
-} = require("../firebase-admin-setup");
+const { db, ServerValue } = require("../firebase-admin-setup");
 
 module.exports = {
-  // Function to upload a file
+  // Upload a file to Firestore
   uploadFileToDB: async (name, content, path, folderId, userId) => {
     try {
-      const filePath = `files/${user.uid}/${path}`;
-      await realtimeDatabase.ref(filePath).set({
+      const fileData = {
         name,
         content,
         path,
         folderId,
         userId,
-        createdAt: ServerValue.TIMESTAMP,
-      });
+        createdAt: new Date(), // Firestore uses JS Date or Timestamp
+      };
+
+      const docRef = await db.collection("files").add(fileData);
+
+      return { id: docRef.id, ...fileData };
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error uploading file to Firestore:", error);
       throw error;
     }
   },
 
-  // Function to update a file
-  updateFileInDB: async (userId, filePath, name, content) => {
+  // Update a file in Firestore
+  updateFileInDB: async (fileId, name, content) => {
     try {
-      const fileRef = realtimeDatabase.ref(`files/${userId}/${filePath}`);
+      const fileRef = db.collection("files").doc(fileId);
 
-      console.log("File reference:", fileRef);
       await fileRef.update({
         name: name.trim(),
         content,
-        updatedAt: ServerValue.TIMESTAMP,
+        updatedAt: new Date(),
       });
+
+      return { success: true };
     } catch (error) {
-      console.error("Error updating file:", error);
+      console.error("Error updating file in Firestore:", error);
       throw error;
     }
   },
 
-  // Function to delete a file
-  deleteFileFromDB: async (userId, filePath) => {
+  // Delete a file from Firestore
+  deleteFileFromDB: async (fileId) => {
     try {
-      return await realtimeDatabase
-        .ref(`files/${userId}/${filePath}`)
-        .set(null);
+      await db.collection("files").doc(fileId).delete();
+      return { success: true };
     } catch (error) {
-      console.error("Error deleting file:", error);
+      console.error("Error deleting file from Firestore:", error);
       throw error;
     }
   },
 
-  // Function to fetch a file by Folder path
+  // Fetch files by folder path (assuming a `path` field)
   getFileByFolderPathFromDB: async (folderPath, userId) => {
     try {
-      const query = db
+      const snapshot = await db
         .collection("files")
-        .where("folderPath", "==", folderPath)
-        .where("userId", "==", userId);
-      const snapshot = await query.get();
+        .where("path", "==", folderPath)
+        .where("userId", "==", userId)
+        .get();
+
       const files = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       return files;
     } catch (error) {
-      console.error("Error fetching file by folder path:", error);
+      console.error("Error fetching files by folder path:", error);
       throw error;
     }
   },
 
-  // Function to fetch files by folder id
+  // Fetch files by folder ID
   getFilesByFolderIdFromDB: async (folderId, userId) => {
     try {
-      let folderPath =
-        folderId === "null" || folderId === null
-          ? `files/${userId}`
-          : `files/${userId}/${folderId}`;
+      const snapshot = await db
+        .collection("files")
+        .where("folderId", "==", folderId)
+        .where("userId", "==", userId)
+        .get();
 
-      console.log("Fetching files in folder:", folderPath);
-      const snapshot = await realtimeDatabase.ref(folderPath).get();
-
-      const data = snapshot.val() || {};
-      const formattedFiles = Object.keys(data).map((key) => ({
-        id: key,
-        ...data[key],
-        path: data[key].path || key,
-      }));
-      return formattedFiles;
+      const files = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return files;
     } catch (error) {
       console.error("Error fetching files by folder ID:", error);
       throw error;
     }
   },
+
+  // Fetch all files for a given user (no folder/path filter)
+  getAllFilesByUserFromDB: async (userId) => {
+    try {
+      const snapshot = await db
+        .collection("files")
+        .where("userId", "==", userId)
+        .get();
+
+      const files = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return files;
+    } catch (error) {
+      console.error("Error fetching files for user:", error);
+      throw error;
+    }
+  },
+  getFileOrFolderById : async (id, collection = "files") => {
+    try {
+      const doc = await db.collection(collection).doc(id).get();
+      if (!doc.exists) return null;
+      return { id: doc.id, ...doc.data() };
+    } catch (err) {
+      console.error("Error fetching doc:", err);
+      return null;
+    }
+  }
 };

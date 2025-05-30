@@ -403,4 +403,36 @@ input::placeholder {
 .app-title:hover span:nth-child(6) {
   transition-delay: 1.5s;
 }
+/* Light mode */
+.app-title.light {
+  color: #00b4d8;
+  text-shadow: 1px 1px 0 #ffffff;
+}
+
+/* Dark mode */
+.app-title.dark {
+  color: #90e0ef;
+  text-shadow: 1px 1px 2px #000000;
+}
+
+.app-title.dark span {
+  color: #caf0f8;
+}
+
+.app-title.light span {
+  color: #0077b6;
+}
+.custom-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.4rem;
+  background-color: #ccc;
+  border: none;
+  box-shadow: none;
+  transition: background-color 0.3s ease;
+}
+
+.custom-switch .form-check-input:checked {
+  background-color: #343a40;
+}
+
 /* Add any more styles for dark mode here */

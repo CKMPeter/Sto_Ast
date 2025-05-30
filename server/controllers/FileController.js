@@ -4,7 +4,10 @@ const {
   getFileByFolderPathFromDB,
   getFilesByFolderIdFromDB,
   uploadFileToDB,
+  getAllFilesByUserFromDB,
+  getFileOrFolderById,
 } = require("../DAOs/FileDAO");
+const { FieldValue } = require("../firebase-admin-setup");
 
 module.exports = {
   //Function to upload a file
@@ -51,7 +54,7 @@ module.exports = {
         fileId + "\n" + name + "\n" + content + "\n" + filePath
       );
 
-      await updateFileInDB(userId, filePath, name.trim(), content);
+      await updateFileInDB(fileId, name.trim(), content);
 
       console.log("File updated successfully");
 
@@ -71,7 +74,7 @@ module.exports = {
     try {
       console.log("Deleting file:", fileId + "\n" + filePath);
 
-      await deleteFileFromDB(userId, filePath);
+      await deleteFileFromDB(fileId);
 
       console.log("File deleted successfully");
 
@@ -122,4 +125,44 @@ module.exports = {
       res.status(500).json({ error: "Failed to fetch files" });
     }
   },
+
+  fetchAllFilesByUser: async (req, res) => {
+    const { uid: userId } = req.decodedToken;
+
+    try {
+      console.log("Fetching all files for user:", userId);
+
+      const files = await getAllFilesByUserFromDB(userId);
+
+      console.log("All files fetched successfully");
+
+      res.json({ files });
+    } catch (error) {
+      console.error("Fetch all files error:", error.message);
+      res.status(500).json({ error: "Failed to fetch all files" });
+    }
+  },
+  // Function to get a file or folder by ID
+  
+  fetchFileOrFolderById: async (req, res) => {
+    const { id } = req.params;
+    const { collection = "files" } = req.query; // Default to "files" if not provided
+
+    try {
+      console.log("Fetching file or folder with ID:",  id);
+
+      const item = await getFileOrFolderById(fileId, collection);
+
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      console.log("Item fetched successfully");
+
+      res.json({ item });
+    } catch (error) {
+      console.error("Fetch item error:", error.message);
+      res.status(500).json({ error: "Failed to fetch item" });
+    }
+  }
+
 };

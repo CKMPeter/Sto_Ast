@@ -4,7 +4,7 @@ export class FileClass {
   constructor({ id, name, content, path, createdAt, user }) {
     this.id = id;
     this.name = name;
-    this.content = content;
+    this.content = content; // keep raw base64
     this.path = path;
     this.createdAt = createdAt;
     this.user = user;
@@ -13,55 +13,30 @@ export class FileClass {
 
   get isImage() {
     return (
-      this.name?.endsWith("_png") ||
-      this.name?.endsWith("_jpg") ||
-      this.name?.endsWith("_jpeg")
+      this.name?.endsWith(".png") ||
+      this.name?.endsWith(".jpg") ||
+      this.name?.endsWith(".jpeg")
     );
   }
 
   get isText() {
-    return this.name?.endsWith("_txt");
+    return this.name?.endsWith(".txt");
   }
 
   get mimeType() {
-    if (this.name.endsWith("_png")) return "image/png";
-    if (this.name.endsWith("_jpg") || this.name.endsWith("_jpeg"))
-      return "image/jpeg";
-    return "image/jpeg";
+    if (this.name.endsWith(".png")) return "image/png";
+    if (this.name.endsWith(".jpg") || this.name.endsWith(".jpeg")) return "image/jpeg";
+    if (this.isText) return "text/plain";
+    return "application/octet-stream"; // generic fallback
   }
 
-  decodeContent() {
+ decodeContent() {
+    if (!this.isText) return this.content;
     try {
-      return atob(this.content || "");
+      return atob(this.content); // base64 decode to plain string
     } catch (error) {
       console.error("Decoding error:", error);
       return "Error decoding content.";
-    }
-  }
-
-  async fetchAI(token, task, isImageRequest = false) {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/ai`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            input: isImageRequest ? this.content : this.decodeContent(),
-            task,
-            isImage: isImageRequest,
-            mimeType: this.mimeType,
-          }),
-        }
-      );
-      const data = await response.json();
-      return { success: true, result: data.result || "No result returned." };
-    } catch (error) {
-      console.error("AI API error:", error);
-      return { success: false, result: "Error processing content with AI." };
     }
   }
 }

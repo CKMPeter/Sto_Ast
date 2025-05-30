@@ -14,10 +14,18 @@ import { FolderClass } from "../classes/FolderClass";
 
 export default function Dashboard() {
   const { folderId } = useParams();
-  const { folder, childFolders, childFiles, triggerRefresh } = useFolder(folderId);
+  const { folder, childFolders, childFiles, triggerRefresh, allUserFiles } = useFolder(folderId);
   const [showChatbot, setShowChatbot] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { darkMode, loading } = useDarkMode(); // <-- updated
+
+  const simplifiedFiles = allUserFiles?.map(({ name, path, content }) => ({
+    name,
+    path,
+    content,
+  }));
+
+  console.log("All User Files:", simplifiedFiles); // Debugging line
 
   if (loading) return null; // ⛔ avoid flicker on initial load
 
@@ -159,7 +167,7 @@ export default function Dashboard() {
               zIndex: 999,
             }}
           >
-            <Chatbot />
+           <Chatbot allUserFiles={simplifiedFiles} />
           </div>
         )}
       </Container>

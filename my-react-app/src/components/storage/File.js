@@ -29,8 +29,11 @@ export default function File({ file, onChange }) {
   //darkmode context
   const { darkMode } = useDarkMode(); // Use dark mode context
 
+  const previewContent = fileContent;
+
   const handleFileClick = () => {
     setFileContent(fileObj.isText ? fileObj.decodeContent() : fileObj.content);
+    setUpdatedFileName(fileObj.name);
     setShowModal(true);
   };
 
@@ -217,6 +220,8 @@ export default function File({ file, onChange }) {
     document.body.removeChild(element);
   };
 
+  
+
   return (
     <>
       <Button
@@ -290,7 +295,7 @@ export default function File({ file, onChange }) {
                 </>
               ) : fileObj.isText ? (
                 <>
-                  <pre>{fileContent}</pre>
+                  <pre>{fileObj.decodeContent()}</pre>
                   <textarea
                     className={`form-control ${darkMode ? "bg-dark text-light border-light" : ""}`}
                     value={fileContent}

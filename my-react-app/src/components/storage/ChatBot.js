@@ -1,16 +1,34 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDarkMode } from '../../hooks/useDarkMode';
+ // Ensure fetch is available in your environment
 
-const run = async (input, token) => {
+const KEYWORDS = ["find", "locate", "get"];
+
+const runGeminiAI = async (input, token, allUserFiles) => {
   try {
+    // Check if input contains any of the keywords (case-insensitive)
+    const inputLower = input.toLowerCase();
+    const containsKeyword = KEYWORDS.some(keyword => inputLower.includes(keyword));
+
+    let fullPrompt;
+
+    if (containsKeyword) {
+      // Prepare the prompt with embedded files info
+      const filesSummary = JSON.stringify(allUserFiles);
+      fullPrompt = `Files:\n${filesSummary}\n\nUser Query:\n${input} only return the path in plain text, do not include any other information.`;
+    } else {
+      // Just send the input as is
+      fullPrompt = input;
+    }
+
     const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/chatbot`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ input }),
+      body: JSON.stringify({ input: fullPrompt }),
     });
 
     if (!response.ok) {
@@ -25,7 +43,8 @@ const run = async (input, token) => {
   }
 };
 
-const Chatbot = () => {
+
+const Chatbot = ({allUserFiles}) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,23 +60,19 @@ const Chatbot = () => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const token = await getIdToken();
-    if (!token) {
-      throw new Error('User not authenticated');
-    }
-
     setMessages(prev => [...prev, { text: input, sender: 'user' }]);
     setLoading(true);
 
     try {
-      const aiResponse = await run(input, token);
+      const token = await getIdToken();
+      if (!token) throw new Error("User not authenticated");
+
+      // Pass allUserFiles and input to runGeminiAI
+      const aiResponse = await runGeminiAI(input, token, allUserFiles);
       setMessages(prev => [...prev, { text: aiResponse, sender: 'bot' }]);
     } catch (error) {
-      setMessages(prev => [
-        ...prev,
-        { text: "Sorry, I couldn't get a response at the moment.", sender: 'bot' },
-      ]);
-    } finally { 
+      setMessages(prev => [...prev, { text: "Sorry, I couldn't get a response at the moment.", sender: 'bot' }]);
+    } finally {
       setLoading(false);
       setInput('');
     }

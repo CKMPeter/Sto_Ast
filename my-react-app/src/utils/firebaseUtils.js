@@ -1,78 +1,97 @@
-import { ref, set, get, serverTimestamp } from "firebase/database";
-import { storage,realtimeDatabase } from "../firebase"; // Firebase Storage import (for later use)
-import { uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import {
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  query,
+  where,
+  serverTimestamp,
+} from "firebase/firestore";
+import { storage, firestore } from "../firebase";
+import { v4 as uuidv4 } from "uuid";
+
 /**
- * FirebaseUtils class handles file upload operations to Firebase Realtime Database and Storage.
+ * Utility class for Firebase Storage and Firestore integration.
  */
 class FirebaseUtils {
-  static async uploadFileToDatabase(currentUser, file, filePath, currentFolder) {
-    try {
-      const fileRef = ref(realtimeDatabase, `files/${currentUser.uid}/${filePath}`);
-
-      const base64File = await this.convertFileToBase64(file);
-
-      const fileData = {
-        name: file.name,
-        content: base64File,
-        path: filePath,
-        createdAt: serverTimestamp(),
-        folderId: currentFolder.id,
-      };
-
-      // Save to Realtime Database
-      await set(fileRef, fileData);
-
-      return { success: true, message: "File uploaded successfully" };
-    } catch (error) {
-      console.error("Error uploading file to Realtime Database:", error);
-      return { success: false, message: error.message };
-    }
+  /**
+   * Sanitizes the file name to avoid unsafe characters.
+   */
+  static sanitizeFilename(name) {
+    return name.replace(/[^\w.-]/g, "_");
   }
 
-  static async uploadFileToStorage(currentUser, file, filePath) {
+  /**
+   * Uploads a file to Firebase Storage and saves metadata to Firestore.
+   */
+  static async uploadFile(currentUser, file, pathSegments, currentFolder, onProgress) {
     try {
-      const storageRef = ref(storage, `files/${currentUser.uid}/${filePath}`);
+      const fileId = uuidv4();
+      const safeName = FirebaseUtils.sanitizeFilename(file.name);
+      const filePath = [...pathSegments, safeName].join("/");
 
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const fileStorageRef = storageRef(storage, `files/${currentUser.uid}/${filePath}`);
+      const metadataRef = doc(collection(firestore, "files", currentUser.uid, "metadata"), fileId);
+
+      const uploadTask = uploadBytesResumable(fileStorageRef, file);
 
       return new Promise((resolve, reject) => {
         uploadTask.on(
           "state_changed",
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log("Upload progress:", progress);
+            if (onProgress) onProgress(progress);
           },
           (error) => reject(error),
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref)
-              .then((downloadURL) => resolve(downloadURL))
-              .catch(reject);
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+            // Save file metadata to Firestore
+            await setDoc(metadataRef, {
+              id: fileId,
+              name: file.name,
+              path: filePath,
+              downloadURL,
+              folderId: currentFolder.id,
+              createdAt: serverTimestamp(),
+              size: file.size,
+              type: file.type,
+            });
+
+            resolve({
+              success: true,
+              message: "File uploaded and metadata saved",
+              fileId,
+              downloadURL,
+            });
           }
         );
       });
     } catch (error) {
-      console.error("Error uploading file to Firebase Storage:", error);
-      throw new Error(error.message);
+      console.error("Upload failed:", error);
+      return { success: false, message: error.message };
     }
   }
 
-  static async convertFileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = () => resolve(reader.result.split(",")[1]);
-      reader.onerror = (error) => reject(error);
-
-      reader.readAsDataURL(file);
-    });
-  }
-
-  static async checkIfFileExists(currentUser, filePath) {
-    const fileRef = ref(realtimeDatabase, `files/${currentUser.uid}/${filePath}`);
+  /**
+   * Checks if a file with the given name exists in the specified folder.
+   */
+  static async checkIfFileExists(currentUser, fileName, folderId) {
+    const metadataCollection = collection(firestore, "files", currentUser.uid, "metadata");
 
     try {
-      const snapshot = await get(fileRef);
-      return snapshot.exists(); // Returns true if file exists
+      const q = query(
+        metadataCollection,
+        where("name", "==", fileName),
+        where("folderId", "==", folderId)
+      );
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
     } catch (error) {
       console.error("Error checking file existence:", error);
       return false;

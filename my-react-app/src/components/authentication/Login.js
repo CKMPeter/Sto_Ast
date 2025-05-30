@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import CenteredContainer from "./CenteredContainer";
 import "../../index.css";
-import { faG } from "@fortawesome/free-solid-svg-icons";
+import { faG, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function Login() {
@@ -66,7 +66,7 @@ export default function Login() {
   }
 
   function slideSignUp() {
-    if (!mode) {
+    if (mode) {
       textBoxRef.current.classList.toggle("slide_right");
       loginRef.current.classList.toggle("slide_right");
       signUpRef.current.classList.toggle("slide_right_1");
@@ -90,7 +90,8 @@ export default function Login() {
                   className="text-center mb-4 fw-bold"
                   style={{ color: "#578FCA" }}
                 >
-                  SIGN IN
+                  <FontAwesomeIcon icon={faUser} style={{ marginRight: "5px",color: "#578FCA", fontSize: "5rem" }}/><br/>
+                  <span>SIGN IN</span>
                 </h2>
                 {error && <Alert variant="danger">{error}</Alert>}
                 <Form onSubmit={handleSignUp}>
@@ -134,7 +135,7 @@ export default function Login() {
               style={{ color: "gray" }}
             >
               Already have an account?
-              <span onClick={slideSignUp} class="test">
+              <span onClick={slideSignUp} setMode = {true} class="test">
                 Log In
               </span>
             </div>
@@ -160,7 +161,8 @@ export default function Login() {
                   className="text-center mb-4 fw-bold"
                   style={{ color: "#578FCA" }}
                 >
-                  LOG IN
+                  <FontAwesomeIcon icon={faUser} style={{ marginRight: "5px",color: "#578FCA", fontSize: "5rem" }}/><br/>
+                  <span>LOG IN</span>
                 </h2>
                 {error && <Alert variant="danger">{error}</Alert>}
                 <Form onSubmit={handleSubmit}>

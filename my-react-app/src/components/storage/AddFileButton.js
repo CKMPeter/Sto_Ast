@@ -1,89 +1,161 @@
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { realtimeDatabase } from "../../firebase"; // Import Realtime Database
-import { ref, set, serverTimestamp } from "firebase/database";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { ROOT_FOLDER } from "../../hooks/useFolder";
 
 export default function AddFileButton({ currentFolder, onAdd }) {
-  const { currentUser } = useAuth();
-  const [uploadProgress, setUploadProgress] = useState(0); // State to track progress
-  const [isUploading, setIsUploading] = useState(false); // State to check upload status
+  const { currentUser, getIdToken } = useAuth();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
+  // Sanitize filename to allow only word chars, dots, hyphens, and underscores
   function sanitizeFileName(fileName) {
-    return fileName.replace(/[.#$[\]]/g, "_"); // Replace invalid characters
+    return fileName.replace(/[^\w.-]/g, "_");
   }
 
-  function handleUpload(e) {
-    const file = e.target.files[0];
-    if (currentFolder == null || file == null) return;
+  // Get path segments as IDs from currentFolder
+  function getFilePathSegments(currentFolder) {
+    return currentFolder === ROOT_FOLDER
+      ? currentFolder.path.map((folder) => folder.id)
+      : [...currentFolder.path.map((folder) => folder.id), currentFolder.id];
+  }
 
-    const reader = new FileReader();
+  // Convert file to base64 string (without data:<type>;base64, prefix)
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = reader.result.split(",")[1]; // remove prefix
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
-    reader.onload = () => {
-      const base64File = reader.result.split(",")[1]; // Extract Base64 content
-      const sanitizedFileName = sanitizeFileName(file.name);
+  // Fetch AI rename result based on file content
+  const fetchAIRename = async (base64Input, task, isImage = true) => {
+    const token = await getIdToken();
+    if (!token) {
+      throw new Error("User not authenticated");
+    }
 
-      const filePath =
-        currentFolder === ROOT_FOLDER
-          ? `${currentFolder.path
-              .map((folder) => folder.id)
-              .join("/")}/${sanitizedFileName}`
-          : `${currentFolder.path.map((folder) => folder.id).join("/")}/${
-              currentFolder.id
-            }/${sanitizedFileName}`;
-
-      // Reference to the Realtime Database
-      const fileRef = ref(
-        realtimeDatabase,
-        `files/${currentUser.uid}/${filePath}`
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/aiRename`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: base64Input,
+            task,
+            isImage,
+            mimeType: isImage ? "image/jpeg" : "text/plain",
+          }),
+        }
       );
 
-      // Start the upload process
-      setIsUploading(true);
+      const data = await response.json();
+      return data.result || null;
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+      return null;
+    }
+  };
+  async function handleUpload(e) {
+    const file = e.target.files[0];
+    if (!file || !currentFolder || !currentUser) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Convert file to base64
+      const base64Content = await fileToBase64(file);
+
+      // Prepare path segments
+      const pathSegments = getFilePathSegments(currentFolder);
+
+      // Use AI rename if filename length >= 20, else original filename
+      let newName = file.name;
+      if (file.name.length >= 20) {
+        const extMatch = file.name.match(/\.[^.]+$/);
+        const ext = extMatch ? extMatch[0] : "";
+
+        const aiRenameResult = await fetchAIRename(
+          base64Content,
+          "rename based on content with in 5 words, without file extension",
+          file.type.startsWith("image/")
+        );
+
+        if (aiRenameResult && typeof aiRenameResult === "string") {
+          let baseName = aiRenameResult.trim();
+          baseName = baseName.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_'); // sanitize & replace spaces with underscores
+
+          newName = baseName + ext;
+        }
+
+        console.log("AI rename result:", newName);
+      }
+
+
+      // Sanitize filename
+      const sanitizedFileName = sanitizeFileName(newName);
+
+      // Create full file path string
+      const filePath = [...pathSegments, sanitizedFileName].join("/");
+
+      // Get token for upload
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
+
+      // Prepare upload body
+      const body = JSON.stringify({
+        name: sanitizedFileName,
+        content: base64Content || "none",
+        path: filePath,
+        folderId: currentFolder?.id || null,
+      });
+
+      console.log("Uploading file with body:", body);
+
+      // Upload to backend
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/files`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || response.statusText);
+      }
+
+      setUploadProgress(100);
+      if (onAdd) onAdd();
+    } catch (error) {
+      console.error("Upload failed:", error.message);
+      alert("Upload failed: " + error.message);
+    } finally {
+      setIsUploading(false);
       setUploadProgress(0);
-
-      const fakeUploadInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(fakeUploadInterval);
-            setIsUploading(false);
-            console.log("File uploaded successfully!");
-            return 100;
-          }
-          return prev + 10; // Increment progress
-        });
-      }, 200);
-
-      // Simulating file upload using Firebase set()
-      setTimeout(() => {
-        set(fileRef, {
-          name: sanitizedFileName,
-          content: base64File,
-          path: filePath,
-          createdAt: serverTimestamp(),
-          folderId: currentFolder.id,
-        })
-          .catch((error) => {
-            console.error("Error uploading file:", error);
-            setIsUploading(false);
-          })
-          .finally(onAdd); // Call onAdd after upload
-      }, 2000); // Simulate some delay
-    };
-
-    reader.onerror = (error) => {
-      console.error("Error reading file:", error);
-    };
-
-    reader.readAsDataURL(file); // Convert file to Base64
+      e.target.value = null;
+    }
   }
 
   return (
     <div className="d-flex align-items-center justify-content-between flex-wrap">
       <div className="d-flex align-items-center flex-grow-1">
-        <label className="btn btn-outline-success btn-sm m-0 mr-2">
+        <label className="btn btn-outline-success btn-sm m-0 mr-2" style={{ cursor: "pointer" }}>
           <FontAwesomeIcon icon={faFileArrowUp} style={{ fontSize: "2rem" }} />
           <input
             type="file"
@@ -94,7 +166,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
         {/* Progress Bar */}
         {isUploading && (
-          <div style={{ marginTop: "10px" }}>
+          <div style={{ marginTop: "10px", width: "100%" }}>
             <div
               style={{
                 width: "100%",
@@ -108,6 +180,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                   height: "10px",
                   backgroundColor: "#4caf50",
                   borderRadius: "4px",
+                  transition: "width 0.2s",
                 }}
               ></div>
             </div>

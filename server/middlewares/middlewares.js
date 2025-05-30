@@ -16,6 +16,8 @@ module.exports = function (app) {
       ],
       credentials: false,
       methods: ['GET', 'PUT', 'OPTIONS', 'POST', 'DELETE'],
+      maxAgeSeconds: 3600,
+      responseHeader: ["Content-Type", "Authorization", "x-goog-meta-custom"],
       allowedHeaders: ['Content-Type', 'Authorization'],
     })
   );

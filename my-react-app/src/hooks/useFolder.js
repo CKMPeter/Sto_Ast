@@ -16,6 +16,7 @@ const ACTIONS = {
   SET_CHILD_FOLDERS: "set-child-folders",
   SET_CHILD_FILES: "set-child-files",
   TRIGGER_REFRESH: "trigger-refresh",
+  SET_ALL_USER_FILES: "set-all-user-files",
 };
 
 export const ROOT_FOLDER = { name: "Root", id: null, path: [] };
@@ -49,6 +50,11 @@ function reducer(state, { type, payload }) {
         ...state,
         childFiles: payload.childFiles,
       };
+    case ACTIONS.SET_ALL_USER_FILES:
+      return {
+        ...state,
+        allUserFiles: payload.allUserFiles,
+      };
     default:
       return state;
   }
@@ -60,6 +66,7 @@ export function useFolder(folderId = null, folder = null) {
     folder, // Ensures a valid folder object
     childFolders: [],
     childFiles: [],
+    allUserFiles: [], 
     refresh: false,
   });
 
@@ -107,6 +114,7 @@ export function useFolder(folderId = null, folder = null) {
   // --- Fetch folders/files from the backend ---
   // This effect fetches folders and files from the backend when the component mounts
   // and when the folderId or currentUser changes.
+  /*
   useEffect(() => {
     async function fetchFoldersAndFiles() {
       const token = await getIdToken();
@@ -114,7 +122,7 @@ export function useFolder(folderId = null, folder = null) {
 
       // Construct the request for folders from backend
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/folders?parentId=${folderId}`,
+        `${process.env.REACT_APP_BACKEND_URL}/api/files`,
         {
           method: "GET",
           headers: {
@@ -122,7 +130,6 @@ export function useFolder(folderId = null, folder = null) {
           },
         }
       );
-
       const data = await response.json();
       if (data?.childFolders) {
         dispatch({
@@ -141,7 +148,7 @@ export function useFolder(folderId = null, folder = null) {
 
     fetchFoldersAndFiles();
   }, [folderId, getIdToken, currentUser.uid, state.refresh]);
-
+ */
   // --- Fetch child folders from Firestore ---
   // This effect fetches child folders from Firestore when the folderId or currentUser changes.
   useEffect(() => {
@@ -173,8 +180,8 @@ export function useFolder(folderId = null, folder = null) {
         const token = await getIdToken();
         if (!token) return;
         const res = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/files/${folderId}`,
-          {
+         `${process.env.REACT_APP_BACKEND_URL}/api/folders/${folderId}/files`,
+{
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -198,6 +205,46 @@ export function useFolder(folderId = null, folder = null) {
 
     fetchFiles();
   }, [folderId, getIdToken, state.refresh]);
+
+  // --- getallUserFiles ---
+  useEffect(() => {
+  const fetchAllUserFiles = async () => {
+    try {
+      const token = await getIdToken();
+      if (!token) return;
+
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/files/user`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch all user files");
+      }
+
+      const data = await response.json();
+
+      dispatch({
+        type: ACTIONS.SET_ALL_USER_FILES,
+        payload: { allUserFiles: data.files || [] }, // adjust if response shape is different
+      });
+    } catch (error) {
+      console.error("Error fetching all user files:", error);
+      dispatch({
+        type: ACTIONS.SET_ALL_USER_FILES,
+        payload: { allUserFiles: [] },
+      });
+    }
+  };
+
+  if (currentUser?.uid) {
+    fetchAllUserFiles();
+  }
+}, [currentUser?.uid, getIdToken, state.refresh]);
+
 
   // Expose a triggerRefresh function
   // This function can be called to trigger a refresh of the folder and its contents.
