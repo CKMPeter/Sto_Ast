@@ -14,21 +14,85 @@ import { FolderClass } from "../classes/FolderClass";
 
 export default function Dashboard() {
   const { folderId } = useParams();
-  const { folder, childFolders, childFiles, triggerRefresh, allUserFiles } = useFolder(folderId);
+  const {
+    folder,
+    childFolders,
+    childFiles,
+    triggerRefresh,
+    allUserFiles,
+    allUserFolders,
+  } = useFolder(folderId);
   const [showChatbot, setShowChatbot] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { darkMode, loading } = useDarkMode(); // <-- updated
+  const { darkMode, loading } = useDarkMode();
 
-  const simplifiedFiles = allUserFiles?.map(({ name, path, content }) => ({
-    name,
-    path,
-    content,
-  }));
+  // Defensive check: avoid undefined
+  const simplifiedFiles = Array.isArray(allUserFiles)
+    ? allUserFiles.map(({ name, path, content }) => ({ name, path, content }))
+    : [];
 
-  console.log("All User Files:", simplifiedFiles); // Debugging line
+  const simplifiedFolder = Array.isArray(allUserFolders)
+    ? allUserFolders.map(({ name, id }) => ({ name, id }))
+    : [];
 
-  if (loading) return null; // ⛔ avoid flicker on initial load
+  // Function to reconstruct paths from folder IDs to folder names starting with "root"
+  function reconstructFilePaths(simplifiedFolders, simplifiedFiles) {
+    if (!Array.isArray(simplifiedFolders) || !Array.isArray(simplifiedFiles)) {
+      console.warn(
+        "reconstructFilePaths: Invalid input arrays",
+        simplifiedFolders,
+        simplifiedFiles
+      );
+      return simplifiedFiles;
+    }
 
+    // Build folderId => folderName map
+    const folderNameMap = {};
+    simplifiedFolders.forEach(({ id, name }) => {
+      folderNameMap[id] = name;
+    });
+
+    // Map files and rebuild readable paths
+    return simplifiedFiles.map((file) => {
+      // Split path string into segments (if path is a string)
+      const pathSegments =
+        typeof file.path === "string" && file.path.length > 0
+          ? file.path.split("/")
+          : [];
+
+      const readablePath = pathSegments.map((segment) => {
+        if (segment === "null" || segment === null) return "root";
+        
+        return folderNameMap[segment] || segment; // fallback to ID if no name
+      });
+
+      // Always add "root" at the start
+      if (readablePath[0] !== "root") {
+        readablePath.unshift("root");
+      }
+
+      readablePath[pathSegments.length] = file.name; // Ensure last segment is the file name
+
+      return {
+        ...file,
+        path: readablePath.join("/"),
+      };
+    });
+  }
+
+
+  // Reconstruct paths, only if data loaded
+  const filesWithFullPath =
+    simplifiedFolder.length && simplifiedFiles.length
+      ? reconstructFilePaths(simplifiedFolder, simplifiedFiles, allUserFolders)
+      : [];
+
+  console.log("All User Folder:", simplifiedFolder); // Debugging
+  console.log("Files with full paths:", filesWithFullPath); // Debugging
+
+  if (loading) return null; // avoid flicker on initial load
+
+  // Search helper functions...
   const toggleChatbot = () => setShowChatbot((prev) => !prev);
 
   const highlightText = (text, query) => {
@@ -80,7 +144,7 @@ export default function Dashboard() {
       >
         <div className="d-flex align-items-center justify-content-between flex-wrap">
           <div className="d-flex align-items-center flex-grow-1">
-            <FolderBreadcrumbs currentFolder={folder} style = {{marginLeft: '10px'}}/>
+            <FolderBreadcrumbs currentFolder={folder} style={{ marginLeft: "10px" }} />
             <CreateFolderButton currentFolder={folder} />
             <AddFileButton currentFolder={folder} onAdd={triggerRefresh} />
             <Form.Control
@@ -102,38 +166,42 @@ export default function Dashboard() {
 
         {/* Folder List */}
         <div className="d-flex flex-wrap mt-3">
-          {childFolders?.filter(
-            (f) => isNameMatch(f.name) && isTagMatch(f) && f.name !== "undefined"
-          ).map((child) => {
-            const folderInstance = FolderClass.fromObject(child);
-            folderInstance.highlightedName = highlightText(child.name, searchQuery);
-            return (
-              <div key={child.id} style={{ maxWidth: "200px" }} className="p-2">
-                <Folder folder={folderInstance} />
-              </div>
-            );
-          })}
+          {childFolders
+            ?.filter(
+              (f) => isNameMatch(f.name) && isTagMatch(f) && f.name !== "undefined"
+            )
+            .map((child) => {
+              const folderInstance = FolderClass.fromObject(child);
+              folderInstance.highlightedName = highlightText(child.name, searchQuery);
+              return (
+                <div key={child.id} style={{ maxWidth: "200px" }} className="p-2">
+                  <Folder folder={folderInstance} />
+                </div>
+              );
+            })}
         </div>
 
         {/* File List */}
         <div className="d-flex flex-wrap mt-3">
-          {childFiles?.filter(
-            (file) =>
-              file.folderId === folderId &&
-              isNameMatch(file.name) &&
-              isTypeMatch(file) &&
-              isTagMatch(file)
-          ).map((child) => (
-            <div key={child.id} style={{ maxWidth: "200px" }} className="p-2">
-              <File
-                file={{
-                  ...child,
-                  highlightedName: highlightText(child.name, searchQuery),
-                }}
-                onChange={triggerRefresh}
-              />
-            </div>
-          ))}
+          {childFiles
+            ?.filter(
+              (file) =>
+                file.folderId === folderId &&
+                isNameMatch(file.name) &&
+                isTypeMatch(file) &&
+                isTagMatch(file)
+            )
+            .map((child) => (
+              <div key={child.id} style={{ maxWidth: "200px" }} className="p-2">
+                <File
+                  file={{
+                    ...child,
+                    highlightedName: highlightText(child.name, searchQuery),
+                  }}
+                  onChange={triggerRefresh}
+                />
+              </div>
+            ))}
         </div>
 
         {/* Chatbot Toggle */}
@@ -167,7 +235,7 @@ export default function Dashboard() {
               zIndex: 999,
             }}
           >
-           <Chatbot allUserFiles={simplifiedFiles} />
+            <Chatbot allUserFiles={filesWithFullPath} />
           </div>
         )}
       </Container>

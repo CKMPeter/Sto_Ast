@@ -13,6 +13,7 @@ const {
   deleteFolder,
   fetchFolderById,
   fetchFoldersByParentId,
+  fetchAllUserFolders,
 } = require("./controllers/FolderController");
 const {
   uploadFile,
@@ -48,6 +49,7 @@ app.post("/api/describe-image", describeImage); // Image description
 
 // --- Folder API ---
 app.post("/api/folders", createFolder); // Create folder
+app.get("/api/folders/user", fetchAllUserFolders); // Fetch all files by user
 app.put("/api/folders/:folderId", updateFolder); // Update folder
 app.delete("/api/folders/:folderId", deleteFolder); // Delete folder
 app.get("/api/folders/:folderId", fetchFolderById); // Fetch folder by ID
@@ -55,9 +57,9 @@ app.get("/api/folders", fetchFoldersByParentId); // Fetch folders by parentId
 
 // --- File API ---
 app.post("/api/files", uploadFile); // Upload file
+app.get("/api/files/user", fetchAllFilesByUser); // Fetch all files by user
 app.put("/api/files/:fileId", updateFile); // Update file
 app.delete("/api/files/:fileId", deleteFile); // Delete file
-app.get("/api/files/user", fetchAllFilesByUser); // Fetch all files by user
 app.get("/api/files/:fileId", fetchFileOrFolderById); // Fetch file or folder by ID
 
 // Fetch files by folderPath (query param)

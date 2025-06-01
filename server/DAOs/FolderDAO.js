@@ -63,7 +63,7 @@ module.exports = {
   getFolderByIdFromDB: async (folderId) => {
     try {
       const doc = await db.collection("folders").doc(folderId).get();
-      if (!doc.exists) {
+      if (!doc.exists && !folderId) {
         throw new Error("Folder not found");
       }
       return { id: doc.id, ...doc.data() };
@@ -84,6 +84,19 @@ module.exports = {
       return snapshot.docs.map(formatDoc);
     } catch (error) {
       console.error("Error fetching folders:", error);
+      throw error;
+    }
+  },
+    // Function to fetch all folders created by a specific user
+  fetchAllFoldersByUserFromDB: async (userId) => {
+    try {
+      const query = db
+        .collection("folders")
+        .where("userId", "==", userId)
+      const snapshot = await query.get();
+      return snapshot.docs.map(formatDoc);
+    } catch (error) {
+      console.error("Error fetching all user folders:", error);
       throw error;
     }
   },

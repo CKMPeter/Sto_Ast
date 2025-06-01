@@ -17,6 +17,7 @@ const ACTIONS = {
   SET_CHILD_FILES: "set-child-files",
   TRIGGER_REFRESH: "trigger-refresh",
   SET_ALL_USER_FILES: "set-all-user-files",
+  SET_ALL_USER_FOLDERS: "set-all-user-folders",
 };
 
 export const ROOT_FOLDER = { name: "Root", id: null, path: [] };
@@ -55,6 +56,11 @@ function reducer(state, { type, payload }) {
         ...state,
         allUserFiles: payload.allUserFiles,
       };
+    case ACTIONS.SET_ALL_USER_FOLDERS:
+      return {
+        ...state,
+        allUserFolders: payload.allUserFolders,
+      };
     default:
       return state;
   }
@@ -66,7 +72,8 @@ export function useFolder(folderId = null, folder = null) {
     folder, // Ensures a valid folder object
     childFolders: [],
     childFiles: [],
-    allUserFiles: [], 
+    allUserFiles: [],
+    allUserFolders: [],
     refresh: false,
   });
 
@@ -231,19 +238,58 @@ export function useFolder(folderId = null, folder = null) {
         type: ACTIONS.SET_ALL_USER_FILES,
         payload: { allUserFiles: data.files || [] }, // adjust if response shape is different
       });
-    } catch (error) {
-      console.error("Error fetching all user files:", error);
-      dispatch({
-        type: ACTIONS.SET_ALL_USER_FILES,
-        payload: { allUserFiles: [] },
-      });
-    }
-  };
+      } catch (error) {
+        console.error("Error fetching all user files:", error);
+        dispatch({
+          type: ACTIONS.SET_ALL_USER_FILES,
+          payload: { allUserFiles: [] },
+        });
+      }
+    };
 
-  if (currentUser?.uid) {
-    fetchAllUserFiles();
-  }
-}, [currentUser?.uid, getIdToken, state.refresh]);
+    if (currentUser?.uid) {
+      fetchAllUserFiles();
+    }
+  }, [currentUser?.uid, getIdToken, state.refresh]);
+
+// --- getallUserFolders ---
+  useEffect(() => {
+    const fetchAllUserFolders = async () => {
+      try {
+        const token = await getIdToken();
+        if (!token) return;
+
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/folders/user`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch all user folders");
+        }
+
+        const data = await response.json();
+
+        dispatch({
+          type: ACTIONS.SET_ALL_USER_FOLDERS,
+          payload: { allUserFolders: data.folders || [] },
+        });
+      } catch (error) {
+        console.error("Error fetching all user folders:", error);
+        dispatch({
+          type: ACTIONS.SET_ALL_USER_FOLDERS,
+          payload: { allUserFolders: [] },
+        });
+      }
+    };
+
+    if (currentUser?.uid) {
+      fetchAllUserFolders();
+    }
+  }, [currentUser?.uid, getIdToken, state.refresh]);
 
 
   // Expose a triggerRefresh function
