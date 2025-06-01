@@ -4,6 +4,12 @@
 Author: Cao Khải Minh </br>
 This guide walks you through the steps to create a simple Google clone application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot** with a text summarizer. 
 
+### Features:
+- Provide a easy to use interface.
+- Help rename the file base on content.
+- Help to analysize the text/image files.
+- Smart search for File base on AI.
+
 ### Prerequisites
 
 Before starting, ensure you have the following installed:
