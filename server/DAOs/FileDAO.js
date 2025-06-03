@@ -73,11 +73,14 @@ module.exports = {
   // Fetch files by folder ID
   getFilesByFolderIdFromDB: async (folderId, userId) => {
     try {
-      const snapshot = await db
-        .collection("files")
-        .where("folderId", "==", folderId)
-        .where("userId", "==", userId)
-        .get();
+      let query = db.collection("files").where("userId", "==", userId);
+
+      if (folderId === null) {
+        query = query.where("folderId", "in", [null]);
+      } else {
+        query = query.where("folderId", "==", folderId);
+      }
+      const snapshot = await query.get();
 
       const files = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       return files;

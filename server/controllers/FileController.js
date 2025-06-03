@@ -34,10 +34,14 @@ module.exports = {
       );
 
       console.log(
-        "File uploaded successfully. File id and name: ",
+        "File uploaded successfully. File id: ",
         uploadedFile.id,
-        " ",
-        uploadedFile.name
+        "\nname: ",
+        uploadedFile.name,
+        "\nfolderId: ",
+        uploadedFile.folderId,
+        "\nuserId: ",
+        uploadedFile.userId
       );
 
       res
