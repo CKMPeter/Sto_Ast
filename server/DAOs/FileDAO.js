@@ -2,11 +2,12 @@ const { db, ServerValue } = require("../firebase-admin-setup");
 
 module.exports = {
   // Upload a file to Firestore
-  uploadFileToDB: async (name, content, path, folderId, userId) => {
+  uploadFileToDB: async (name, content, preview, path, folderId, userId) => {
     try {
       const fileData = {
         name,
         content,
+        preview,
         path,
         folderId,
         userId,
@@ -23,13 +24,14 @@ module.exports = {
   },
 
   // Update a file in Firestore
-  updateFileInDB: async (fileId, name, content) => {
+  updateFileInDB: async (fileId, name, content, preview) => {
     try {
       const fileRef = db.collection("files").doc(fileId);
 
       await fileRef.update({
         name: name.trim(),
-        content,
+        content: content,
+        preview: preview,
         updatedAt: new Date(),
       });
 
@@ -100,7 +102,7 @@ module.exports = {
       throw error;
     }
   },
-  getFileOrFolderById : async (id, collection = "files") => {
+  getFileOrFolderById: async (id, collection = "files") => {
     try {
       const doc = await db.collection(collection).doc(id).get();
       if (!doc.exists) return null;
@@ -109,5 +111,5 @@ module.exports = {
       console.error("Error fetching doc:", err);
       return null;
     }
-  }
+  },
 };

@@ -1,4 +1,10 @@
-import React, { useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   faFile,
   faFileAlt,
@@ -8,7 +14,7 @@ import {
   faSave,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 //import { ref, remove, update } from "../../../src/firebase";
 //import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
@@ -18,9 +24,13 @@ import { useDarkMode } from "../../hooks/useDarkMode"; // Adjust path if needed
 
 export default function File({ file, onChange }) {
   const { currentUser, getIdToken } = useAuth();
-  const fileObj = new FileClass({ ...file, user: currentUser });
+  const fileObj = useMemo(
+    () => new FileClass({ ...file, user: currentUser }),
+    [file, currentUser]
+  );
 
-  const [showModal, setShowModal] = useState(false);
+  const [showMainModal, setShowMainModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [fileContent, setFileContent] = useState(fileObj.decodeContent());
   const [aiResponse, setAiResponse] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,12 +39,86 @@ export default function File({ file, onChange }) {
   //darkmode context
   const { darkMode } = useDarkMode(); // Use dark mode context
 
-  const previewContent = fileContent;
+  // Rename/Preview states
+  const [aiReName, setAiReName] = useState("");
+  const [reName, setReName] = useState("");
+  const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
+  const isContentEdited = useRef(false);
+
+  // Fetch AI rename/preview result based on task and file content
+  const fetchAIWithTask = useCallback(
+    async (base64Input, task, isImage = true) => {
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error("User not authenticated");
+      }
+
+      const api = task === "rename" ? "/api/aiRename" : "/api/aiPreview";
+      try {
+        const response = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL + api}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              input: base64Input,
+              isImage,
+              mimeType: isImage ? "image/jpeg" : "text/plain",
+              fileName: fileObj.name,
+            }),
+          }
+        );
+
+        const data = await response.json();
+        return data.result || null;
+      } catch (error) {
+        console.error("Error fetching AI response:", error);
+        return null;
+      }
+    },
+    [getIdToken, fileObj.name]
+  );
+
+  // Fetch AI rename when editing starts
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const fetchAIRename = async () => {
+      setIsFetchingAIRename(true);
+
+      try {
+        const base64Content = fileObj.isImage
+          ? fileObj.content
+          : fileObj.decodeContent();
+
+        // Fetch AI rename
+        const aiRenameResult = await fetchAIWithTask(
+          base64Content,
+          "rename",
+          fileObj.isImage
+        );
+        if (aiRenameResult && typeof aiRenameResult === "string") {
+          let newName = aiRenameResult.trim();
+          newName = newName.replace(/[^a-zA-Z0-9_.-]/g, "_"); // Sanitize name
+          setAiReName(newName);
+        }
+      } catch (error) {
+        console.error("AI fetch failed:", error.message);
+      } finally {
+        setIsFetchingAIRename(false);
+      }
+    };
+
+    fetchAIRename();
+  }, [isEditing, fileObj, fetchAIWithTask]);
 
   const handleFileClick = () => {
     setFileContent(fileObj.isText ? fileObj.decodeContent() : fileObj.content);
     setUpdatedFileName(fileObj.name);
-    setShowModal(true);
+    setShowMainModal(true);
   };
 
   const handleDelete = async () => {
@@ -60,7 +144,7 @@ export default function File({ file, onChange }) {
         );
         if (response.ok) {
           alert("File deleted successfully.");
-          setShowModal(false);
+          setShowMainModal(false);
           onChange();
         } else {
           alert("Error deleting file.");
@@ -74,6 +158,16 @@ export default function File({ file, onChange }) {
 
   const handleUpdate = () => setIsEditing(true);
 
+  // Handle AI rename
+  async function handleRename(ai = false) {
+    if (!aiReName && !reName) {
+      alert("Please provide a name using AI rename or custom rename.");
+      return;
+    }
+    const name = ai ? aiReName : reName + fileObj.fileExtension;
+    setUpdatedFileName(name);
+  }
+
   const handleSaveUpdate = async () => {
     if (!updatedFileName.trim()) return alert("File name cannot be empty.");
     if (!fileContent.trim()) return alert("File content cannot be empty.");
@@ -85,6 +179,20 @@ export default function File({ file, onChange }) {
     }
 
     try {
+      // Fetch AI preview if needed
+      let aiPreviewResult = fileObj.preview;
+      if (isContentEdited.current) {
+        const newPreview = await fetchAIWithTask(
+          fileObj.content,
+          "preview",
+          fileObj.isImage
+        );
+        if (newPreview && typeof newPreview === "string") {
+          aiPreviewResult = newPreview;
+        }
+      }
+
+      // File update request
       const response = await fetch(
         `${process.env.REACT_APP_BACKEND_URL}/api/files/${fileObj.id}`,
         {
@@ -96,6 +204,7 @@ export default function File({ file, onChange }) {
           body: JSON.stringify({
             name: updatedFileName.trim(),
             content: btoa(fileContent),
+            preview: aiPreviewResult,
             filePath: fileObj.path,
           }),
         }
@@ -104,7 +213,7 @@ export default function File({ file, onChange }) {
       if (response.ok) {
         console.log("File updated successfully.");
         setIsEditing(false);
-        setShowModal(false);
+        setShowMainModal(false);
         onChange();
       } else {
         alert("Error updating file.");
@@ -186,41 +295,47 @@ export default function File({ file, onChange }) {
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    setShowMainModal(false);
     setUpdatedFileName("");
     setFileContent("");
     setAiResponse("");
+    setReName("");
+    setAiReName("");
+    setIsFetchingAIRename(false);
     setIsEditing(false);
   };
 
-   const handleDownload = () => {
+  const handleDownload = () => {
     const element = document.createElement("a");
     const originalName = fileObj.name;
-  
+
     // Extract file type from right to left until "_"
     const parts = originalName.split("_");
     const inferredExtension = parts.length > 1 ? parts.at(-1) : "txt"; // fallback to txt
-  
-    const baseName = originalName.substring(0, originalName.lastIndexOf("_")) || "download";
+
+    const baseName =
+      originalName.substring(0, originalName.lastIndexOf("_")) || "download";
     const fileName = `${baseName}.${inferredExtension}`;
-  
+
     if (fileObj.isText) {
-      const fileBlob = new Blob([fileContent], { type: fileObj.mimeType || "text/plain" });
+      const fileBlob = new Blob([fileContent], {
+        type: fileObj.mimeType || "text/plain",
+      });
       element.href = URL.createObjectURL(fileBlob);
     } else if (fileObj.isImage) {
       element.href = `data:${fileObj.mimeType};base64,${fileObj.content}`;
     } else {
-      const fileBlob = new Blob([fileObj.content], { type: fileObj.mimeType || "application/octet-stream" });
+      const fileBlob = new Blob([fileObj.content], {
+        type: fileObj.mimeType || "application/octet-stream",
+      });
       element.href = URL.createObjectURL(fileBlob);
     }
-  
+
     element.download = fileName;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
-
-  
 
   return (
     <>
@@ -229,6 +344,11 @@ export default function File({ file, onChange }) {
         variant={darkMode ? "outline-light" : "outline-dark"}
         className={`text-truncate w-100 invert-hover`}
         style={{ cursor: "pointer", fontWeight: "bold" }}
+        onContextMenu={(e) => {
+          // Right-click to open preview modal
+          e.preventDefault();
+          setShowPreviewModal(true);
+        }}
       >
         <FontAwesomeIcon
           icon={faFile}
@@ -246,16 +366,64 @@ export default function File({ file, onChange }) {
       </Button>
 
       {/* Modal for file details */}
-      <Modal show={showModal} onHide={closeModal}>
+      <Modal show={showMainModal} onHide={closeModal}>
         <Modal.Header closeButton>
           <Modal.Title>
             {isEditing ? (
-              <Form.Control
-                type="text"
-                value={updatedFileName}
-                onChange={(e) => setUpdatedFileName(e.target.value)}
-                autoFocus
-              />
+              <>
+                <Form.Label className="form-label">
+                  File name: {updatedFileName}
+                </Form.Label>
+
+                {/* Rename Options */}
+                <Row>
+                  <Col md="auto">
+                    {/* AI Rename Option */}
+                    <Form.Group>
+                      <Form.Label>AI Rename</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={aiReName}
+                        placeholder="AI will suggest a name..."
+                        readOnly
+                        style={{ cursor: "not-allowed" }}
+                      />
+                      <Button
+                        variant="outline-primary"
+                        onClick={() => handleRename(true)}
+                        disabled={!file || isFetchingAIRename}
+                        style={{ marginTop: "10px" }}
+                      >
+                        Use AI Rename
+                      </Button>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md="auto" offset={1}>
+                    {/* Custom Rename Option */}
+                    <Form.Group>
+                      <Form.Label>Custom Rename</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={reName}
+                        placeholder="Enter custom name"
+                        onChange={(e) => setReName(e.target.value)}
+                        style={{ marginBottom: "10px" }}
+                        disabled={!file}
+                      />
+                      <Button
+                        variant="outline-primary"
+                        type="button"
+                        onClick={() => handleRename()}
+                        disabled={!reName}
+                        style={{ marginTop: "10px" }}
+                      >
+                        Use Custom Name
+                      </Button>
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </>
             ) : (
               `File: ${fileObj.name}`
             )}
@@ -279,17 +447,19 @@ export default function File({ file, onChange }) {
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Download
                     </Button>
-                    <Button variant="primary" onClick={() => fetchAIDesrcibe("describe", true)}>
+                    <Button
+                      variant="primary"
+                      onClick={() => fetchAIDesrcibe("describe", true)}
+                    >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Describe Image
                     </Button>
-                    <Button variant="secondary" onClick={() => fetchAIDesrcibe("main_objects", true)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => fetchAIDesrcibe("main_objects", true)}
+                    >
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Identify Objects
-                    </Button>
-                    <Button variant="danger" onClick={handleDelete}>
-                      <FontAwesomeIcon icon={faTrash} className="me-2" />
-                      Delete
                     </Button>
                   </div>
                 </>
@@ -297,9 +467,14 @@ export default function File({ file, onChange }) {
                 <>
                   <pre>{fileObj.decodeContent()}</pre>
                   <textarea
-                    className={`form-control ${darkMode ? "bg-dark text-light border-light" : ""}`}
+                    className={`form-control ${
+                      darkMode ? "bg-dark text-light border-light" : ""
+                    }`}
                     value={fileContent}
-                    onChange={(e) => setFileContent(e.target.value)}
+                    onChange={(e) => {
+                      setFileContent(e.target.value);
+                      isContentEdited.current = true; // Track content changes
+                    }}
                     rows="10"
                     disabled={!isEditing}
                   />
@@ -308,17 +483,19 @@ export default function File({ file, onChange }) {
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Download
                     </Button>
-                    <Button variant="primary" onClick={() => fetchAIResponse("summarize")}>
+                    <Button
+                      variant="primary"
+                      onClick={() => fetchAIResponse("summarize")}
+                    >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Summarize
                     </Button>
-                    <Button variant="secondary" onClick={() => fetchAIResponse("keywords")}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => fetchAIResponse("keywords")}
+                    >
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Find Keywords
-                    </Button>
-                    <Button variant="danger" onClick={handleDelete}>
-                      <FontAwesomeIcon icon={faTrash} className="me-2" />
-                      Delete
                     </Button>
                     {isEditing ? (
                       <Button variant="success" onClick={handleSaveUpdate}>
@@ -337,7 +514,11 @@ export default function File({ file, onChange }) {
                 <p>{fileContent}</p>
               )}
               {aiResponse && (
-                <div className={`mt-3 p-3 rounded ${darkMode ? "bg-secondary text-light" : "bg-light"}`}>
+                <div
+                  className={`mt-3 p-3 rounded ${
+                    darkMode ? "bg-secondary text-light" : "bg-light"
+                  }`}
+                >
                   <h5>AI Response:</h5>
                   <p>{aiResponse}</p>
                 </div>
@@ -347,9 +528,46 @@ export default function File({ file, onChange }) {
         </Modal.Body>
 
         <Modal.Footer>
-          <Button variant={darkMode ? "light" : "secondary"} onClick={closeModal}>
-          Close
-        </Button>
+          <Button variant="danger" onClick={handleDelete}>
+            <FontAwesomeIcon icon={faTrash} className="me-2" />
+            Delete
+          </Button>
+          <Button
+            variant={darkMode ? "light" : "secondary"}
+            onClick={closeModal}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Right-click preview modal */}
+      <Modal show={showPreviewModal} onHide={() => setShowPreviewModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>File Preview</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="form-control">
+            <textarea
+              value={fileObj.preview}
+              readOnly
+              style={{
+                width: "100%",
+                height: "100px",
+                resize: "none",
+                backgroundColor: "#f8f9fa",
+              }}
+              placeholder="No preview available"
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowPreviewModal(false)}
+          >
+            Close
+          </Button>
         </Modal.Footer>
       </Modal>
     </>
