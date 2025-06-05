@@ -24,8 +24,15 @@ const {
   fetchAllFilesByUser,
   fetchFileOrFolderById,
 } = require("./controllers/FileController");
-const { describeImage, aiRename } = require("./controllers/openAIController");
-const { getDarkMode, setDarkMode } = require("./controllers/DarkModeController");
+const {
+  describeImage,
+  aiRename,
+  aiPreview,
+} = require("./controllers/openAIController");
+const {
+  getDarkMode,
+  setDarkMode,
+} = require("./controllers/DarkModeController");
 
 // Express setup
 const app = express();
@@ -44,6 +51,7 @@ app.put("/api/user", updateUser);
 // --- AI API ---
 app.post("/api/ai", aiAnalyse); // AI analysis (summary, keywords, object ID)
 app.post("/api/aiRename", aiRename);
+app.post("/api/aiPreview", aiPreview);
 app.post("/api/chatbot", chatWithBot); // Chatbot interaction
 app.post("/api/describe-image", describeImage); // Image description
 

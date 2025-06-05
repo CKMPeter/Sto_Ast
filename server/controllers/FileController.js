@@ -12,24 +12,41 @@ const { FieldValue } = require("../firebase-admin-setup");
 module.exports = {
   //Function to upload a file
   uploadFile: async (req, res) => {
-    const { name, content, path, folderId } = req.body;
+    const { name, content, preview, path, folderId } = req.body;
     const { uid: userId } = req.decodedToken;
 
-    if (!name || !content || !path || !folderId) {
+    if (!name || !content || !path) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     try {
       console.log(
         "Uploading file:",
-        name + "\n" + content + "\n" + path + "\n" + folderId
+        name + "\n" + preview + "\n" + path + "\n" + folderId
+      );
+      const uploadedFile = await uploadFileToDB(
+        name.trim(),
+        content,
+        preview,
+        path,
+        folderId,
+        userId
       );
 
-      await uploadFileToDB(name.trim(), content, path, folderId, userId);
+      console.log(
+        "File uploaded successfully. File id: ",
+        uploadedFile.id,
+        "\nname: ",
+        uploadedFile.name,
+        "\nfolderId: ",
+        uploadedFile.folderId,
+        "\nuserId: ",
+        uploadedFile.userId
+      );
 
-      console.log("File uploaded successfully");
-
-      res.status(200).json({ message: "File uploaded successfully" });
+      res
+        .status(200)
+        .json({ message: "File uploaded successfully", file: uploadedFile });
     } catch (err) {
       console.error("Error uploading file to Firebase:", err);
       res.status(500).json({ error: "Internal server error" });
@@ -39,7 +56,7 @@ module.exports = {
   // Function to update a file
   updateFile: async (req, res) => {
     const { fileId } = req.params;
-    const { name, content, filePath } = req.body;
+    const { name, content, preview, filePath } = req.body;
     const { uid: userId } = req.decodedToken;
 
     if (!name || !content) {
@@ -51,10 +68,10 @@ module.exports = {
     try {
       console.log(
         "Updating file:",
-        fileId + "\n" + name + "\n" + content + "\n" + filePath
+        fileId + "\n" + name + "\n" + preview + "\n" + filePath
       );
 
-      await updateFileInDB(fileId, name.trim(), content);
+      await updateFileInDB(fileId, name.trim(), content, preview);
 
       console.log("File updated successfully");
 
@@ -143,13 +160,13 @@ module.exports = {
     }
   },
   // Function to get a file or folder by ID
-  
+
   fetchFileOrFolderById: async (req, res) => {
     const { id } = req.params;
     const { collection = "files" } = req.query; // Default to "files" if not provided
 
     try {
-      console.log("Fetching file or folder with ID:",  id);
+      console.log("Fetching file or folder with ID:", id);
 
       const item = await getFileOrFolderById(fileId, collection);
 
@@ -163,6 +180,5 @@ module.exports = {
       console.error("Fetch item error:", error.message);
       res.status(500).json({ error: "Failed to fetch item" });
     }
-  }
-
+  },
 };
