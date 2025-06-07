@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { ROOT_FOLDER } from "../../hooks/useFolder";
 import { Button, Modal, Form, Alert, Col, Row } from "react-bootstrap";
-import { useDarkMode } from "../../hooks/useDarkMode"; // fix import and usage
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 export default function AddFileButton({ currentFolder, onAdd }) {
   const { currentUser, getIdToken } = useAuth();
@@ -20,7 +20,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
   const [preview, setPreview] = useState("");
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
   const [isFetchingAIPreview, setIsFetchingAIPreview] = useState(false);
-  const darkMode = useDarkMode(); // ✅ Use the hook
+  const { darkMode } = useDarkMode();
 
   const fetchAI = useCallback(
     async (base64Input, task, isImage = true) => {
@@ -30,22 +30,19 @@ export default function AddFileButton({ currentFolder, onAdd }) {
       const api = task === "rename" ? "/api/aiRename" : "/api/aiPreview";
 
       try {
-        const response = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL + api}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              input: base64Input,
-              isImage,
-              mimeType: isImage ? "image/jpeg" : "text/plain",
-              fileName: file.name,
-            }),
-          }
-        );
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL + api}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            input: base64Input,
+            isImage,
+            mimeType: isImage ? "image/jpeg" : "text/plain",
+            fileName: file.name,
+          }),
+        });
 
         const data = await response.json();
         return data.result || null;
@@ -67,24 +64,15 @@ export default function AddFileButton({ currentFolder, onAdd }) {
       try {
         const base64Content = await fileToBase64(file);
 
-        const aiRenameResult = await fetchAI(
-          base64Content,
-          "rename",
-          file.type.startsWith("image/")
-        );
+        const aiRenameResult = await fetchAI(base64Content, "rename", file.type.startsWith("image/"));
         if (aiRenameResult && typeof aiRenameResult === "string") {
-          let newName = aiRenameResult.trim();
-          newName = sanitizeFileName(newName);
+          let newName = sanitizeFileName(aiRenameResult.trim());
           setAiReName(newName);
         } else {
           setError("AI rename failed or returned invalid result");
         }
 
-        const aiPreviewResult = await fetchAI(
-          base64Content,
-          "preview",
-          file.type.startsWith("image/")
-        );
+        const aiPreviewResult = await fetchAI(base64Content, "preview", file.type.startsWith("image/"));
         if (aiPreviewResult && typeof aiPreviewResult === "string") {
           setPreview(aiPreviewResult.trim());
         } else {
@@ -265,40 +253,32 @@ export default function AddFileButton({ currentFolder, onAdd }) {
         <Modal
           show={open}
           onHide={closeModal}
-          dialogClassName={darkMode ? "modal-dark" : ""}
+          dialogClassName="custom-modal"
+          contentClassName={darkMode ? "bg-dark text-light" : ""}
         >
           <Form onSubmit={handleSubmit}>
-            <Modal.Header>
+            <Modal.Header closeButton>
               <Modal.Title>
                 <FontAwesomeIcon icon={faFileArrowUp} /> Add File
               </Modal.Title>
             </Modal.Header>
 
-            <Modal.Body
-              style={{
-                backgroundColor: darkMode ? "#1e1e1e" : undefined,
-                color: darkMode ? "#ffffff" : undefined,
-              }}
-            >
+            <Modal.Body>
               {error && <Alert variant={darkMode ? "dark" : "danger"}>{error}</Alert>}
               {success && <Alert variant={darkMode ? "dark" : "success"}>{success}</Alert>}
 
               <Form.Group>
-                <Form.Label>
-                  Upload File
-                  <Form.Control
-                    type="file"
-                    onChange={handleUpload}
-                    required
-                    style={{
-                      display: "block",
-                      marginTop: "10px",
-                      fontWeight: "bold",
-                      backgroundColor: darkMode ? "#2a2a2a" : undefined,
-                      color: darkMode ? "#fff" : undefined,
-                    }}
-                  />
-                </Form.Label>
+                <Form.Label>Upload File</Form.Label>
+                <Form.Control
+                  type="file"
+                  onChange={handleUpload}
+                  required
+                  style={{
+                    marginTop: "10px",
+                    backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
+                    color: darkMode ? "#fff" : "#000",
+                  }}
+                />
               </Form.Group>
 
               {file && (
@@ -318,8 +298,8 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                       readOnly
                       style={{
                         cursor: "not-allowed",
-                        backgroundColor: darkMode ? "#2a2a2a" : undefined,
-                        color: darkMode ? "#ccc" : undefined,
+                        backgroundColor: darkMode ? "#2a2a2a" : "#f8f9fa",
+                        color: darkMode ? "#ccc" : "#000",
                       }}
                     />
                     <Button
@@ -342,7 +322,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                       placeholder="Enter custom name"
                       onChange={(e) => setReName(e.target.value)}
                       style={{
-                        backgroundColor: darkMode ? "#2a2a2a" : "transparent",
+                        backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
                         color: darkMode ? "#fff" : "#000",
                       }}
                       disabled={!file}
@@ -362,7 +342,12 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
               <Form.Group>
                 <Form.Label>File Preview</Form.Label>
-                <div className="form-control" style={{ backgroundColor: darkMode ? "#2a2a2a" : "inherit" }}>
+                <div
+                  className="form-control"
+                  style={{
+                    backgroundColor: darkMode ? "#2a2a2a" : "#f8f9fa",
+                  }}
+                >
                   {isFetchingAIPreview ? (
                     <p>Loading preview...</p>
                   ) : (
@@ -404,7 +389,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                       }}
                     ></div>
                   </div>
-                  <p style={{ fontSize: "0.9rem", margin: "5px 0 0", color: "#555" }}>
+                  <p style={{ fontSize: "0.9rem", margin: "5px 0 0", color: "#bbb" }}>
                     {uploadProgress}% uploaded
                   </p>
                 </div>
