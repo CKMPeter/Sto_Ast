@@ -30,19 +30,22 @@ export default function AddFileButton({ currentFolder, onAdd }) {
       const api = task === "rename" ? "/api/aiRename" : "/api/aiPreview";
 
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL + api}`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            input: base64Input,
-            isImage,
-            mimeType: isImage ? "image/jpeg" : "text/plain",
-            fileName: file.name,
-          }),
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL + api}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              input: base64Input,
+              isImage,
+              mimeType: isImage ? "image/jpeg" : "text/plain",
+              fileName: file.name,
+            }),
+          }
+        );
 
         const data = await response.json();
         return data.result || null;
@@ -64,7 +67,11 @@ export default function AddFileButton({ currentFolder, onAdd }) {
       try {
         const base64Content = await fileToBase64(file);
 
-        const aiRenameResult = await fetchAI(base64Content, "rename", file.type.startsWith("image/"));
+        const aiRenameResult = await fetchAI(
+          base64Content,
+          "rename",
+          file.type.startsWith("image/")
+        );
         if (aiRenameResult && typeof aiRenameResult === "string") {
           let newName = sanitizeFileName(aiRenameResult.trim());
           setAiReName(newName);
@@ -72,7 +79,11 @@ export default function AddFileButton({ currentFolder, onAdd }) {
           setError("AI rename failed or returned invalid result");
         }
 
-        const aiPreviewResult = await fetchAI(base64Content, "preview", file.type.startsWith("image/"));
+        const aiPreviewResult = await fetchAI(
+          base64Content,
+          "preview",
+          file.type.startsWith("image/")
+        );
         if (aiPreviewResult && typeof aiPreviewResult === "string") {
           setPreview(aiPreviewResult.trim());
         } else {
@@ -264,8 +275,12 @@ export default function AddFileButton({ currentFolder, onAdd }) {
             </Modal.Header>
 
             <Modal.Body>
-              {error && <Alert variant={darkMode ? "dark" : "danger"}>{error}</Alert>}
-              {success && <Alert variant={darkMode ? "dark" : "success"}>{success}</Alert>}
+              {error && (
+                <Alert variant={darkMode ? "dark" : "danger"}>{error}</Alert>
+              )}
+              {success && (
+                <Alert variant={darkMode ? "dark" : "success"}>{success}</Alert>
+              )}
 
               <Form.Group>
                 <Form.Label>Upload File</Form.Label>
@@ -297,7 +312,6 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                       placeholder="AI will suggest a name..."
                       readOnly
                       style={{
-                        cursor: "not-allowed",
                         backgroundColor: darkMode ? "#2a2a2a" : "#f8f9fa",
                         color: darkMode ? "#ccc" : "#000",
                       }}
@@ -389,7 +403,13 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                       }}
                     ></div>
                   </div>
-                  <p style={{ fontSize: "0.9rem", margin: "5px 0 0", color: "#bbb" }}>
+                  <p
+                    style={{
+                      fontSize: "0.9rem",
+                      margin: "5px 0 0",
+                      color: "#bbb",
+                    }}
+                  >
                     {uploadProgress}% uploaded
                   </p>
                 </div>
@@ -397,7 +417,11 @@ export default function AddFileButton({ currentFolder, onAdd }) {
               <Button variant="secondary" onClick={closeModal}>
                 Close
               </Button>
-              <Button variant="success" type="submit">
+              <Button
+                variant="success"
+                type="submit"
+                disabled={!file || !aiReName}
+              >
                 Add File
               </Button>
             </Modal.Footer>

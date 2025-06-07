@@ -391,7 +391,6 @@ export default function File({ file, onChange }) {
                         value={aiReName}
                         placeholder="AI will suggest a name..."
                         readOnly
-                        style={{ cursor: "not-allowed" }}
                       />
                       <Button
                         variant="outline-primary"
@@ -474,30 +473,33 @@ export default function File({ file, onChange }) {
                 </>
               ) : fileObj.isText ? (
                 <>
+                  <Modal.Title>
+                    <Form.Label>Content:</Form.Label>
+                  </Modal.Title>
                   <pre>{fileObj.decodeContent()}</pre>
                   {isEditing && (
-                    <textarea
-                      className={`form-control ${
-                        darkMode ? "bg-dark text-light border-light" : ""
-                      }`}
-                      value={fileContent}
-                      onChange={(e) => {
-                        setFileContent(e.target.value);
-                        isContentEdited.current = true; // Track content changes
-                      }}
-                      rows="10"
-                      disabled={!isEditing}
-                    />
+                    <>
+                      <Modal.Title>
+                        <Form.Label>Edit Content:</Form.Label>
+                      </Modal.Title>
+                      <textarea
+                        className={`form-control ${
+                          darkMode ? "bg-dark text-light border-light" : ""
+                        }`}
+                        value={fileContent}
+                        onChange={(e) => {
+                          setFileContent(e.target.value);
+                          isContentEdited.current = true; // Track content changes
+                        }}
+                        rows="10"
+                        disabled={!isEditing}
+                        style={{
+                          resize: "none",
+                        }}
+                      />
+                    </>
                   )}
                   <div className="mt-3 d-flex flex-wrap gap-2">
-                    <Button
-                      variant="info"
-                      onClick={handleDownload}
-                      disabled={isEditing}
-                    >
-                      <FontAwesomeIcon icon={faFileAlt} className="me-2" />
-                      Download
-                    </Button>
                     <Button
                       variant="primary"
                       onClick={() => fetchAIResponse("summarize")}
