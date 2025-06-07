@@ -118,44 +118,6 @@ export function useFolder(folderId = null, folder = null) {
       });
   }, [folderId, state.refresh]);
 
-  // --- Fetch folders/files from the backend ---
-  // This effect fetches folders and files from the backend when the component mounts
-  // and when the folderId or currentUser changes.
-  /*
-  useEffect(() => {
-    async function fetchFoldersAndFiles() {
-      const token = await getIdToken();
-      if (!token) return;
-
-      // Construct the request for folders from backend
-      const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/files`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data?.childFolders) {
-        dispatch({
-          type: ACTIONS.SET_CHILD_FOLDERS,
-          payload: { childFolders: data.childFolders },
-        });
-      }
-
-      if (data?.childFiles) {
-        dispatch({
-          type: ACTIONS.SET_CHILD_FILES,
-          payload: { childFiles: data.childFiles },
-        });
-      }
-    }
-
-    fetchFoldersAndFiles();
-  }, [folderId, getIdToken, currentUser.uid, state.refresh]);
- */
   // --- Fetch child folders from Firestore ---
   // This effect fetches child folders from Firestore when the folderId or currentUser changes.
   useEffect(() => {
@@ -187,8 +149,8 @@ export function useFolder(folderId = null, folder = null) {
         const token = await getIdToken();
         if (!token) return;
         const res = await fetch(
-         `${process.env.REACT_APP_BACKEND_URL}/api/folders/${folderId}/files`,
-{
+          `${process.env.REACT_APP_BACKEND_URL}/api/folders/${folderId}/files`,
+          {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -215,29 +177,32 @@ export function useFolder(folderId = null, folder = null) {
 
   // --- getallUserFiles ---
   useEffect(() => {
-  const fetchAllUserFiles = async () => {
-    try {
-      const token = await getIdToken();
-      if (!token) return;
+    const fetchAllUserFiles = async () => {
+      try {
+        const token = await getIdToken();
+        if (!token) return;
 
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/files/user`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+        const response = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/api/files/user`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch all user files");
-      }
+        if (!response.ok) {
+          throw new Error("Failed to fetch all user files");
+        }
 
-      const data = await response.json();
+        const data = await response.json();
 
-      dispatch({
-        type: ACTIONS.SET_ALL_USER_FILES,
-        payload: { allUserFiles: data.files || [] }, // adjust if response shape is different
-      });
+        dispatch({
+          type: ACTIONS.SET_ALL_USER_FILES,
+          payload: { allUserFiles: data.files || [] }, // adjust if response shape is different
+        });
       } catch (error) {
         console.error("Error fetching all user files:", error);
         dispatch({
@@ -250,22 +215,25 @@ export function useFolder(folderId = null, folder = null) {
     if (currentUser?.uid) {
       fetchAllUserFiles();
     }
-  }, [currentUser?.uid, getIdToken, state.refresh]);
+  }, [currentUser?.uid, getIdToken, folderId, state.refresh]);
 
-// --- getallUserFolders ---
+  // --- getallUserFolders ---
   useEffect(() => {
     const fetchAllUserFolders = async () => {
       try {
         const token = await getIdToken();
         if (!token) return;
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/folders/user`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_BACKEND_URL}/api/folders/user`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to fetch all user folders");
@@ -289,8 +257,7 @@ export function useFolder(folderId = null, folder = null) {
     if (currentUser?.uid) {
       fetchAllUserFolders();
     }
-  }, [currentUser?.uid, getIdToken, state.refresh]);
-
+  }, [currentUser?.uid, getIdToken, folderId, state.refresh]);
 
   // Expose a triggerRefresh function
   // This function can be called to trigger a refresh of the folder and its contents.
