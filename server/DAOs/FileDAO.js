@@ -74,16 +74,23 @@ module.exports = {
   getFilesByFolderIdFromDB: async (folderId, userId) => {
     try {
       let query = db.collection("files").where("userId", "==", userId);
-
-      if (folderId === null) {
-        query = query.where("folderId", "in", [null]);
-      } else {
-        query = query.where("folderId", "==", folderId);
+      const actualFolderId = folderId;
+      if (actualFolderId === "null") {
+        // We can't query Firestore directly for null folderId reliably, so fetch all user files first
+        const snapshot = await query.get();
+        const files = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(file => file.folderId === null); // Manual filtering for null folderId
+        return files;
       }
-      const snapshot = await query.get();
-
-      const files = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      return files;
+      else {
+        // Query by folderId normally
+        query = query.where("folderId", "==", folderId);
+        const snapshot = await query.get();
+        const files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return files;
+      }
+      
     } catch (error) {
       console.error("Error fetching files by folder ID:", error);
       throw error;
@@ -105,6 +112,7 @@ module.exports = {
       throw error;
     }
   },
+
   getFileOrFolderById: async (id, collection = "files") => {
     try {
       const doc = await db.collection(collection).doc(id).get();

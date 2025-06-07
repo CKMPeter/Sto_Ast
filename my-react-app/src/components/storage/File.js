@@ -407,8 +407,7 @@ export default function File({ file, onChange }) {
                         type="text"
                         value={reName}
                         placeholder="Enter custom name"
-                        onChange={(e) => setReName(e.target.value)}
-                        style={{ marginBottom: "10px" }}
+                        onChange={(e) => setReName(e.target.value)} 
                         disabled={!file}
                       />
                       <Button
@@ -497,17 +496,6 @@ export default function File({ file, onChange }) {
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Find Keywords
                     </Button>
-                    {isEditing ? (
-                      <Button variant="success" onClick={handleSaveUpdate}>
-                        <FontAwesomeIcon icon={faSave} className="me-2" />
-                        Save Changes
-                      </Button>
-                    ) : (
-                      <Button variant="warning" onClick={handleUpdate}>
-                        <FontAwesomeIcon icon={faEdit} className="me-2" />
-                        Edit
-                      </Button>
-                    )}
                   </div>
                 </>
               ) : (
@@ -522,6 +510,17 @@ export default function File({ file, onChange }) {
                   <h5>AI Response:</h5>
                   <p>{aiResponse}</p>
                 </div>
+              )}
+              {isEditing ? (
+                <Button variant="success" onClick={handleSaveUpdate}>
+                  <FontAwesomeIcon icon={faSave} className="me-2" />
+                  Save Changes
+                </Button>
+              ) : (
+                <Button variant="warning" onClick={handleUpdate}>
+                  <FontAwesomeIcon icon={faEdit} className="me-2" />
+                  Edit
+                </Button>
               )}
             </>
           )}

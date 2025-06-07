@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState } from 'react';
 import { useDarkMode } from '../../hooks/useDarkMode';
 
 const Chatbot = ({ allUserFiles }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const { getIdToken } = useAuth();
   const { darkMode, loading: darkModeLoading } = useDarkMode();
 
   const handleSubmit = async (e) => {

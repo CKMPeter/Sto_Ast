@@ -35,6 +35,7 @@ export default function Dashboard() {
     ? allUserFolders.map(({ name, id }) => ({ name, id }))
     : [];
 
+  console.log("childFiles", childFiles);
   // Function to reconstruct paths from folder IDs to folder names starting with "root"
   function reconstructFilePaths(simplifiedFolders, simplifiedFiles) {
     if (!Array.isArray(simplifiedFolders) || !Array.isArray(simplifiedFiles)) {
@@ -186,7 +187,7 @@ export default function Dashboard() {
           {childFiles
             ?.filter(
               (file) =>
-                file.folderId === folderId &&
+                file.folderId === folderId || "null" &&
                 isNameMatch(file.name) &&
                 isTypeMatch(file) &&
                 isTagMatch(file)
