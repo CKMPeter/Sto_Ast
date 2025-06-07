@@ -203,7 +203,7 @@ export default function File({ file, onChange }) {
           },
           body: JSON.stringify({
             name: updatedFileName.trim(),
-            content: btoa(fileContent),
+            content: fileObj.isImage ? fileContent : btoa(fileContent),
             preview: aiPreviewResult,
             filePath: fileObj.path,
           }),
@@ -366,13 +366,18 @@ export default function File({ file, onChange }) {
       </Button>
 
       {/* Modal for file details */}
-      <Modal show={showMainModal} onHide={closeModal}>
-        <Modal.Header closeButton>
+      <Modal show={showMainModal}>
+        <Modal.Header>
           <Modal.Title>
             {isEditing ? (
               <>
                 <Form.Label className="form-label">
-                  File name: {updatedFileName}
+                  Current File name:{" "}
+                  <span
+                    style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
+                  >
+                    {updatedFileName}
+                  </span>
                 </Form.Label>
 
                 {/* Rename Options */}
@@ -407,7 +412,7 @@ export default function File({ file, onChange }) {
                         type="text"
                         value={reName}
                         placeholder="Enter custom name"
-                        onChange={(e) => setReName(e.target.value)} 
+                        onChange={(e) => setReName(e.target.value)}
                         disabled={!file}
                       />
                       <Button
@@ -424,7 +429,14 @@ export default function File({ file, onChange }) {
                 </Row>
               </>
             ) : (
-              `File: ${fileObj.name}`
+              <Form.Label className="form-label">
+                File name:{" "}
+                <span
+                  style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
+                >
+                  {fileObj.name}
+                </span>
+              </Form.Label>
             )}
           </Modal.Title>
         </Modal.Header>
@@ -442,13 +454,10 @@ export default function File({ file, onChange }) {
                     style={{ maxWidth: "100%", maxHeight: "400px" }}
                   />
                   <div className="mt-3 d-flex flex-wrap gap-2">
-                    <Button variant="info" onClick={handleDownload}>
-                      <FontAwesomeIcon icon={faFileAlt} className="me-2" />
-                      Download
-                    </Button>
                     <Button
                       variant="primary"
                       onClick={() => fetchAIDesrcibe("describe", true)}
+                      disabled={isEditing}
                     >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Describe Image
@@ -456,6 +465,7 @@ export default function File({ file, onChange }) {
                     <Button
                       variant="secondary"
                       onClick={() => fetchAIDesrcibe("main_objects", true)}
+                      disabled={isEditing}
                     >
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Identify Objects
@@ -465,26 +475,33 @@ export default function File({ file, onChange }) {
               ) : fileObj.isText ? (
                 <>
                   <pre>{fileObj.decodeContent()}</pre>
-                  <textarea
-                    className={`form-control ${
-                      darkMode ? "bg-dark text-light border-light" : ""
-                    }`}
-                    value={fileContent}
-                    onChange={(e) => {
-                      setFileContent(e.target.value);
-                      isContentEdited.current = true; // Track content changes
-                    }}
-                    rows="10"
-                    disabled={!isEditing}
-                  />
+                  {isEditing && (
+                    <textarea
+                      className={`form-control ${
+                        darkMode ? "bg-dark text-light border-light" : ""
+                      }`}
+                      value={fileContent}
+                      onChange={(e) => {
+                        setFileContent(e.target.value);
+                        isContentEdited.current = true; // Track content changes
+                      }}
+                      rows="10"
+                      disabled={!isEditing}
+                    />
+                  )}
                   <div className="mt-3 d-flex flex-wrap gap-2">
-                    <Button variant="info" onClick={handleDownload}>
+                    <Button
+                      variant="info"
+                      onClick={handleDownload}
+                      disabled={isEditing}
+                    >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Download
                     </Button>
                     <Button
                       variant="primary"
                       onClick={() => fetchAIResponse("summarize")}
+                      disabled={isEditing}
                     >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Summarize
@@ -492,6 +509,7 @@ export default function File({ file, onChange }) {
                     <Button
                       variant="secondary"
                       onClick={() => fetchAIResponse("keywords")}
+                      disabled={isEditing}
                     >
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Find Keywords
@@ -511,29 +529,40 @@ export default function File({ file, onChange }) {
                   <p>{aiResponse}</p>
                 </div>
               )}
-              {isEditing ? (
-                <Button variant="success" onClick={handleSaveUpdate}>
-                  <FontAwesomeIcon icon={faSave} className="me-2" />
-                  Save Changes
+              <div className="mt-3 d-flex flex-wrap gap-2">
+                {isEditing ? (
+                  <Button variant="success" onClick={handleSaveUpdate}>
+                    <FontAwesomeIcon icon={faSave} className="me-2" />
+                    Save Changes
+                  </Button>
+                ) : (
+                  <Button variant="warning" onClick={handleUpdate}>
+                    <FontAwesomeIcon icon={faEdit} className="me-2" />
+                    Edit
+                  </Button>
+                )}
+                <Button
+                  variant="info"
+                  onClick={handleDownload}
+                  disabled={isEditing}
+                >
+                  <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+                  Download
                 </Button>
-              ) : (
-                <Button variant="warning" onClick={handleUpdate}>
-                  <FontAwesomeIcon icon={faEdit} className="me-2" />
-                  Edit
-                </Button>
-              )}
+              </div>
             </>
           )}
         </Modal.Body>
 
         <Modal.Footer>
-          <Button variant="danger" onClick={handleDelete}>
+          <Button variant="danger" onClick={handleDelete} disabled={isEditing}>
             <FontAwesomeIcon icon={faTrash} className="me-2" />
             Delete
           </Button>
           <Button
             variant={darkMode ? "light" : "secondary"}
             onClick={closeModal}
+            disabled={isEditing}
           >
             Close
           </Button>
@@ -541,24 +570,34 @@ export default function File({ file, onChange }) {
       </Modal>
 
       {/* Right-click preview modal */}
-      <Modal show={showPreviewModal} onHide={() => setShowPreviewModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>File Preview</Modal.Title>
+      <Modal show={showPreviewModal}>
+        <Modal.Header>
+          <Modal.Title>
+            <Form.Label className="form-label">
+              File name:{" "}
+              <span style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}>
+                {fileObj.name}
+              </span>
+            </Form.Label>
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="form-control">
-            <textarea
-              value={fileObj.preview}
-              readOnly
-              style={{
-                width: "100%",
-                height: "100px",
-                resize: "none",
-                backgroundColor: "#f8f9fa",
-              }}
-              placeholder="No preview available"
-            />
-          </div>
+          <Modal.Title>
+            <Form.Label>File Preview</Form.Label>
+          </Modal.Title>
+          <textarea
+            className={`form-control ${
+              darkMode ? "bg-dark text-light border-light" : ""
+            }`}
+            style={{
+              width: "100%",
+              height: "100px",
+              resize: "none",
+            }}
+            value={fileObj.preview}
+            readOnly
+            placeholder="No preview available"
+          />
         </Modal.Body>
         <Modal.Footer>
           <Button
