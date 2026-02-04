@@ -3,7 +3,7 @@ import { Button, Modal, Dropdown, Alert, Form } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
-import { FolderClass } from "../classes/FolderClass"; // import renamed to avoid naming conflict
+import { FolderClass } from "../../classes/FolderClass"; // import renamed to avoid naming conflict
 import { useAuth } from "../../contexts/AuthContext";
 import { useDarkMode } from "../../hooks/useDarkMode"; // adjust path if needed
 
@@ -62,7 +62,7 @@ export default function Folder({ folder }) {
     }
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/folders/${clickedFolder.id}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/folders/${clickedFolder.id}`,
         {
           method: "PUT",
           headers: {
@@ -94,7 +94,7 @@ export default function Folder({ folder }) {
     }
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/folders/${clickedFolder.id}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/folders/${clickedFolder.id}`,
         {
           method: "DELETE",
           headers: {

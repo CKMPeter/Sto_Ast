@@ -18,7 +18,7 @@ export function useDarkMode() {
       setLoading(true);
       try {
         const token = await currentUser.getIdToken(true); // <- force refreshs
-        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/theme`, {
+        const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/user/theme`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -48,7 +48,7 @@ export function useDarkMode() {
       const token = await currentUser.getIdToken(true);
       if (!token) return;
 
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user/theme`, {
+      const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/user/theme`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

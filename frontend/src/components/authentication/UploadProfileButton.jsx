@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { realtimeDatabase } from "../../firebase";
+import { realtimeDatabase } from "../../config/firebase";
 import { ref, set, serverTimestamp } from "firebase/database";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCamera } from "@fortawesome/free-solid-svg-icons";

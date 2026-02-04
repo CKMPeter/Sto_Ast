@@ -34,7 +34,7 @@ const runGeminiAI = async (input, token, allUserFiles) => {
   try {
     const fullPrompt = buildPrompt(input, allUserFiles);
 
-    const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/chatbot`, {
+    const response = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/chatbot`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

@@ -1,7 +1,7 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function (app) {
-  target = process.env.REACT_APP_FRONTEND_URL || 'https://localhost:3000';
+  target = import.meta.env.VITE_APP_FRONTEND_URL || 'https://localhost:5000';
   app.use(
     '/api',
     createProxyMiddleware({

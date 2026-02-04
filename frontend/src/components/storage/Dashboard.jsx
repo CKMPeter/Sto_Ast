@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Container, Form } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { useFolder } from "../../hooks/useFolder";
-import { useDarkMode } from "../../hooks/useDarkMode"; // ✅ Import the dark mode hook
+import { useDarkMode } from "../../hooks/useDarkMode"; // Import the dark mode hook
 import CreateFolderButton from "./CreateFolderButton";
 import Folder from "./Folder";
 import Navbar from "./Navbar";
@@ -10,7 +10,7 @@ import FolderBreadcrumbs from "./FolderBreadcrumbs";
 import AddFileButton from "./AddFileButton";
 import File from "./File";
 import Chatbot from "./ChatBot";
-import { FolderClass } from "../classes/FolderClass";
+import { FolderClass } from "../../classes/FolderClass";
 
 export default function Dashboard() {
   const { folderId } = useParams();

@@ -43,7 +43,7 @@ export default function CreateFolderButton({ currentFolder }) {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/folders`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/folders`,
         {
           method: "POST",
           headers: {

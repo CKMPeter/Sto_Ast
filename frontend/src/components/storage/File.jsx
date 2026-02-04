@@ -18,7 +18,7 @@ import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 //import { ref, remove, update } from "../../../src/firebase";
 //import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
-import { FileClass } from "../classes/FileClass";
+import { FileClass } from "../../classes/FileClass";
 //darkmode
 import { useDarkMode } from "../../hooks/useDarkMode"; // Adjust path if needed
 
@@ -56,7 +56,7 @@ export default function File({ file, onChange }) {
       const api = task === "rename" ? "/api/aiRename" : "/api/aiPreview";
       try {
         const response = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL + api}`,
+          `${import.meta.env.VITE_APP_BACKEND_URL + api}`,
           {
             method: "POST",
             headers: {
@@ -130,7 +130,7 @@ export default function File({ file, onChange }) {
       }
       try {
         const response = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/files/${fileObj.id}`,
+          `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/${fileObj.id}`,
           {
             method: "DELETE",
             headers: {
@@ -194,7 +194,7 @@ export default function File({ file, onChange }) {
 
       // File update request
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/files/${fileObj.id}`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/${fileObj.id}`,
         {
           method: "PUT",
           headers: {
@@ -234,7 +234,7 @@ export default function File({ file, onChange }) {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/ai`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/ai`,
         {
           method: "POST",
           headers: {
@@ -269,7 +269,7 @@ export default function File({ file, onChange }) {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/describe-image`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/describe-image`,
         {
           method: "POST",
           headers: {

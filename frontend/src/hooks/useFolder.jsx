@@ -1,6 +1,6 @@
 import { useReducer, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { database } from "../firebase";
+import { database } from "../config/firebase";
 import {
   getDoc,
   doc,
@@ -149,7 +149,7 @@ export function useFolder(folderId = null, folder = null) {
         const token = await getIdToken();
         if (!token) return;
         const res = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/folders/${folderId}/files`,
+          `${import.meta.env.VITE_APP_BACKEND_URL}/api/folders/${folderId}/files`,
           {
             method: "GET",
             headers: {
@@ -183,7 +183,7 @@ export function useFolder(folderId = null, folder = null) {
         if (!token) return;
 
         const response = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/files/user`,
+          `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/user`,
           {
             method: "GET",
             headers: {
@@ -225,7 +225,7 @@ export function useFolder(folderId = null, folder = null) {
         if (!token) return;
 
         const response = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL}/api/folders/user`,
+          `${import.meta.env.VITE_APP_BACKEND_URL}/api/folders/user`,
           {
             method: "GET",
             headers: {

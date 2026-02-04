@@ -31,7 +31,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
       try {
         const response = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL + api}`,
+          `${import.meta.env.VITE_APP_BACKEND_URL + api}`,
           {
             method: "POST",
             headers: {
@@ -209,7 +209,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
       setUploadProgress(85);
       const response = await fetch(
-        `${process.env.REACT_APP_BACKEND_URL}/api/files`,
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/files`,
         {
           method: "POST",
           headers: {

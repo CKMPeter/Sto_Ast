@@ -2,7 +2,7 @@ const OpenAI = require('openai');
 require('dotenv').config();
 
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+  apiKey: import.meta.env.VITE_APP_OPENAI_API_KEY,
 });
 async function listAvailableModels() {
   try {

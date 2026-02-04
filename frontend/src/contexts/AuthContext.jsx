@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { auth } from '../firebase';
+import { auth } from '../config/firebase';
 import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
         throw new Error('User not authenticated');
       }
 
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/user`, {
+      const response = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/user`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
