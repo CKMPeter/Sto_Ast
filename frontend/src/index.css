@@ -113,18 +113,22 @@ body{
     transition: all 2s ease;
 }
 
-/* Slide to the Right */
+/* go right */
 .slide_right {
-    transform: translateX(40vw); /* Moves to the right */
+  transform: translateX(0vw);
 }
-.slide_right_1{
-    transform: translateX(-6vw);
+
+.slide_right_1 {
+  transform: translateX(0vw);
 }
+
+/* go back left */
 .slide_left {
-    transform: translateX(-40vw); /* Moves to the right */
+  transform: translateX(-6vw);
 }
-.slide_left_1{
-    transform: translateX(6vw);
+
+.slide_left_1 {
+  transform: translateX(40vw);
 }
 /* Clickable text */
 .test {

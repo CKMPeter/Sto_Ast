@@ -66,18 +66,31 @@ export default function Login() {
   }
 
   function slideSignUp() {
-    if (mode) {
-      textBoxRef.current.classList.toggle("slide_right");
-      loginRef.current.classList.toggle("slide_right");
-      signUpRef.current.classList.toggle("slide_right_1");
+    if (!mode) {
+      // go to signup
+      textBoxRef.current.classList.remove("slide_right", "slide_right_1");
+      loginRef.current.classList.remove("slide_right");
+      signUpRef.current.classList.remove("slide_right");
+
+      textBoxRef.current.classList.add("slide_left_1");
+      loginRef.current.classList.add("slide_left");
+      signUpRef.current.classList.add("slide_left");
+
       setMode(true);
     } else {
-      textBoxRef.current.classList.toggle("slide_left_1");
-      loginRef.current.classList.toggle("slide_left");
-      signUpRef.current.classList.toggle("slide_left");
+      // go to login
+      textBoxRef.current.classList.remove("slide_left_1");
+      loginRef.current.classList.remove("slide_left");
+      signUpRef.current.classList.remove("slide_left");
+
+      textBoxRef.current.classList.add("slide_right");
+      loginRef.current.classList.add("slide_right");
+      signUpRef.current.classList.add("slide_right_1");
+
       setMode(false);
     }
   }
+
 
   return (
     <>
