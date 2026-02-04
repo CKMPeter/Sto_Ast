@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Link, useNavigate } from 'react-router-dom'
 import CenteredContainer from './CenteredContainer'
 import { useDarkMode } from '../../hooks/useDarkMode'
-import { useProfilePicture } from '../../hooks/useProfilePicture'
+import { useProfilePicture } from '../../hooks/profileHook/useProfilePicture'
 
 export default function UserProfile() {
   const [error, setError] = useState("")

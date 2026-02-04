@@ -1,6 +1,6 @@
 import { useReducer, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { database } from "../config/firebase";
+import { useAuth } from "../../contexts/AuthContext";
+import { database } from "../../config/firebase";
 import {
   getDoc,
   doc,

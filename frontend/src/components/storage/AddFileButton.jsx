@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
-import { ROOT_FOLDER } from "../../hooks/useFolder";
+import { ROOT_FOLDER } from "../../hooks/storageHook/useFolder";
 import { Button, Modal, Form, Alert, Col, Row } from "react-bootstrap";
 import { useDarkMode } from "../../hooks/useDarkMode";
 

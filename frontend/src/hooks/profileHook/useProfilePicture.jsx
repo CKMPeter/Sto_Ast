@@ -1,4 +1,4 @@
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from  '../../contexts/AuthContext'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getDatabase, ref as dbRef, set, get } from 'firebase/database'
 

@@ -3,7 +3,7 @@ import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolderPlus } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../../contexts/AuthContext";
-import { ROOT_FOLDER } from "../../hooks/useFolder";
+import { ROOT_FOLDER } from "../../hooks/storageHook/useFolder";
 
 export default function CreateFolderButton({ currentFolder }) {
   const [open, setOpen] = useState(false);

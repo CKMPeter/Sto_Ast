@@ -18,7 +18,7 @@ import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 //import { ref, remove, update } from "../../../src/firebase";
 //import { getDatabase } from "firebase/database";
 import { useAuth } from "../../contexts/AuthContext";
-import { FileClass } from "../../classes/storage/FileClass";
+import { FileClass } from "../../classes/storageClass/FileClass";
 //darkmode
 import { useDarkMode } from "../../hooks/useDarkMode"; // Adjust path if needed
 

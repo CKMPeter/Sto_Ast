@@ -3,7 +3,7 @@ import { Button, Modal, Dropdown, Alert, Form } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
-import { FolderClass } from "../../classes/FolderClass"; // import renamed to avoid naming conflict
+import { FolderClass } from "../../classes/storageClass/FolderClass"; // import renamed to avoid naming conflict
 import { useAuth } from "../../contexts/AuthContext";
 import { useDarkMode } from "../../hooks/useDarkMode"; // adjust path if needed
 

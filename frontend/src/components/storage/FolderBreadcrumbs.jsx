@@ -1,6 +1,6 @@
 import { Breadcrumb } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import { ROOT_FOLDER } from "../../hooks/useFolder";
+import { ROOT_FOLDER } from "../../hooks/storageHook/useFolder";
 import { useDarkMode } from "../../hooks/useDarkMode"; // Import the dark mode hook
 
 export default function FolderBreadcrumbs({ currentFolder }) {
