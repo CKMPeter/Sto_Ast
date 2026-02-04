@@ -28,7 +28,21 @@ export default function NavbarComponent() {
       </Navbar.Brand>
 
       <Nav className="ms-auto d-flex align-items-center">
+         <Nav.Link
+          as={Link}
+          to="/storage"
+          style={{ fontSize: '1rem', fontWeight: 'bold' }}
+        >
+          Storage
+        </Nav.Link>
         <Nav.Link
+          as={Link}
+          to="/message"
+          style={{ fontSize: '1rem', fontWeight: 'bold' }}
+        >
+          Message
+        </Nav.Link>
+         <Nav.Link
           as={Link}
           to="/user"
           style={{ fontSize: '1rem', fontWeight: 'bold' }}
@@ -37,10 +51,10 @@ export default function NavbarComponent() {
         </Nav.Link>
         <Nav.Link
           as={Link}
-          to="/message"
+          to="/Schedule"
           style={{ fontSize: '1rem', fontWeight: 'bold' }}
         >
-          Message
+          Schedule
         </Nav.Link>
 
         {/* Sun/Moon Switch */}

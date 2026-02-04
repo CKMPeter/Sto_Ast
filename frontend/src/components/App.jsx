@@ -3,6 +3,7 @@ import Profile from "./authentication/Profile";
 import Login from "./authentication/Login";
 import Dashboard from "./storage/Dashboard";
 import { Message } from "./message/Message";
+import Schedule from "./schedule/Schedule";
 import { AuthProvider } from "../contexts/AuthContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./authentication/PrivateRoutes";
@@ -65,6 +66,14 @@ function AppWrapper() {
           element={
             <PrivateRoute>
               <Message />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/Schedule"
+          element={
+            <PrivateRoute>
+              <Schedule />
             </PrivateRoute>
           }
         />
