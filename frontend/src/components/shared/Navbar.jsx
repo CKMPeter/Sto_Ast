@@ -30,7 +30,7 @@ export default function NavbarComponent() {
       <Nav className="ms-auto d-flex align-items-center">
          <Nav.Link
           as={Link}
-          to="/storage"
+          to="/"
           style={{ fontSize: '1rem', fontWeight: 'bold' }}
         >
           Storage
