@@ -5,7 +5,7 @@ import { useFolder } from "../../hooks/useFolder";
 import { useDarkMode } from "../../hooks/useDarkMode"; // Import the dark mode hook
 import CreateFolderButton from "./CreateFolderButton";
 import Folder from "./Folder";
-import Navbar from "./Navbar";
+import Navbar from "../shared/Navbar";
 import FolderBreadcrumbs from "./FolderBreadcrumbs";
 import AddFileButton from "./AddFileButton";
 import File from "./File";

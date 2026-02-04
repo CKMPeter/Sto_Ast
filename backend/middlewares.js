@@ -13,8 +13,8 @@ module.exports = function (app) {
   app.use(
     cors({
       origin: [
-        "https://localhost:3000",
-        "http://localhost:3000",
+        "https://localhost:5173",
+        "http://localhost:5173",
         process.env.FRONTEND_URL,
       ],
       credentials: true,
@@ -31,14 +31,14 @@ module.exports = function (app) {
           scriptSrc: [
             "'self'",
             process.env.FRONTEND_URL,
-            "https://localhost:3000",
+            "https://localhost:5173",
             "https://apis.google.com",
             "https://www.gstatic.com",
           ],
           styleSrc: [
             "'self'",
             process.env.FRONTEND_URL,
-            "https://localhost:3000",
+            "https://localhost:5173",
           ],
           imgSrc: [
             "'self'",
@@ -51,7 +51,7 @@ module.exports = function (app) {
             process.env.FRONTEND_URL,
             process.env.BACKEND_URL,
             "https://localhost:5000",
-            "http://localhost:3000",
+            "http://localhost:5173",
             "https://generativelanguage.googleapis.com",
           ],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],

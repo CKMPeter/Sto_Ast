@@ -1,4 +1,4 @@
-import { FileClass } from "./FileClass";
+import { FileClass } from "./storage/FileClass";
 
 export class FolderClass {
   constructor(id, name, path) {

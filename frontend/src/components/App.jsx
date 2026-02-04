@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import Profile from "./authentication/Profile";
 import Login from "./authentication/Login";
 import Dashboard from "./storage/Dashboard";
+import { Message } from "./message/Message";
 import { AuthProvider } from "../contexts/AuthContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./authentication/PrivateRoutes";
 import ForgotPassword from "./authentication/ForgotPassword";
 import UpdateProfile from "./authentication/UpdateProfile";
 import { useDarkMode } from "../hooks/useDarkMode"; // import your hook
-import LoadingPage from "./storage/LoadingPage";
+import LoadingPage from "./shared/LoadingPage";
 
 function AppWrapper() {
   const { darkMode, loading } = useDarkMode();
@@ -56,6 +57,14 @@ function AppWrapper() {
           element={
             <PrivateRoute>
               <UpdateProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route 
+          path="/message"
+          element={
+            <PrivateRoute>
+              <Message />
             </PrivateRoute>
           }
         />

@@ -35,6 +35,13 @@ export default function NavbarComponent() {
         >
           Profile
         </Nav.Link>
+        <Nav.Link
+          as={Link}
+          to="/message"
+          style={{ fontSize: '1rem', fontWeight: 'bold' }}
+        >
+          Message
+        </Nav.Link>
 
         {/* Sun/Moon Switch */}
         <div className="d-flex align-items-center ms-3 me-2">
