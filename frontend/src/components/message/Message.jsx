@@ -13,7 +13,7 @@ export function Message() {
   return (
     <div>
         <Navbar />
-        <div className="container-fluid mt-4 d-flex flex-row gap-4">
+        <ChatBoxContainer className="container-fluid d-flex flex-row gap-4">
             <div style={{ minWidth: "220px" }}>
                 <h1>Friend List</h1>
                 <ul>
@@ -47,10 +47,17 @@ export function Message() {
                   />
                 </div>
             </div>
-        </div>
+        </ChatBoxContainer>
     </div>
   )
 }
+const ChatBoxContainer = styled("div")(({ theme }) => ({
+  border: `1px solid ${theme.palette.divider}`,
+  height: "100vh",
+  marginRight: theme.spacing(2),
+  overflowY: "auto",
+  padding: theme.spacing(2),
+}));  
 const ChatBox = styled("div")(({ theme }) => ({
   border: `1px solid ${theme.palette.divider}`,
   height: "60vh",
@@ -60,5 +67,4 @@ const ChatBox = styled("div")(({ theme }) => ({
 const MessageContainer = styled("div")(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing(1),
 }));
