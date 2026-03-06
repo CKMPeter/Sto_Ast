@@ -37,6 +37,7 @@ const styleSheet = {
 const thisMonth = new Date().getMonth() + 1; // Get current month (0-11, so add 1)
 const thisYear = new Date().getFullYear(); // Get current year
 const startOfMonth = new Date(thisYear, thisMonth - 1 , 1).getDay(); // Get the day of the week for the first day of the month (0-6, where 0 is Sunday)
+const today = new Date().getDate(); // Get current day of the month
 
 var months = [ "January", "February", "March", "April", "May", "June", 
            "July", "August", "September", "October", "November", "December" ];
@@ -76,21 +77,31 @@ export default function Schedule() {
             </thead>
             <tbody>
               {/* Schedule rows would go here */}
-              {Array.from({ length: 5}, (_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 7 }, (_, j) => {
-                    const day = (i * 7 + j - startOfMonth + 1);
-                    const isCurrentMonth = day > 0 && day <= getDaysInMonth(thisMonth);
-                    return (
-                      <td key={j} style={styleSheet.dateContainer} 
-                      onMouseEnter={(e) => e.target.style.backgroundColor = "#f0f0f0"}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = "transparent"}>
-                        {isCurrentMonth ? day : ''}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                {Array.from({ length: 5 }, (_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 7 }, (_, j) => {
+                      const day = i * 7 + j - startOfMonth + 1;
+                      const isCurrentMonth = day > 0 && day <= getDaysInMonth(thisMonth);
+                      const isToday = day === today;
+
+                      return (
+                        <td
+                          key={j}
+                          style={{
+                            ...styleSheet.dateContainer,
+                            backgroundColor: isToday ? "#ffeb3b" : "transparent",
+                          }}
+                          onMouseEnter={(e) => (e.target.style.backgroundColor = "#f0f0f0")}
+                          onMouseLeave={(e) =>
+                            (e.target.style.backgroundColor = isToday ? "#ffeb3b" : "transparent")
+                          }
+                        >
+                          {isCurrentMonth ? day : ""}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
