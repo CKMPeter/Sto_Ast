@@ -33,6 +33,12 @@ const {
   getDarkMode,
   setDarkMode,
 } = require("./controllers/DarkModeController");
+const {
+  addSchedule,
+  fetchSchedulesByDate,
+  updateSchedule,
+  deleteSchedule
+} = require("./controllers/ScheduleController");
 
 // Express setup
 const app = express();
@@ -75,6 +81,12 @@ app.get("/api/files", fetchFilesByFolderPath);
 
 // Fetch files by folderId (distinct route to avoid conflict)
 app.get("/api/folders/:folderId/files", fetchFilesByFolderId);
+
+// Scheduling API
+app.post("/api/schedules", addSchedule);
+app.get("/api/schedules", fetchSchedulesByDate);
+app.put("/api/schedules/:scheduleId", updateSchedule);
+app.delete("/api/schedules/:scheduleId", deleteSchedule);
 
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {

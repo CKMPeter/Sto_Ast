@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import Navbar from '../shared/Navbar';
+import SchedulePopUp from './SchedulePopUp';
 
 const styleSheet = {
   table: {
@@ -34,6 +35,7 @@ const styleSheet = {
     border: "1px solid #ddd",
     padding: "2rem",
     textAlign: "center",
+    cursor: "pointer",
   },
   monthNavigate: {
     fontSize: "1rem",
@@ -101,6 +103,10 @@ export default function Schedule() {
   const [tempMonth, setTempMonth] = useState(month)
   const [tempYear, setTempYear] = useState(year)
 
+  //POP UPS Stats
+  const [showSchedule, setShowSchedule] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null)
+
   const today = todayDate.getDate()
 
   const months = [
@@ -140,6 +146,13 @@ export default function Schedule() {
     setTempMonth(month)
     setTempYear(year)
     setShowPicker(true)
+  }
+
+   /* OPEN POPUP WHEN DAY CLICKED */
+  function openSchedule(day) {
+    const date = new Date(year, month, day)
+    setSelectedDate(date)
+    setShowSchedule(true)
   }
 
   useEffect(() => {
@@ -201,6 +214,11 @@ export default function Schedule() {
                         backgroundColor: isToday ? "#00b4d8" : "transparent",
                         color: isToday ? "white" : "black"
                       }}
+
+                      onClick={() => {
+                        if (isCurrentMonth) openSchedule(day)
+                      }}
+
                       onMouseEnter={(e) => {
                         if (!isToday)
                           e.target.style.backgroundColor = "#f0f0f0"
@@ -274,6 +292,14 @@ export default function Schedule() {
             </div>
           </div>
         </div>
+      )}
+
+       {/* SCHEDULE POPUP */}
+      {showSchedule && (
+        <SchedulePopUp
+          date={selectedDate}
+          close={() => setShowSchedule(false)}
+        />
       )}
     </div>
   )
