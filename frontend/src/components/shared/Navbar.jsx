@@ -42,19 +42,20 @@ export default function NavbarComponent() {
         >
           Message
         </Nav.Link>
-         <Nav.Link
-          as={Link}
-          to="/user"
-          style={{ fontSize: '1rem', fontWeight: 'bold' }}
-        >
-          Profile
-        </Nav.Link>
         <Nav.Link
           as={Link}
           to="/Schedule"
           style={{ fontSize: '1rem', fontWeight: 'bold' }}
         >
           Schedule
+        </Nav.Link>
+
+         <Nav.Link
+          as={Link}
+          to="/user"
+          style={{ fontSize: '1rem', fontWeight: 'bold' }}
+        >
+          Profile
         </Nav.Link>
 
         {/* Sun/Moon Switch */}
