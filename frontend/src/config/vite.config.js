@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    https: {
+    https: false/*{
       cert: './src/cert/cert.pem',
       key: './src/cert/key.pem',
     },
@@ -14,6 +14,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-    },
+    },*/
   },
 });
