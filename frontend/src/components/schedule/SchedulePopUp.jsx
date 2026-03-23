@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+// import { useScheduleQueue } from "../../hooks/scheduleHook/useScheduleQueue";
 
 export default function SchedulePopUp({ date, close, userId }) {
 
+  //const { addEvent: addToQueue, getEventsByDate, deleteEvent: deleteFromQueue } = useScheduleQueue();
   const { getIdToken, currentUser } = useAuth();
   const timelineRef = useRef(null);
 
@@ -40,104 +42,112 @@ export default function SchedulePopUp({ date, close, userId }) {
       .padStart(2, "0")} ${ampm}`);
   }
 
-  async function addEvent() {
-
-        if (clickedMinutes === null) {
-            alert("Click timeline first");
-            return;
-        }
-
-        try {
-
-            const token = await getIdToken();
-
-            const res = await fetch(
-            `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules`,
-            {
-                method: "POST",
-                headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                title: eventTitle,
-                date: date.toISOString().split("T")[0],
-                startMinutes: clickedMinutes,
-                duration: 60,
-                userId: currentUser.uid
-                })
-            }
-            );
-
-            if (!res.ok) {
-            throw new Error("Failed to create schedule");
-            }
-
-            const data = await res.json();
-
-            const newEvent = {
-            id: data.id || Date.now(),
-            start: clickedMinutes,
-            duration: 60,
-            title: eventTitle
-            };
-
-            setEvents([...events, newEvent]);
-
-        } catch (err) {
-            console.error("Schedule API error", err);
-        }
-    }
-
-    async function loadEvents() {
-
-    try {
-
-        const token = await getIdToken();
-
-        const res = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules?date=${date
-            .toISOString()
-            .split("T")[0]}`,
-        {
-            headers: {
-            Authorization: `Bearer ${token}`
-            }
-        }
-        );
-
-        if (!res.ok) {
-        throw new Error("Failed to load schedules");
-        }
-
-        const data = await res.json();
-
-        const formattedEvents = (data.events || []).map(e => ({
-        id: e.id,
-        start: e.startMinutes ?? e.start,
-        duration: e.duration ?? 60,
-        title: e.title
-        }));
-
-        setEvents(formattedEvents);
-
-    } catch (err) {
-        console.error("Load schedules error:", err);
-    }
-
-    }
-
-  function deleteEvent() {
-
-    if (!selectedEvent) {
-      alert("Select event first");
-      return;
-    }
-
-    setEvents(events.filter(e => e.id !== selectedEvent.id));
-    setSelectedEvent(null);
+async function addEvent() {
+  if (clickedMinutes === null) {
+    alert("Click timeline first");
+    return;
   }
 
+  try {
+    const token = await getIdToken();
+    const formattedDate = date.toISOString().split("T")[0];
+
+    const res = await fetch(
+      `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: eventTitle,
+          date: formattedDate,
+          startMinutes: clickedMinutes,
+          duration: 60,
+          userId: currentUser.uid
+        })
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to create schedule");
+
+    const data = await res.json();
+
+    const newEvent = {
+      id: data.id,
+      start: clickedMinutes,   // ✅ ALWAYS valid
+      duration: 60,
+      title: eventTitle
+    };
+    setEvents(prev => [...prev, newEvent]);
+    setEventTitle("");
+
+  } catch (err) {
+    console.error("Schedule API error", err);
+  }
+}
+
+async function loadEvents() {
+  try {
+    const token = await getIdToken();
+    const formattedDate = date.toISOString().split("T")[0];
+
+    const res = await fetch(
+      `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules?date=${formattedDate}&userId=${currentUser.uid}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to load schedules");
+
+    const data = await res.json();
+
+    const backendEvents = (data.events || []).map(e => ({
+      id: e.id,
+      start: Number(e.startMinutes ?? e.start ?? 0), // ✅ SAFE
+      duration: Number(e.duration ?? 60),
+      title: e.title || "Untitled"
+    }));
+
+    setEvents(backendEvents);
+
+  } catch (err) {
+    console.error("Load schedules error:", err);
+  }
+}
+
+async function deleteEvent() {
+  if (!selectedEvent) {
+    alert("Select event first");
+    return;
+  }
+
+  try {
+    const token = await getIdToken();
+
+    const res = await fetch(
+      `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules/${selectedEvent.id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!res.ok) throw new Error("Delete failed");
+
+    setEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+    setSelectedEvent(null);
+
+  } catch (err) {
+    console.error("Delete error:", err);
+  }
+}
   function updateEvent() {
 
     if (!selectedEvent) {
@@ -175,39 +185,42 @@ export default function SchedulePopUp({ date, close, userId }) {
         }
     }, [date, currentUser]);
 
-  function renderEvents() {
+function renderEvents() {
 
-    const containerHeight = timelineRef.current?.scrollHeight || 960;
+  const containerHeight = timelineRef.current?.scrollHeight || 960;
 
-    return events.map(event => {
+  return events.map(event => {
 
-      const top = (event.start / 1440) * containerHeight;
-      const height = (event.duration / 1440) * containerHeight;
+    if (!Number.isFinite(event.start) || !Number.isFinite(event.duration)) {
+      return null;
+    }
 
-      return (
-        <div
-          key={event.id}
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedEvent(event);
-            setEventTitle(event.title);
-          }}
-          style={{
-            ...styleSheet.eventBlock,
-            top: top,
-            height: height,
-            backgroundColor:
-              selectedEvent?.id === event.id
-                ? "#ff9800"
-                : "#2196F3"
-          }}
-        >
-          {event.title}
-        </div>
-      );
-    });
-  }
+    const top = (event.start / 1440) * containerHeight;
+    const height = (event.duration / 1440) * containerHeight;
 
+    return (
+      <div
+        key={event.id ?? `${event.start}-${event.title}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedEvent(event);
+          setEventTitle(event.title);
+        }}
+        style={{
+          ...styleSheet.eventBlock,
+          top: `${top}px`,
+          height: `${height}px`,
+          backgroundColor:
+            selectedEvent?.id === event.id
+              ? "#ff9800"
+              : "#2196F3"
+        }}
+      >
+        {event.title}
+      </div>
+    );
+  });
+}
   return (
     <div style={styleSheet.overlay} onClick={close}>
       <div
