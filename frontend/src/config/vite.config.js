@@ -4,16 +4,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    https: false/*{
-      cert: './src/cert/cert.pem',
-      key: './src/cert/key.pem',
-    },
+    https: false, 
+    port: 3000,   
     proxy: {
       '/api': {
-        target: 'https://localhost:5000',
+        target: 'http://localhost:5000', 
         changeOrigin: true,
         secure: false,
       },
-    },*/
+    },
   },
 });
