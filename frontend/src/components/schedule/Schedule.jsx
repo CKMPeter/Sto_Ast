@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Navbar from '../shared/Navbar';
 import SchedulePopUp from './SchedulePopUp';
+import { useScheduleRealtime } from '../../hooks/scheduleHook/useScheduleRealtime';
 
 const styleSheet = {
   table: {
@@ -89,7 +90,29 @@ const styleSheet = {
     gap: "1rem",
     justifyContent: "center",
     marginTop: "1rem"
-  }
+  },
+
+  eventDot: {
+    position: "absolute",
+    bottom: "6px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "6px",
+    height: "6px",
+    borderRadius: "50%",
+    backgroundColor: "#db8d17",
+  },
+
+  eventCount: {
+    position: "absolute",
+    top: "4px",
+    right: "6px",
+    fontSize: "0.7rem",
+    backgroundColor: "#1976d2",
+    color: "white",
+    borderRadius: "10px",
+    padding: "2px 6px",
+  },
 }
 
 export default function Schedule() {
@@ -106,6 +129,9 @@ export default function Schedule() {
   //POP UPS Stats
   const [showSchedule, setShowSchedule] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
+
+  //For icon notification
+  const  eventList  = useScheduleRealtime()
 
   const today = todayDate.getDate()
 
@@ -159,6 +185,38 @@ export default function Schedule() {
     console.log("Days in month:", daysInMonth)
   }, [month, year])
 
+  function hasEventOnDay(day) {
+    if (!eventList || !day) return false;
+
+    const cellDate = new Date(year, month, day)
+      .toISOString()
+      .split("T")[0];
+
+    return eventList.some(e => {
+      const eventDate = new Date(e.date)
+        .toISOString()
+        .split("T")[0];
+
+      return eventDate === cellDate;
+    });
+  }
+
+  function getEventCount(day) {
+    if (!eventList || !day) return 0;
+
+    const cellDate = new Date(year, month, day)
+      .toISOString()
+      .split("T")[0];
+
+    return eventList.filter(e => {
+      const eventDate = new Date(e.date)
+        .toISOString()
+        .split("T")[0];
+
+      return eventDate === cellDate;
+    }).length;
+  }
+
   return (
     <div>
       <Navbar />
@@ -211,24 +269,43 @@ export default function Schedule() {
                       key={j}
                       style={{
                         ...styleSheet.dateContainer,
-                        backgroundColor: isToday ? "#00b4d8" : "transparent",
-                        color: isToday ? "white" : "black"
+                        backgroundColor: isToday
+                          ? "#00b4d8"
+                          : hasEventOnDay(day)
+                          ? "#e3f2fd" // 🔥 light highlight if has event
+                          : "transparent",
+                        color: isToday ? "white" : "black",
+                        position: "relative"
                       }}
-
                       onClick={() => {
                         if (isCurrentMonth) openSchedule(day)
                       }}
-
                       onMouseEnter={(e) => {
                         if (!isToday)
                           e.target.style.backgroundColor = "#f0f0f0"
                       }}
                       onMouseLeave={(e) => {
                         e.target.style.backgroundColor =
-                          isToday ? "#00b4d8" : "transparent"
+                          isToday
+                            ? "#00b4d8"
+                            : hasEventOnDay(day)
+                            ? "#e3f2fd"
+                            : "transparent"
                       }}
                     >
                       {isCurrentMonth ? day : ""}
+
+                      {/* ✅ DOT indicator */}
+                      {isCurrentMonth && hasEventOnDay(day) && (
+                        <div style={styleSheet.eventDot}></div>
+                      )}
+
+                      {/* ✅ COUNT badge (optional) */}
+                      {isCurrentMonth && getEventCount(day) > 1 && (
+                        <div style={styleSheet.eventCount}>
+                          {getEventCount(day)}
+                        </div>
+                      )}
                     </td>
                   )
                 })}
