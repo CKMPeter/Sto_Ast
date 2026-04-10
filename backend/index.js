@@ -33,12 +33,15 @@ const {
   getDarkMode,
   setDarkMode,
 } = require("./controllers/DarkModeController");
+
 const {
   addSchedule,
   fetchSchedulesByDate,
   updateSchedule,
   deleteSchedule
 } = require("./controllers/ScheduleController");
+
+const { getFriends, getMessages } = require("./controllers/FriendController");
 
 // Express setup
 const app = express();
@@ -89,6 +92,10 @@ app.put("/api/schedules/:scheduleId", updateSchedule);
 app.delete("/api/schedules/:scheduleId", deleteSchedule);
 //app.post("/api/schedulesQueue");
 
+// --- Friends & Messages API ---
+app.get('/api/:userid/friends', getFriends);
+app.get('/api/:userid/:friendid/message', getMessages);
+
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {
   const options = {
@@ -97,10 +104,10 @@ if (process.env.HTTPS === "true") {
   };
 
   https.createServer(options, app).listen(PORT, () => {
-    console.log(`✅ HTTPS server running at https://localhost:${PORT}`);
+    console.log(`HTTPS server running at https://localhost:${PORT}`);
   });
 } else {
   app.listen(PORT, () => {
-    console.log(`✅ HTTP server running at http://localhost:${PORT}`);
+    console.log(`HTTP server running at http://localhost:${PORT}`);
   });
 }
