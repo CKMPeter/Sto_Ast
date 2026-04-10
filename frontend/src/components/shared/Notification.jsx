@@ -11,7 +11,10 @@ export default function Notification({ eventList = [] }) {
         eventList.map((event) => (
           <div key={event.id} style={styleSheet.item}>
             <strong>{event.title}</strong>
-            <p>{formatTime(event.start)}</p>
+            <div style={{display: "flex", direction: "collumn", gap: "1rem"}}>
+              <p>{formatTime(event.start)}</p>
+              <p>{event.date}</p>
+            </div>
           </div>
         ))
       )}

@@ -199,89 +199,97 @@ function renderEvents() {
     const height = (event.duration / 1440) * containerHeight;
 
     return (
-      <div
-        key={event.id ?? `${event.start}-${event.title}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedEvent(event);
-          setEventTitle(event.title);
-        }}
-        style={{
-          ...styleSheet.eventBlock,
-          top: `${top}px`,
-          height: `${height}px`,
-          backgroundColor:
-            selectedEvent?.id === event.id
-              ? "#ff9800"
-              : "#2196F3"
-        }}
-      >
-        {event.title}
-      </div>
+      <>
+        <div
+          key={event.id ?? `${event.start}-${event.title}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedEvent(event);
+            setEventTitle(event.title);
+          }}
+          style={{
+            ...styleSheet.eventBlock,
+            top: `${top}px`,
+            height: `${height}px`,
+            backgroundColor:
+              selectedEvent?.id === event.id
+                ? "#ff9800"
+                : "#2196F3"
+          }}
+        >
+          {event.title}
+        </div>
+      </>
     );
   });
 }
   return (
-    <div style={styleSheet.overlay} onClick={close}>
-      <div
-        style={styleSheet.root}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={styleSheet.title}>
-          Schedule for {date?.toDateString()}
-        </h3>
-
-        <input
-          style={styleSheet.input}
-          placeholder="Event title..."
-          value={eventTitle}
-          onChange={(e) => setEventTitle(e.target.value)}
-        />
-
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={styleSheet.overlay} onClick={close}>
         <div
-          ref={timelineRef}
-          style={styleSheet.timeLineContainter}
-          onClick={handleTimelineClick}
+          style={styleSheet.root}
+          onClick={(e) => e.stopPropagation()}
         >
-          {hours.map((hour) => {
+          <h3 style={styleSheet.title}>
+            Schedule for {date?.toDateString()}
+          </h3>
 
-            const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-            const ampm = hour < 12 ? "AM" : "PM";
+          <input
+            style={styleSheet.input}
+            placeholder="Event title..."
+            value={eventTitle}
+            onChange={(e) => setEventTitle(e.target.value)}
+          />
 
-            return (
-              <div key={hour} style={styleSheet.timeRow}>
-                <div style={styleSheet.timeLabel}>
-                  {displayHour}:00 {ampm}
+          <div
+            ref={timelineRef}
+            style={styleSheet.timeLineContainter}
+            onClick={handleTimelineClick}
+          >
+            {hours.map((hour) => {
+
+              const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+              const ampm = hour < 12 ? "AM" : "PM";
+
+              return (
+                <div key={hour} style={styleSheet.timeRow}>
+                  <div style={styleSheet.timeLabel}>
+                    {displayHour}:00 {ampm}
+                  </div>
+
+                  <div style={styleSheet.timeSlot}></div>
                 </div>
+              );
+            })}
 
-                <div style={styleSheet.timeSlot}></div>
-              </div>
-            );
-          })}
+            {renderEvents()}
+          </div>
 
-          {renderEvents()}
+          <div style={styleSheet.buttonContainer}>
+
+            <button style={styleSheet.addButton} onClick={addEvent}>
+              Add
+            </button>
+
+            <button style={styleSheet.updateButton} onClick={updateEvent}>
+              Update
+            </button>
+
+            <button style={styleSheet.deleteButton} onClick={deleteEvent}>
+              Delete
+            </button>
+
+          </div>
+
+          <button style={styleSheet.closeButton} onClick={close}>
+            Close
+          </button>
+
         </div>
+      </div>
 
-        <div style={styleSheet.buttonContainer}>
-
-          <button style={styleSheet.addButton} onClick={addEvent}>
-            Add
-          </button>
-
-          <button style={styleSheet.updateButton} onClick={updateEvent}>
-            Update
-          </button>
-
-          <button style={styleSheet.deleteButton} onClick={deleteEvent}>
-            Delete
-          </button>
-
-        </div>
-
-        <button style={styleSheet.closeButton} onClick={close}>
-          Close
-        </button>
-
+      <div style={{ position: "fixed", bottom: "10px", left: "10px", fontSize: "0.8rem", color: "#666" }}>
+        <p>Click on an event to select it, then use the buttons to update or delete it.</p>
       </div>
     </div>
   );
