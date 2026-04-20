@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
+const getBackendUrl = () => {
+  return (
+    import.meta.env.VITE_APP_BACKEND_URL ||
+    "http://localhost:5000" // ✅ use HTTP for dev
+  );
+};
+
 export function useDarkMode() {
-  const { currentUser, getIdToken } = useAuth();
+  const { currentUser } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fetch dark mode from backend on mount or user change
+  // 🔥 Fetch dark mode
   useEffect(() => {
     if (!currentUser) {
       setDarkMode(false);
@@ -14,58 +21,62 @@ export function useDarkMode() {
       return;
     }
 
-    async function fetchDarkMode() {
-      setLoading(true);
+    const fetchDarkMode = async () => {
       try {
-        const token = await currentUser.getIdToken(true); // <- force refreshs
-        const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/user/theme`, {
+        const token = await currentUser.getIdToken(); // ✅ no force refresh
+        const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        if (res.ok) {
-          const data = await res.json();
-          setDarkMode(data.darkMode);
-        }
+
+        if (!res.ok) throw new Error("Failed request");
+
+        const data = await res.json();
+        setDarkMode(data.darkMode ?? false);
+
       } catch (error) {
         console.error("Failed to fetch dark mode:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchDarkMode();
-  }, [currentUser, getIdToken]);
+  }, [currentUser]);
 
-  // Toggle dark mode locally and update backend
-  async function toggleDarkMode() {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode); // Instant UI feedback
+  // 🔥 Toggle dark mode
+  const toggleDarkMode = async () => {
+    const newValue = !darkMode;
+
+    // optimistic update
+    setDarkMode(newValue);
 
     if (!currentUser) return;
 
     try {
-      const token = await currentUser.getIdToken(true);
-      if (!token) return;
+      const token = await currentUser.getIdToken();
 
-      const res = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/user/theme`, {
+      const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ darkMode: newDarkMode }),
+        body: JSON.stringify({ darkMode: newValue }),
       });
 
       if (!res.ok) {
-        console.error("Failed to update dark mode");
-      } else {
-        window.location.reload(); // ✅ Refresh after successful update
+        throw new Error("Update failed");
       }
+
     } catch (error) {
       console.error("Error updating dark mode:", error);
+
+      // rollback if failed
+      setDarkMode(!newValue);
     }
-  }
+  };
 
   return { darkMode, toggleDarkMode, loading };
 }
