@@ -27,6 +27,7 @@
 // }
 import React from "react";
 import useFriends from "../../hooks/messageHook/useFriends";
+import FriendBox from "./FriendBox";
 
 export default function FriendsList({ userId }) {
   const { friends, loadingFriends } = useFriends(userId);
@@ -38,15 +39,7 @@ export default function FriendsList({ userId }) {
   return (
     <ul style={{ padding: 0, listStyle: "none" }}>
       {friends.map((friend) => (
-        <li
-          key={friend.uid} // 🔥 FIX HERE
-          style={{
-            padding: "8px",
-            borderBottom: "1px solid #ddd"
-          }}
-        >
-          {friend.email}
-        </li>
+        <FriendBox name={friend.email} photoURL={""} uid={friend.uid}/>
       ))}
     </ul>
   );

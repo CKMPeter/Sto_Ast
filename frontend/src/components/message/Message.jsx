@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../shared/Navbar';
 import useCall from "../../webrtc/useCall";
 import { RequestBox } from './RequestBox';
-import FriendsList from '../shared/FriendsList';
+import FriendsList from './FriendsList';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCallContext } from '../../contexts/CallContext';
 import useFriends from '../../hooks/messageHook/useFriends'; // 🔥 ADD
