@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from '../shared/Navbar';
 import useCall from "../../webrtc/useCall";
-import FriendBox from './FriendBox';
+import { RequestBox } from './RequestBox';
 import FriendsList from '../shared/FriendsList';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCallContext } from '../../contexts/CallContext'; // 🔥 ADD
+import { useCallContext } from '../../contexts/CallContext';
+import useFriends from '../../hooks/messageHook/useFriends'; // 🔥 ADD
 import { styled } from "@mui/material/styles";
 
 export function Message() {
@@ -13,13 +14,59 @@ export function Message() {
   // CALL LOGIC
   const { startCall, incomingCall, acceptCall, endCall } = useCall(currentUser?.uid);
 
-  // GET STREAM FROM CONTEXT
+  // STREAM CONTEXT
   const { call } = useCallContext();
 
-  // TEST USER (RECEIVER)
-  const testFriendId = "2llsP93pmhcoLXZz0BIwdyKeDTv2";
+  // 🔥 FRIEND HOOK (REAL DATA)
+  const {
+    requests,
+    sendRequest,
+    acceptRequest,
+    rejectRequest
+  } = useFriends(currentUser?.uid);
 
-  console.log("MY UID:", currentUser?.uid);
+  // 🔥 ADD FRIEND STATE
+  const [showAddFriend, setShowAddFriend] = useState(false);
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+
+  const handleSearch = async () => {
+    if (!search || !currentUser) return;
+
+    try {
+      const token = await currentUser.getIdToken();
+
+      const res = await fetch(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/users/search?query=${encodeURIComponent(search)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!res.ok) throw new Error("Search failed");
+
+      const data = await res.json();
+
+      const filtered = data.filter(u => u.uid !== currentUser.uid);
+
+      console.log(filtered);
+      setResults(filtered);
+
+    } catch (err) {
+      console.error("Search error:", err);
+      setResults([]);
+    }
+  };
+  // 👉 REAL SEND REQUEST
+  const handleSendRequest = async (user) => {
+    await sendRequest(user.uid);
+
+    setShowAddFriend(false);
+    setSearch("");
+    setResults([]);
+  };
 
   return (
     <div>
@@ -29,6 +76,31 @@ export function Message() {
 
         {/* LEFT */}
         <div style={{ minWidth: "220px" }}>
+
+          {/* ADD FRIEND BUTTON */}
+          <button
+            onClick={() => setShowAddFriend(true)}
+            style={{
+              padding: "8px 12px",
+              background: "#2196F3",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              marginBottom: "10px",
+              cursor: "pointer",
+              width: "100%"
+            }}
+          >
+            + Add Friend
+          </button>
+
+          {/* 🔥 REAL REQUEST BOX */}
+          <RequestBox
+            friendRequests={requests}
+            onAccept={acceptRequest}
+            onReject={rejectRequest}
+          />
+
           <FriendsList userId={currentUser?.uid} />
         </div>
 
@@ -37,7 +109,7 @@ export function Message() {
 
           {/* CALL BUTTON */}
           <button
-            onClick={() => startCall(testFriendId)}
+            onClick={() => startCall("2llsP93pmhcoLXZz0BIwdyKeDTv2")}
             style={{
               padding: "10px 16px",
               backgroundColor: "#4CAF50",
@@ -62,10 +134,7 @@ export function Message() {
               <h3>Incoming Call</h3>
               <p>From: {incomingCall.callerId}</p>
 
-              <button
-                onClick={acceptCall}
-                style={{ marginRight: "10px" }}
-              >
+              <button onClick={acceptCall} style={{ marginRight: "10px" }}>
                 Accept
               </button>
 
@@ -88,11 +157,10 @@ export function Message() {
             </MessageContainer>
           </ChatBox>
 
-          {/* VIDEO CALL UI */}
+          {/* VIDEO CALL */}
           {call && (
             <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
 
-              {/* LOCAL VIDEO */}
               <video
                 autoPlay
                 muted
@@ -105,7 +173,6 @@ export function Message() {
                 style={{ width: "200px", background: "black" }}
               />
 
-              {/* REMOTE VIDEO */}
               <video
                 autoPlay
                 playsInline
@@ -117,7 +184,6 @@ export function Message() {
                 style={{ width: "200px", background: "black" }}
               />
 
-              {/*  END CALL */}
               <button
                 onClick={endCall}
                 style={{
@@ -145,8 +211,87 @@ export function Message() {
 
         </div>
       </ChatBoxContainer>
+
+      {/* ADD FRIEND MODAL */}
+      {showAddFriend && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: "white",
+            padding: "20px",
+            borderRadius: "10px",
+            width: "320px"
+          }}>
+            <h3>Add Friend</h3>
+
+            <input
+              type="text"
+              placeholder="Enter UID or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="form-control mb-2"
+            />
+
+            <button
+              onClick={handleSearch}
+              className="btn btn-primary w-100"
+            >
+              Search
+            </button>
+
+            {/* RESULTS */}
+            <div style={{ marginTop: "10px" }}>
+              {results.map((user) => (
+                <div
+                  key={user.uid}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                    padding: "5px",
+                    border: "1px solid #ddd",
+                    borderRadius: "5px"
+                  }}
+                >
+                  <span>{user.email}</span>
+
+                  <button
+                    onClick={() => handleSendRequest(user)}
+                    style={{
+                      background: "green",
+                      color: "white",
+                      border: "none",
+                      padding: "4px 8px",
+                      borderRadius: "4px"
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowAddFriend(false)}
+              className="btn btn-secondary w-100 mt-2"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
 
 const ChatBoxContainer = styled("div")(({ theme }) => ({
@@ -164,7 +309,7 @@ const ChatBox = styled("div")(({ theme }) => ({
   padding: theme.spacing(2),
 }));
 
-const MessageContainer = styled("div")(({ theme }) => ({
+const MessageContainer = styled("div")(() => ({
   display: "flex",
   flexDirection: "column",
 }));

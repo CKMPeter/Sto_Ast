@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { getDatabase, ref, set, get, update  } from "firebase/database";
 import { auth } from '../config/firebase';
 import {
   createUserWithEmailAndPassword,
@@ -99,9 +100,49 @@ export function AuthProvider({ children }) {
     return null;
   }
 
+  // USE FOR UPDATE THE REALTIME DATABASE TO SYNC THE USERNAME AND EMAIL ON CREATION
+
+  // async function saveUserToDatabase(user) {
+  //   if (!user) return;
+
+  //   const db = getDatabase();
+  //   const userRef = ref(db, `users/${user.uid}`);
+
+  //   // check if already exists (avoid overwrite)
+  //   const snapshot = await get(userRef);
+
+  //   if (!snapshot.exists()) {
+  //     await set(userRef, {
+  //       email: user.email || "",
+  //       name: user.displayName || "",
+  //       createdAt: Date.now()
+  //     });
+  //   }
+  // }
+
+  async function saveUserToDatabase(user) {
+    //if (!user) return;
+
+    const db = getDatabase();
+    const userRef = ref(db, `users/${user.uid}`);
+
+    console.log(user.email);
+
+    await update(ref(db, `users/${user.uid}`), {
+      email: user.email || "",
+      name: user.displayName || "",
+      updatedAt: Date.now()
+    });
+  }
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setCurrentUser(user);
+
+      if (user) {
+        await saveUserToDatabase(user); // 🔥 ADD THIS
+      }
+
       setLoading(false);
     });
 

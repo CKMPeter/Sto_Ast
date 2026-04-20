@@ -41,7 +41,15 @@ const {
   deleteSchedule
 } = require("./controllers/ScheduleController");
 
-const { getFriends, getMessages } = require("./controllers/FriendController");
+const {
+  getFriends,
+  getMessages,
+  searchUsers,
+  getFriendRequests,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest
+} = require("./controllers/FriendController");
 
 // Express setup
 const app = express();
@@ -92,9 +100,18 @@ app.put("/api/schedules/:scheduleId", updateSchedule);
 app.delete("/api/schedules/:scheduleId", deleteSchedule);
 //app.post("/api/schedulesQueue");
 
-// --- Friends & Messages API ---
-app.get('/api/:userid/friends', getFriends);
-app.get('/api/:userid/:friendid/message', getMessages);
+// --- Friends API ---
+app.get('/api/users/:userid/friends', getFriends);
+app.get('/api/users/:userid/requests', getFriendRequests);
+
+app.post('/api/users/friend-request', sendFriendRequest);
+app.post('/api/users/friend-request/accept', acceptFriendRequest);
+app.post('/api/users/friend-request/reject', rejectFriendRequest);
+
+app.get("/api/users/search", searchUsers);
+
+// --- Messages API ---
+app.get('/api/messages/:userid/:friendid', getMessages);
 
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {
