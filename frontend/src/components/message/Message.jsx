@@ -5,7 +5,7 @@ import { RequestBox } from './RequestBox';
 import FriendsList from './FriendsList';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCallContext } from '../../contexts/CallContext';
-import useFriends from '../../hooks/messageHook/useFriends'; // 🔥 ADD
+import useFriends from '../../hooks/messageHook/useFriends'; //  ADD
 import { styled } from "@mui/material/styles";
 
 export function Message() {
@@ -17,7 +17,7 @@ export function Message() {
   // STREAM CONTEXT
   const { call } = useCallContext();
 
-  // 🔥 FRIEND HOOK (REAL DATA)
+  //  FRIEND HOOK (REAL DATA)
   const {
     requests,
     sendRequest,
@@ -25,7 +25,7 @@ export function Message() {
     rejectRequest
   } = useFriends(currentUser?.uid);
 
-  // 🔥 ADD FRIEND STATE
+  //  ADD FRIEND STATE
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
@@ -94,7 +94,7 @@ export function Message() {
             + Add Friend
           </button>
 
-          {/* 🔥 REAL REQUEST BOX */}
+          {/*  REAL REQUEST BOX */}
           <RequestBox
             friendRequests={requests}
             onAccept={acceptRequest}

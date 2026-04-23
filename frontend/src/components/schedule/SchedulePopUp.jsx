@@ -8,12 +8,22 @@ export default function SchedulePopUp({ date, close, userId }) {
   const { getIdToken, currentUser } = useAuth();
   const timelineRef = useRef(null);
 
+  // Local state for events and form
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [clickedMinutes, setClickedMinutes] = useState(null);
   const [eventTitle, setEventTitle] = useState("");
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  // New state to track if a time slot has been selected
+  const [isTimeSelected, setIsTimeSelected] = useState(false);
+
+  const linkedFileList = [
+    { id: 1, name: "Project Plan.docx" },
+    { id: 2, name: "Budget.xlsx" },
+    { id: 3, name: "Presentation.pptx" }
+  ];
 
   function handleTimelineClick(e) {
 
@@ -40,17 +50,32 @@ export default function SchedulePopUp({ date, close, userId }) {
     alert(`Selected Time: ${displayHour}:${minute
       .toString()
       .padStart(2, "0")} ${ampm}`);
+    setIsTimeSelected(true);
+    console.log(isTimeSelected);
   }
 
 async function addEvent() {
+  if (!eventTitle.trim()) {
+    alert("Enter event title");
+    return;
+  }
+
   if (clickedMinutes === null) {
-    alert("Click timeline first");
+    alert("Select time first");
     return;
   }
 
   try {
     const token = await getIdToken();
     const formattedDate = date.toISOString().split("T")[0];
+
+    const payload = {
+      title: eventTitle.trim(),        // ✅ from input
+      date: formattedDate,
+      startMinutes: clickedMinutes,    // ✅ from time input
+      duration: 60,
+      userId: currentUser.uid
+    };
 
     const res = await fetch(
       `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules`,
@@ -60,13 +85,7 @@ async function addEvent() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title: eventTitle,
-          date: formattedDate,
-          startMinutes: clickedMinutes,
-          duration: 60,
-          userId: currentUser.uid
-        })
+        body: JSON.stringify(payload)
       }
     );
 
@@ -74,20 +93,25 @@ async function addEvent() {
 
     const data = await res.json();
 
-    const newEvent = {
-      id: data.id,
-      start: clickedMinutes,   // ✅ ALWAYS valid
-      duration: 60,
-      title: eventTitle
-    };
-    setEvents(prev => [...prev, newEvent]);
+    setEvents(prev => [
+      ...prev,
+      {
+        id: data.id,
+        start: payload.startMinutes,
+        duration: payload.duration,
+        title: payload.title
+      }
+    ]);
+
+    // ✅ reset form
     setEventTitle("");
+    setClickedMinutes(null);
+    setIsTimeSelected(false);
 
   } catch (err) {
     console.error("Schedule API error", err);
   }
 }
-
 async function loadEvents() {
   try {
     const token = await getIdToken();
@@ -223,6 +247,16 @@ function renderEvents() {
     );
   });
 }
+
+  //HELPER FOR FORMATING TIME
+function formatTime(minutes) {
+    if (minutes === null) return "";
+
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  }
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div style={styleSheet.overlay} onClick={close}>
@@ -234,62 +268,104 @@ function renderEvents() {
             Schedule for {date?.toDateString()}
           </h3>
 
-          <input
-            style={styleSheet.input}
-            placeholder="Event title..."
-            value={eventTitle}
-            onChange={(e) => setEventTitle(e.target.value)}
-          />
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "1rem",
+            width: "100%",
+          }}>
+            {/*Main Form for time selection */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flexGrow: 1 }}>
+              <div
+                ref={timelineRef}
+                style={styleSheet.timeLineContainter}
+                onClick={handleTimelineClick}
+              >
+                {hours.map((hour) => {
 
-          <div
-            ref={timelineRef}
-            style={styleSheet.timeLineContainter}
-            onClick={handleTimelineClick}
-          >
-            {hours.map((hour) => {
+                  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+                  const ampm = hour < 12 ? "AM" : "PM";
 
-              const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-              const ampm = hour < 12 ? "AM" : "PM";
+                  return (
+                    <div key={hour} style={styleSheet.timeRow}>
+                      <div style={styleSheet.timeLabel}>
+                        {displayHour}:00 {ampm}
+                      </div>
 
-              return (
-                <div key={hour} style={styleSheet.timeRow}>
-                  <div style={styleSheet.timeLabel}>
-                    {displayHour}:00 {ampm}
+                      <div style={styleSheet.timeSlot}></div>
+                    </div>
+                  );
+                })}
+
+                {renderEvents()}
+              </div>
+
+              <div style={styleSheet.buttonContainer}>
+
+                <button style={styleSheet.addButton} onClick={addEvent}>
+                  Add
+                </button>
+
+                <button style={styleSheet.updateButton} onClick={updateEvent}>
+                  Update
+                </button>
+
+                <button style={styleSheet.deleteButton} onClick={deleteEvent}>
+                  Delete
+                </button>
+
+              </div>
+
+              <button style={styleSheet.closeButton} onClick={close}>
+                Close
+              </button>
+            </div>
+
+            {/*Secondary Form for Event Details */}
+            <div style={{ display: isTimeSelected ? "flex" : "none", marginTop: "1rem", flexDirection: "column", gap: "0.5rem", width: "200px" }}>
+              <input
+                style={styleSheet.input}
+                placeholder="Event title..."
+                value={eventTitle}
+                onChange={(e) => setEventTitle(e.target.value)}
+              />
+              <input
+                type="time"
+                value={formatTime(clickedMinutes)}
+                onChange={(e) => {
+                  const [h, m] = e.target.value.split(":").map(Number);
+                  setClickedMinutes(h * 60 + m);
+                }}
+              />
+
+              {/*FILE LINKED*/}
+              {linkedFileList.length > 0 && (
+                <div style={{ marginTop: "1rem" }}>
+                  <h4>Linked Files</h4>
+                  <div style={{
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    padding: "0.5rem"
+                  }}>
+                    <ul>
+                      {linkedFileList.map(file => (
+                        <li key={file.id}>{file.name}</li>
+                      ))}
+                    </ul>
                   </div>
-
-                  <div style={styleSheet.timeSlot}></div>
                 </div>
-              );
-            })}
-
-            {renderEvents()}
+              )}
+              <div>
+                <button >
+                  Save Details
+                </button>
+                < button >
+                  Close Details
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div style={styleSheet.buttonContainer}>
-
-            <button style={styleSheet.addButton} onClick={addEvent}>
-              Add
-            </button>
-
-            <button style={styleSheet.updateButton} onClick={updateEvent}>
-              Update
-            </button>
-
-            <button style={styleSheet.deleteButton} onClick={deleteEvent}>
-              Delete
-            </button>
-
-          </div>
-
-          <button style={styleSheet.closeButton} onClick={close}>
-            Close
-          </button>
-
         </div>
-      </div>
-
-      <div style={{ position: "fixed", bottom: "10px", left: "10px", fontSize: "0.8rem", color: "#666" }}>
-        <p>Click on an event to select it, then use the buttons to update or delete it.</p>
       </div>
     </div>
   );
@@ -311,10 +387,15 @@ const styleSheet = {
   },
 
   root: {
-    background: "white",
-    padding: "2rem",
+    background: "#fff",
+    padding: "1.5rem",
     borderRadius: "10px",
-    minWidth: "420px",
+
+    width: "60vw",
+
+    height: "80vh",          // 🔥 limit height
+    maxHeight: "80vh",
+
     display: "flex",
     flexDirection: "column",
     gap: "1rem",
@@ -410,6 +491,7 @@ const styleSheet = {
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
+    width: "100%",
   },
 };
 

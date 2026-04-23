@@ -11,7 +11,7 @@ export function RequestBox({ friendRequests = [], onAccept, onReject }) {
 
       {friendRequests.map((req) => (
         <div
-          key={req.uid} // 🔥 FIX HERE
+          key={req.uid} //  FIX HERE
           style={{
             display: "flex",
             justifyContent: "space-between",

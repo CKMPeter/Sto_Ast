@@ -13,7 +13,7 @@ export function useDarkMode() {
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 Fetch dark mode
+  //  Fetch dark mode
   useEffect(() => {
     if (!currentUser) {
       setDarkMode(false);
@@ -45,7 +45,7 @@ export function useDarkMode() {
     fetchDarkMode();
   }, [currentUser]);
 
-  // 🔥 Toggle dark mode
+  //  Toggle dark mode
   const toggleDarkMode = async () => {
     const newValue = !darkMode;
 
