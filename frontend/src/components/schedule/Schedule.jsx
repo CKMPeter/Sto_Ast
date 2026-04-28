@@ -272,7 +272,7 @@ export default function Schedule() {
                         backgroundColor: isToday
                           ? "#00b4d8"
                           : hasEventOnDay(day)
-                          ? "#e3f2fd" // 🔥 light highlight if has event
+                          ? "#e3f2fd" //  light highlight if has event
                           : "transparent",
                         color: isToday ? "white" : "black",
                         position: "relative"

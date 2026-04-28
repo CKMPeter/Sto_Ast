@@ -140,7 +140,7 @@ export function AuthProvider({ children }) {
       setCurrentUser(user);
 
       if (user) {
-        await saveUserToDatabase(user); // 🔥 ADD THIS
+        await saveUserToDatabase(user); //  ADD THIS
       }
 
       setLoading(false);

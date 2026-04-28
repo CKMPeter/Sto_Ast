@@ -37,7 +37,7 @@ export function useScheduleRealtime() {
         });
       });
 
-      console.log("🔥 REALTIME EVENTS:", allEvents);
+      console.log(" REALTIME EVENTS:", allEvents);
       setEvents(allEvents);
     });
 

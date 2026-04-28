@@ -23,6 +23,7 @@ const {
   fetchFilesByFolderId,
   fetchAllFilesByUser,
   fetchFileOrFolderById,
+  fetchFilesByExactDate
 } = require("./controllers/FileController");
 const {
   describeImage,
@@ -80,9 +81,12 @@ app.delete("/api/folders/:folderId", deleteFolder); // Delete folder
 app.get("/api/folders/:folderId", fetchFolderById); // Fetch folder by ID
 app.get("/api/folders", fetchFoldersByParentId); // Fetch folders by parentId
 
+
 // --- File API ---
 app.post("/api/files", uploadFile); // Upload file
 app.get("/api/files/user", fetchAllFilesByUser); // Fetch all files by user
+// Fetch files by exact date
+app.get("/api/files/by-date", fetchFilesByExactDate);
 app.put("/api/files/:fileId", updateFile); // Update file
 app.delete("/api/files/:fileId", deleteFile); // Delete file
 app.get("/api/files/:fileId", fetchFileOrFolderById); // Fetch file or folder by ID
@@ -92,6 +96,8 @@ app.get("/api/files", fetchFilesByFolderPath);
 
 // Fetch files by folderId (distinct route to avoid conflict)
 app.get("/api/folders/:folderId/files", fetchFilesByFolderId);
+  
+
 
 // Scheduling API
 app.post("/api/schedules", addSchedule);

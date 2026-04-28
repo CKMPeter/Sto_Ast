@@ -23,7 +23,7 @@ export default function useFriends(userId, { limit = 20 } = {}) {
 
   const base = getBackendUrl();
 
-  // 🔥 helper fetch with auth
+  //  helper fetch with auth
   const fetchWithAuth = useCallback(async (url, options = {}) => {
     const token = await currentUser?.getIdToken();
 

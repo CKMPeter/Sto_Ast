@@ -50,7 +50,7 @@ export function useScheduleQueue() {
     }
 
     // ==========================
-    // 📥 FETCH (🔥 FIRESTORE ONLY)
+    // 📥 FETCH ( FIRESTORE ONLY)
     // ==========================
     const getEventsByDate = async (date) => {
         if (!currentUser) return []
