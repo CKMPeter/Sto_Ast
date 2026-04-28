@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 const getBackendUrl = () => {
-  return (
-    import.meta.env.VITE_APP_BACKEND_URL ||
-    "http://localhost:5000" // ✅ use HTTP for dev
-  );
+  return import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:5000";
 };
 
 export function useDarkMode() {
@@ -13,17 +10,22 @@ export function useDarkMode() {
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  //  Fetch dark mode
+  const hasFetched = useRef(false); // ✅ prevent spam
+
   useEffect(() => {
-    if (!currentUser) {
-      setDarkMode(false);
+    if (!currentUser || hasFetched.current) {
       setLoading(false);
       return;
     }
 
+    hasFetched.current = true;
+
     const fetchDarkMode = async () => {
       try {
-        const token = await currentUser.getIdToken(); // ✅ no force refresh
+        const token = await currentUser.getIdToken(true); // ✅ force refresh
+
+        if (!token) return;
+
         const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -34,7 +36,6 @@ export function useDarkMode() {
 
         const data = await res.json();
         setDarkMode(data.darkMode ?? false);
-
       } catch (error) {
         console.error("Failed to fetch dark mode:", error);
       } finally {
@@ -45,17 +46,14 @@ export function useDarkMode() {
     fetchDarkMode();
   }, [currentUser]);
 
-  //  Toggle dark mode
   const toggleDarkMode = async () => {
     const newValue = !darkMode;
-
-    // optimistic update
     setDarkMode(newValue);
 
     if (!currentUser) return;
 
     try {
-      const token = await currentUser.getIdToken();
+      const token = await currentUser.getIdToken(true); // ✅ fix here too
 
       const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
         method: "PUT",
@@ -66,15 +64,10 @@ export function useDarkMode() {
         body: JSON.stringify({ darkMode: newValue }),
       });
 
-      if (!res.ok) {
-        throw new Error("Update failed");
-      }
-
+      if (!res.ok) throw new Error("Update failed");
     } catch (error) {
       console.error("Error updating dark mode:", error);
-
-      // rollback if failed
-      setDarkMode(!newValue);
+      setDarkMode(!newValue); // rollback
     }
   };
 

@@ -45,6 +45,11 @@ export default function File({ file, onChange }) {
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
   const isContentEdited = useRef(false);
 
+
+  //DateTime State for Date Linked Files
+  const [linkedDates, setLinkedDates] = useState([]);
+  const [selectedDate, setSelectedDate] = useState("");
+
   // Fetch AI rename/preview result based on task and file content
   const fetchAIWithTask = useCallback(
     async (base64Input, task, isImage = true) => {
@@ -179,8 +184,8 @@ export default function File({ file, onChange }) {
     }
 
     try {
-      // Fetch AI preview if needed
       let aiPreviewResult = fileObj.preview;
+
       if (isContentEdited.current) {
         const newPreview = await fetchAIWithTask(
           fileObj.content,
@@ -192,7 +197,6 @@ export default function File({ file, onChange }) {
         }
       }
 
-      // File update request
       const response = await fetch(
         `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/${fileObj.id}`,
         {
@@ -206,12 +210,12 @@ export default function File({ file, onChange }) {
             content: fileObj.isImage ? fileContent : btoa(fileContent),
             preview: aiPreviewResult,
             filePath: fileObj.path,
+            linkedDates, // include linked dates in update
           }),
         }
       );
 
       if (response.ok) {
-        console.log("File updated successfully.");
         setIsEditing(false);
         setShowMainModal(false);
         onChange();
@@ -224,6 +228,17 @@ export default function File({ file, onChange }) {
     }
   };
 
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+
+    // reset everything back to original
+    setUpdatedFileName(fileObj.name);
+    setFileContent(fileObj.decodeContent());
+    setAiReName("");
+    setReName("");
+    setLinkedDates([]); // optional: or reload from backend if you support it
+    isContentEdited.current = false;
+  };
   const fetchAIResponse = async (task, isImage = false) => {
     const token = await getIdToken();
     if (!token) {
@@ -292,6 +307,21 @@ export default function File({ file, onChange }) {
     }
     setAiResponse(result);
     setLoading(false);
+  };
+
+  //for date linked files
+  const handleAddDate = () => {
+    if (!selectedDate) return;
+
+    if (!linkedDates.includes(selectedDate)) {
+      setLinkedDates((prev) => [...prev, selectedDate]);
+    }
+
+    setSelectedDate("");
+  };
+
+  const handleRemoveDate = (date) => {
+    setLinkedDates((prev) => prev.filter((d) => d !== date));
   };
 
   const closeModal = () => {
@@ -424,6 +454,39 @@ export default function File({ file, onChange }) {
                         Use Custom Name
                       </Button>
                     </Form.Group>
+
+                    {/* Date Picker Section */}
+                    <hr />
+                    <Form.Group>
+                      <Form.Label>Link Dates</Form.Label>
+
+                      <div className="d-flex gap-2">
+                        <Form.Control
+                          type="date"
+                          value={selectedDate}
+                          onChange={(e) => setSelectedDate(e.target.value)}
+                        />
+                        <Button variant="primary" onClick={handleAddDate}>
+                          Add Date
+                        </Button>
+                      </div>
+
+                      {/* Selected Dates List */}
+                      <div className="mt-2 d-flex flex-wrap gap-2">
+                        {linkedDates.map((date) => (
+                          <span
+                            key={date}
+                            className={`badge ${
+                              darkMode ? "bg-light text-dark" : "bg-dark text-light"
+                            }`}
+                            style={{ cursor: "pointer" }}
+                            onClick={() => handleRemoveDate(date)}
+                          >
+                            {date} ✕
+                          </span>
+                        ))}
+                      </div>
+                    </Form.Group>
                   </Col>
                 </Row>
               </>
@@ -533,10 +596,16 @@ export default function File({ file, onChange }) {
               )}
               <div className="mt-3 d-flex flex-wrap gap-2">
                 {isEditing ? (
-                  <Button variant="success" onClick={handleSaveUpdate}>
-                    <FontAwesomeIcon icon={faSave} className="me-2" />
-                    Save Changes
-                  </Button>
+                  <>
+                    <Button variant="success" onClick={handleSaveUpdate}>
+                      <FontAwesomeIcon icon={faSave} className="me-2" />
+                      Save Changes
+                    </Button>
+
+                    <Button variant="secondary" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </>
                 ) : (
                   <Button variant="warning" onClick={handleUpdate}>
                     <FontAwesomeIcon icon={faEdit} className="me-2" />

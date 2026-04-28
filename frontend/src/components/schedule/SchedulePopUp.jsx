@@ -19,11 +19,8 @@ export default function SchedulePopUp({ date, close, userId }) {
   // New state to track if a time slot has been selected
   const [isTimeSelected, setIsTimeSelected] = useState(false);
 
-  const linkedFileList = [
-    { id: 1, name: "Project Plan.docx" },
-    { id: 2, name: "Budget.xlsx" },
-    { id: 3, name: "Presentation.pptx" }
-  ];
+  // New state for linked files
+  const [linkedFiles, setLinkedFiles] = useState([]);
 
   function handleTimelineClick(e) {
 
@@ -89,6 +86,8 @@ async function addEvent() {
       }
     );
 
+    
+
     if (!res.ok) throw new Error("Failed to create schedule");
 
     const data = await res.json();
@@ -112,6 +111,32 @@ async function addEvent() {
     console.error("Schedule API error", err);
   }
 }
+
+async function loadLinkedFiles() {
+  try {
+    const token = await getIdToken();
+    const formattedDate = date.toISOString().split("T")[0];
+
+    const res = await fetch(
+      `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/by-date?date=${formattedDate}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch linked files");
+
+    const data = await res.json();
+
+    setLinkedFiles(data.files || []);
+
+  } catch (err) {
+    console.error("Error loading linked files:", err);
+  }
+}
+
 async function loadEvents() {
   try {
     const token = await getIdToken();
@@ -206,6 +231,7 @@ async function deleteEvent() {
     useEffect(() => {
         if (currentUser) {
             loadEvents();
+            loadLinkedFiles();
         }
     }, [date, currentUser]);
 
@@ -275,7 +301,7 @@ function formatTime(minutes) {
             width: "100%",
           }}>
             {/*Main Form for time selection */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flexGrow: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1 }}>
               <div
                 ref={timelineRef}
                 style={styleSheet.timeLineContainter}
@@ -322,7 +348,67 @@ function formatTime(minutes) {
             </div>
 
             {/*Secondary Form for Event Details */}
-            <div style={{ display: isTimeSelected ? "flex" : "none", marginTop: "1rem", flexDirection: "column", gap: "0.5rem", width: "200px" }}>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+            }}>
+            <div style={{width: "100%" }}>
+              {/*FILE LINKED*/}
+              <div style={{ marginTop: "1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem"
+               }}>
+                  <h4>Linked Files</h4>
+
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "6px",
+                      padding: "0.5rem",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "6px",
+                    }}
+                  >
+                    {linkedFiles.length === 0 ? (
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "#888",
+                          width: "100%",
+                          textAlign: "center",
+                          padding: "6px 0",
+                        }}
+                      >
+                        No linked files
+                      </div>
+                    ) : (
+                      linkedFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            background: "#f1f1f1",
+                            fontSize: "0.8rem",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontWeight: "500",
+                            cursor: "pointer",
+                          }}
+                          title={file.name}
+                        >
+                          📄 {file.name}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+            </div>
+            <div style={{ display: isTimeSelected ? "flex" : "none", marginTop: "1rem", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
               <input
                 style={styleSheet.input}
                 placeholder="Event title..."
@@ -337,24 +423,6 @@ function formatTime(minutes) {
                   setClickedMinutes(h * 60 + m);
                 }}
               />
-
-              {/*FILE LINKED*/}
-              {linkedFileList.length > 0 && (
-                <div style={{ marginTop: "1rem" }}>
-                  <h4>Linked Files</h4>
-                  <div style={{
-                    border: "1px solid #ddd",
-                    borderRadius: "6px",
-                    padding: "0.5rem"
-                  }}>
-                    <ul>
-                      {linkedFileList.map(file => (
-                        <li key={file.id}>{file.name}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
               <div>
                 <button >
                   Save Details
@@ -363,6 +431,7 @@ function formatTime(minutes) {
                   Close Details
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
