@@ -65,8 +65,12 @@ export default function NavbarComponent() {
           Message
         </Nav.Link>
 
-        <Nav.Link as={Link} to="/Schedule" style={style.link}>
+        <Nav.Link as={Link} to="/schedule" style={style.link}>
           Schedule
+        </Nav.Link>
+
+        <Nav.Link as={Link} to="/task" style={style.link}>
+          Task
         </Nav.Link>
 
         <Nav.Link as={Link} to="/user" style={style.link}>
