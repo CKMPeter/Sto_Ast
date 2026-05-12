@@ -52,6 +52,17 @@ const {
   rejectFriendRequest
 } = require("./controllers/FriendController");
 
+const {
+  createTask,
+  getTasksByUser,
+  updateTask,
+  deleteTask,
+  createSubTask,
+  getSubTasks,
+  updateSubTask,
+  deleteSubTask
+} = require("./controllers/TaskController");
+
 // Express setup
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -118,6 +129,28 @@ app.get("/api/users/search", searchUsers);
 
 // --- Messages API ---
 app.get('/api/messages/:userid/:friendid', getMessages);
+
+// --- Tasks API ---
+
+// Main Tasks
+app.post("/api/tasks", createTask);
+app.get("/api/tasks", getTasksByUser);
+app.put("/api/tasks/:taskId", updateTask);
+app.delete("/api/tasks/:taskId", deleteTask);
+
+// Sub Tasks
+app.post("/api/tasks/:taskId/subtasks", createSubTask);
+app.get("/api/tasks/:taskId/subtasks", getSubTasks);
+
+app.put(
+  "/api/tasks/:taskId/subtasks/:subTaskId",
+  updateSubTask
+);
+
+app.delete(
+  "/api/tasks/:taskId/subtasks/:subTaskId",
+  deleteSubTask
+);
 
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {

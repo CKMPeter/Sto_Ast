@@ -1,3 +1,5 @@
+// TaskComponent.jsx
+//this component is responsible for rendering individual Main Task for selection
 import React from 'react'
 
 export default function TaskComponent({ task, onDragStart }) {
