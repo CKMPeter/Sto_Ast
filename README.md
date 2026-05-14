@@ -2,13 +2,16 @@
 ## Node.js, React, Express, Firebase, AI Chatbot
 
 Author: Cao Khải Minh </br>
-This guide walks you through the steps to create a simple Google clone application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot** with a text summarizer. 
+This guide walks you through the steps to create a Multi Purpose application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot**.
 
 ### Features:
 - Provide a easy to use interface.
 - Help rename the file base on content.
 - Help to analysize the text/image files.
 - Smart search for File base on AI.
+- A Chat And Call system for individual or groups communication.
+- A Scheduling system for handle your upcoming event and notify user.
+- A Task Monitor System for Personal usage or Group project.
 
 ### Prerequisites
 
