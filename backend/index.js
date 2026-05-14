@@ -53,10 +53,10 @@ const {
 } = require("./controllers/FriendController");
 
 const {
-  createTask,
-  getTasksByUser,
-  updateTask,
-  deleteTask,
+  createMainTask,
+  getMainTasks,
+  updateMainTask,
+  deleteMainTask,
   createSubTask,
   getSubTasks,
   updateSubTask,
@@ -133,24 +133,18 @@ app.get('/api/messages/:userid/:friendid', getMessages);
 // --- Tasks API ---
 
 // Main Tasks
-app.post("/api/tasks", createTask);
-app.get("/api/tasks", getTasksByUser);
-app.put("/api/tasks/:taskId", updateTask);
-app.delete("/api/tasks/:taskId", deleteTask);
+app.post("/api/tasks", createMainTask);
+app.get("/api/tasks", getMainTasks);
+app.put("/api/tasks/:taskId", updateMainTask);
+app.delete("/api/tasks/:taskId", deleteMainTask);
 
 // Sub Tasks
 app.post("/api/tasks/:taskId/subtasks", createSubTask);
 app.get("/api/tasks/:taskId/subtasks", getSubTasks);
 
-app.put(
-  "/api/tasks/:taskId/subtasks/:subTaskId",
-  updateSubTask
-);
+app.put("/api/tasks/:taskId/subtasks/:subTaskId",updateSubTask);
 
-app.delete(
-  "/api/tasks/:taskId/subtasks/:subTaskId",
-  deleteSubTask
-);
+app.delete("/api/tasks/:taskId/subtasks/:subTaskId",deleteSubTask);
 
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {

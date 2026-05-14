@@ -1,4 +1,4 @@
-const { db, admin } = require('../firebase/firebaseAdmin')
+const { db, admin } = require("../firebase-admin-setup");
 
 class TaskDAO {
 
@@ -40,9 +40,24 @@ class TaskDAO {
   }
 
   async deleteMainTask(taskId) {
-    await db.collection('mainTasks')
+
+    const subTasksSnapshot = await db
+      .collection('mainTasks')
       .doc(taskId)
-      .delete()
+      .collection('subtasks')
+      .get()
+
+    const batch = db.batch()
+
+    subTasksSnapshot.docs.forEach(doc => {
+      batch.delete(doc.ref)
+    })
+
+    batch.delete(
+      db.collection('mainTasks').doc(taskId)
+    )
+
+    await batch.commit()
 
     return true
   }
@@ -103,6 +118,43 @@ class TaskDAO {
       .delete()
 
     return true
+  }
+
+  // =========================
+  // Process Calculation
+  // =========================
+  async updateTaskProgress(taskId) {
+
+    const snapshot = await db
+      .collection('mainTasks')
+      .doc(taskId)
+      .collection('subtasks')
+      .get()
+
+    const subtasks = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    const completedSubTasks = subtasks.filter(
+      subtask => subtask.status === 'Done'
+    ).length
+
+    const progress = subtasks.length > 0
+      ? Math.round(
+          (completedSubTasks / subtasks.length) * 100
+        )
+      : 0
+
+    await db
+      .collection('mainTasks')
+      .doc(taskId)
+      .update({
+        progress,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      })
+
+    return progress
   }
 }
 

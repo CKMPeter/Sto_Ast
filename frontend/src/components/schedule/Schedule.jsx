@@ -220,6 +220,7 @@ export default function Schedule() {
   return (
     <div>
       <Navbar />
+      <img src="./Sto_Ast_Logo_Title.png" alt="" style={{height: '50%', opacity: '30%', position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)'}}/>
       <div style={styleSheet.titleContainer}>
 
         <label style={styleSheet.monthNavigate} onClick={prevMonth}>

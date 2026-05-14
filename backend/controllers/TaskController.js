@@ -8,6 +8,7 @@ class TaskController {
 
   async createMainTask(req, res) {
     try {
+
       const result = await taskDAO.createMainTask(req.body)
 
       res.status(201).json({
@@ -17,6 +18,7 @@ class TaskController {
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -26,7 +28,10 @@ class TaskController {
 
   async getMainTasks(req, res) {
     try {
-      const tasks = await taskDAO.getMainTasks()
+
+      const { userId } = req.query
+
+      const tasks = await taskDAO.getMainTasks(userId)
 
       res.status(200).json({
         success: true,
@@ -34,6 +39,7 @@ class TaskController {
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -43,9 +49,13 @@ class TaskController {
 
   async updateMainTask(req, res) {
     try {
+
       const { taskId } = req.params
 
-      await taskDAO.updateMainTask(taskId, req.body)
+      await taskDAO.updateMainTask(
+        taskId,
+        req.body
+      )
 
       res.status(200).json({
         success: true,
@@ -53,6 +63,7 @@ class TaskController {
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -62,6 +73,7 @@ class TaskController {
 
   async deleteMainTask(req, res) {
     try {
+
       const { taskId } = req.params
 
       await taskDAO.deleteMainTask(taskId)
@@ -72,6 +84,7 @@ class TaskController {
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -85,12 +98,16 @@ class TaskController {
 
   async createSubTask(req, res) {
     try {
+
       const { taskId } = req.params
 
       const result = await taskDAO.createSubTask(
         taskId,
         req.body
       )
+
+      // update main task progress
+      await taskDAO.updateTaskProgress(taskId)
 
       res.status(201).json({
         success: true,
@@ -99,6 +116,7 @@ class TaskController {
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -108,6 +126,7 @@ class TaskController {
 
   async getSubTasks(req, res) {
     try {
+
       const { taskId } = req.params
 
       const subtasks = await taskDAO.getSubTasks(taskId)
@@ -118,6 +137,7 @@ class TaskController {
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -127,6 +147,7 @@ class TaskController {
 
   async updateSubTask(req, res) {
     try {
+
       const { taskId, subTaskId } = req.params
 
       await taskDAO.updateSubTask(
@@ -135,12 +156,16 @@ class TaskController {
         req.body
       )
 
+      // update main task progress
+      await taskDAO.updateTaskProgress(taskId)
+
       res.status(200).json({
         success: true,
         message: 'Sub task updated'
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
@@ -150,6 +175,7 @@ class TaskController {
 
   async deleteSubTask(req, res) {
     try {
+
       const { taskId, subTaskId } = req.params
 
       await taskDAO.deleteSubTask(
@@ -157,18 +183,23 @@ class TaskController {
         subTaskId
       )
 
+      // update main task progress
+      await taskDAO.updateTaskProgress(taskId)
+
       res.status(200).json({
         success: true,
         message: 'Sub task deleted'
       })
 
     } catch (error) {
+
       res.status(500).json({
         success: false,
         error: error.message
       })
     }
   }
+
 }
 
 module.exports = new TaskController()
