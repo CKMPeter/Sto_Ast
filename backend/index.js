@@ -60,7 +60,8 @@ const {
   createSubTask,
   getSubTasks,
   updateSubTask,
-  deleteSubTask
+  deleteSubTask,
+  getTaskLogs
 } = require("./controllers/TaskController");
 
 // Express setup
@@ -145,7 +146,9 @@ app.get("/api/tasks/:taskId/subtasks", getSubTasks);
 app.put("/api/tasks/:taskId/subtasks/:subTaskId",updateSubTask);
 
 app.delete("/api/tasks/:taskId/subtasks/:subTaskId",deleteSubTask);
-
+  
+// Task Logs
+app.get("/api/tasks/:taskId/logs", getTaskLogs);
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {
   const options = {

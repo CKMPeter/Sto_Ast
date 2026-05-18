@@ -29,9 +29,14 @@ class TaskController {
   async getMainTasks(req, res) {
     try {
 
-      const { userId } = req.query
+      const { userId, group } = req.query
 
-      const tasks = await taskDAO.getMainTasks(userId)
+      const tasks = await taskDAO.getMainTasks( 
+        userId, 
+        group || null
+      )
+
+      console.log (tasks)
 
       res.status(200).json({
         success: true,
@@ -52,9 +57,17 @@ class TaskController {
 
       const { taskId } = req.params
 
+      const updateData = {
+        ...req.body
+      }
+
+      // prevent invalid updates
+      delete updateData.id
+      delete updateData.createdAt
+
       await taskDAO.updateMainTask(
         taskId,
-        req.body
+        updateData
       )
 
       res.status(200).json({
@@ -199,7 +212,24 @@ class TaskController {
       })
     }
   }
+  
+  async getTaskLogs(req, res) {
+    try {
+      const { taskId } = req.params
 
+      const logs = await taskDAO.getTaskLogs(taskId)
+      res.status(200).json({
+        success: true,
+        data: logs
+      })
+    }
+    catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
 }
 
 module.exports = new TaskController()
