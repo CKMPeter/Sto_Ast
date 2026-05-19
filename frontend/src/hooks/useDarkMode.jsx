@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 const getBackendUrl = () => {
   return (
     import.meta.env.VITE_APP_BACKEND_URL ||
-    "http://localhost:5000" // ✅ use HTTP for dev
+    "http://localhost:5000"
   );
 };
 
@@ -13,7 +13,6 @@ export function useDarkMode() {
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 Fetch dark mode
   useEffect(() => {
     if (!currentUser) {
       setDarkMode(false);
@@ -23,7 +22,7 @@ export function useDarkMode() {
 
     const fetchDarkMode = async () => {
       try {
-        const token = await currentUser.getIdToken(); // ✅ no force refresh
+        const token = await currentUser.getIdToken();
         const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -45,11 +44,14 @@ export function useDarkMode() {
     fetchDarkMode();
   }, [currentUser]);
 
-  // 🔥 Toggle dark mode
+  // ✅ GLOBAL APPLY (CRITICAL FIX)
+  useEffect(() => {
+    document.body.classList.toggle("dark-mode", darkMode);
+    document.body.classList.toggle("light-mode", !darkMode);
+  }, [darkMode]);
+
   const toggleDarkMode = async () => {
     const newValue = !darkMode;
-
-    // optimistic update
     setDarkMode(newValue);
 
     if (!currentUser) return;
@@ -66,14 +68,10 @@ export function useDarkMode() {
         body: JSON.stringify({ darkMode: newValue }),
       });
 
-      if (!res.ok) {
-        throw new Error("Update failed");
-      }
+      if (!res.ok) throw new Error("Update failed");
 
     } catch (error) {
       console.error("Error updating dark mode:", error);
-
-      // rollback if failed
       setDarkMode(!newValue);
     }
   };

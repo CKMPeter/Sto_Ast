@@ -1,8 +1,15 @@
-require("dotenv").config();
-const express = require("express");
-const https = require("https");
 const fs = require("fs");
 const path = require("path");
+const express = require("express");
+const https = require("https");
+
+// Load .env.local first if it exists, otherwise .env
+const envLocalPath = path.join(__dirname, ".env.local");
+const envPath = fs.existsSync(envLocalPath)
+  ? envLocalPath
+  : path.join(__dirname, ".env");
+
+require("dotenv").config({ path: envPath });
 
 // Import Controllers
 const { aiAnalyse, chatWithBot } = require("./controllers/GeminiAIController");
@@ -33,14 +40,12 @@ const {
   getDarkMode,
   setDarkMode,
 } = require("./controllers/DarkModeController");
-
 const {
   addSchedule,
   fetchSchedulesByDate,
   updateSchedule,
-  deleteSchedule
+  deleteSchedule,
 } = require("./controllers/ScheduleController");
-
 const {
   getFriends,
   getMessages,
@@ -48,7 +53,7 @@ const {
   getFriendRequests,
   sendFriendRequest,
   acceptFriendRequest,
-  rejectFriendRequest
+  rejectFriendRequest,
 } = require("./controllers/FriendController");
 
 // Express setup
@@ -66,63 +71,71 @@ app.put("/api/user/theme", setDarkMode);
 app.put("/api/user", updateUser);
 
 // --- AI API ---
-app.post("/api/ai", aiAnalyse); // AI analysis (summary, keywords, object ID)
+app.post("/api/ai", aiAnalyse);
 app.post("/api/aiRename", aiRename);
 app.post("/api/aiPreview", aiPreview);
-app.post("/api/chatbot", chatWithBot); // Chatbot interaction
-app.post("/api/describe-image", describeImage); // Image description
+app.post("/api/chatbot", chatWithBot);
+app.post("/api/describe-image", describeImage);
 
 // --- Folder API ---
-app.post("/api/folders", createFolder); // Create folder
-app.get("/api/folders/user", fetchAllUserFolders); // Fetch all files by user
-app.put("/api/folders/:folderId", updateFolder); // Update folder
-app.delete("/api/folders/:folderId", deleteFolder); // Delete folder
-app.get("/api/folders/:folderId", fetchFolderById); // Fetch folder by ID
-app.get("/api/folders", fetchFoldersByParentId); // Fetch folders by parentId
+app.post("/api/folders", createFolder);
+app.get("/api/folders/user", fetchAllUserFolders);
+app.put("/api/folders/:folderId", updateFolder);
+app.delete("/api/folders/:folderId", deleteFolder);
+app.get("/api/folders/:folderId", fetchFolderById);
+app.get("/api/folders", fetchFoldersByParentId);
 
 // --- File API ---
-app.post("/api/files", uploadFile); // Upload file
-app.get("/api/files/user", fetchAllFilesByUser); // Fetch all files by user
-app.put("/api/files/:fileId", updateFile); // Update file
-app.delete("/api/files/:fileId", deleteFile); // Delete file
-app.get("/api/files/:fileId", fetchFileOrFolderById); // Fetch file or folder by ID
-
-// Fetch files by folderPath (query param)
+app.post("/api/files", uploadFile);
+app.get("/api/files/user", fetchAllFilesByUser);
+app.put("/api/files/:fileId", updateFile);
+app.delete("/api/files/:fileId", deleteFile);
+app.get("/api/files/:fileId", fetchFileOrFolderById);
 app.get("/api/files", fetchFilesByFolderPath);
-
-// Fetch files by folderId (distinct route to avoid conflict)
 app.get("/api/folders/:folderId/files", fetchFilesByFolderId);
 
-// Scheduling API
+// --- Scheduling API ---
 app.post("/api/schedules", addSchedule);
 app.get("/api/schedules", fetchSchedulesByDate);
 app.put("/api/schedules/:scheduleId", updateSchedule);
 app.delete("/api/schedules/:scheduleId", deleteSchedule);
-//app.post("/api/schedulesQueue");
 
 // --- Friends API ---
-app.get('/api/users/:userid/friends', getFriends);
-app.get('/api/users/:userid/requests', getFriendRequests);
-
-app.post('/api/users/friend-request', sendFriendRequest);
-app.post('/api/users/friend-request/accept', acceptFriendRequest);
-app.post('/api/users/friend-request/reject', rejectFriendRequest);
-
+app.get("/api/users/:userid/friends", getFriends);
+app.get("/api/users/:userid/requests", getFriendRequests);
+app.post("/api/users/friend-request", sendFriendRequest);
+app.post("/api/users/friend-request/accept", acceptFriendRequest);
+app.post("/api/users/friend-request/reject", rejectFriendRequest);
 app.get("/api/users/search", searchUsers);
 
 // --- Messages API ---
-app.get('/api/messages/:userid/:friendid', getMessages);
+app.get("/api/messages/:userid/:friendid", getMessages);
 
-// --- HTTPS Server Setup ---
-if (process.env.HTTPS === "true") {
-  const options = {
-    key: fs.readFileSync(path.join(__dirname, "key.pem")),
-    cert: fs.readFileSync(path.join(__dirname, "cert.pem")),
-  };
+// --- Server Setup ---
+const useHttps = String(process.env.HTTPS).toLowerCase() === "true";
 
-  https.createServer(options, app).listen(PORT, () => {
-    console.log(`HTTPS server running at https://localhost:${PORT}`);
-  });
+if (useHttps) {
+  const keyPath = path.join(__dirname, "key.pem");
+  const certPath = path.join(__dirname, "cert.pem");
+
+  if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+    const options = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+    };
+
+    https.createServer(options, app).listen(PORT, () => {
+      console.log(`HTTPS server running at https://localhost:${PORT}`);
+    });
+  } else {
+    console.warn(
+      "HTTPS=true but cert.pem/key.pem not found. Falling back to HTTP."
+    );
+
+    app.listen(PORT, () => {
+      console.log(`HTTP server running at http://localhost:${PORT}`);
+    });
+  }
 } else {
   app.listen(PORT, () => {
     console.log(`HTTP server running at http://localhost:${PORT}`);
