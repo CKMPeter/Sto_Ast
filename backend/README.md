@@ -1,4 +1,4 @@
 To run backend
 ```
-    npm run start
+    npm run startgt
 ```
