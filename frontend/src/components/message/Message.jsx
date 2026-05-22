@@ -4,7 +4,6 @@ import useCall from "../../webrtc/useCall";
 import { RequestBox } from './RequestBox';
 import FriendsList from './FriendsList';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCallContext } from '../../contexts/CallContext';
 import useFriends from '../../hooks/messageHook/useFriends';
 import useChat from '../../hooks/useChat';
 import useGroups from '../../hooks/messageHook/useGroups';
@@ -16,31 +15,25 @@ import CallModalGroup from "./CallModalGroup";
 export function Message() {
   const { currentUser } = useAuth();
 
-  // CALL LOGIC
-  const { startCall, incomingCall, acceptCall, endCall } = useCall(currentUser?.uid);
-
-  // STREAM CONTEXT
-  const { call } = useCallContext();
-
-  //  FRIEND HOOK (REAL DATA)
+  // CALL
   const {
-  startCall,
-  incomingCall,
-  acceptCall,
-  endCall,
-  localStream,
-  remoteStream,
-} = useCall(currentUser?.uid);
+    startCall,
+    incomingCall,
+    acceptCall,
+    endCall,
+    localStream,
+    remoteStream,
+  } = useCall(currentUser?.uid);
 
   // GROUP CALL
-  const{
-  startGroupCall,
-  listenIncoming: listenGroupIncoming,
-  acceptCall: acceptGroupCall,
-  incomingCall: incomingGroupCall,
-  endCall: endGroupCall,
-  localStream: groupLocalStream,
-  remoteStreams: groupRemoteStreams,
+  const {
+    startGroupCall,
+    listenIncoming: listenGroupIncoming,
+    acceptCall: acceptGroupCall,
+    incomingCall: incomingGroupCall,
+    endCall: endGroupCall,
+    localStream: groupLocalStream,
+    remoteStreams: groupRemoteStreams,
   } = useCallGroup(currentUser?.uid);
 
   // FRIENDS
@@ -52,45 +45,64 @@ export function Message() {
     sendRequest,
   } = useFriends(currentUser?.uid);
 
-  // GROUP
-  const { groups, createGroup } = useGroups(currentUser?.uid);
+  // GROUPS
+  const { groups = [], createGroup } = useGroups(currentUser?.uid);
 
-  // CHAT TARGET
+  // CHAT
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [text, setText] = useState("");
 
-  const { messages, sendMessage, sendFile, sendVoiceMessage, uploading } = useChat(
+  const {
+    messages = [],
+    sendMessage,
+    sendFile,
+    sendVoiceMessage,
+    uploading,
+  } = useChat(
     currentUser?.uid,
     selectedUserId,
     selectedGroupId
   );
 
-  const selectedFriend = friends.find(f => f.uid === selectedUserId);
-  const selectedGroup = groups.find(g => g.id === selectedGroupId);
+  const selectedFriend = friends.find(
+    f => f.uid === selectedUserId
+  );
 
-  // AUTO SCROLL
-  const bottomRef = useRef();
+  const selectedGroup = groups.find(
+    g => g.id === selectedGroupId
+  );
+
+  // // AUTO SCROLL
+   const bottomRef = useRef();
+
+  // useEffect(() => {
+  //   bottomRef.current?.scrollIntoView({
+  //     behavior: "smooth",
+  //   });
+  // }, [messages]);
+
+  // GROUP CALL LISTENER
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!currentUser?.uid || groups.length === 0) return;
 
-  useEffect(() => {
-  if (!currentUser?.uid) return;
+    const allMembers = [
+      ...new Set(
+        groups.flatMap(g => g.members || [])
+      ),
+    ];
 
-  // listen tất cả group member
-  const allMembers = groups.flatMap(g => g.members || []);
+    listenGroupIncoming(allMembers);
 
-  listenGroupIncoming(allMembers);
-
-  return () => {
-    endGroupCall();
-  };
-  }, [currentUser?.uid, groups]);
+    return () => {
+      endGroupCall();
+    };
+  }, [currentUser?.uid]);
 
   // SEND TEXT
   const handleSend = async () => {
     if (!text.trim()) return;
+
     await sendMessage(text);
     setText("");
   };
@@ -101,6 +113,7 @@ export function Message() {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
+
     if (!file) return;
 
     setFilePreview({
@@ -111,6 +124,7 @@ export function Message() {
 
   const handleSendFile = async () => {
     if (!filePreview) return;
+
     await sendFile(filePreview.file);
     setFilePreview(null);
   };
@@ -119,17 +133,26 @@ export function Message() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const recordStartRef = useRef(null);
+
   const [isRecording, setIsRecording] = useState(false);
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      const mimeType =
+        MediaRecorder.isTypeSupported(
+          "audio/webm;codecs=opus"
+        )
+          ? "audio/webm;codecs=opus"
+          : "audio/webm";
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+      });
 
       chunksRef.current = [];
       recordStartRef.current = Date.now();
@@ -143,8 +166,12 @@ export function Message() {
       recorder.onstop = async () => {
         if (chunksRef.current.length === 0) return;
 
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const duration = Date.now() - recordStartRef.current;
+        const blob = new Blob(chunksRef.current, {
+          type: mimeType,
+        });
+
+        const duration =
+          Date.now() - recordStartRef.current;
 
         stream.getTracks().forEach(t => t.stop());
 
@@ -152,6 +179,7 @@ export function Message() {
       };
 
       recorder.start(100);
+
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
 
@@ -163,16 +191,26 @@ export function Message() {
 
   const stopRecording = () => {
     if (!mediaRecorderRef.current) return;
-    if (mediaRecorderRef.current.state !== "inactive") {
+
+    if (
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
     }
+
     setIsRecording(false);
   };
-  
-  // CREATE GROUP UI
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
+
+  // CREATE GROUP
+  const [showCreateGroup, setShowCreateGroup] =
+    useState(false);
+
   const [groupName, setGroupName] = useState("");
-  const [selectedGroupMembers, setSelectedGroupMembers] = useState([]);
+
+  const [
+    selectedGroupMembers,
+    setSelectedGroupMembers,
+  ] = useState([]);
 
   const toggleGroupMember = (uid) => {
     setSelectedGroupMembers((prev) =>
@@ -186,10 +224,12 @@ export function Message() {
     if (!groupName.trim()) return;
 
     try {
-      const members = [...new Set([
-        currentUser?.uid,
-        ...selectedGroupMembers
-      ].filter(Boolean))];
+      const members = [
+        ...new Set([
+          currentUser?.uid,
+          ...selectedGroupMembers,
+        ].filter(Boolean)),
+      ];
 
       const payload = {
         name: groupName.trim(),
@@ -197,36 +237,35 @@ export function Message() {
         createdAt: Date.now(),
       };
 
-      try {
-        await createGroup(payload);
-      } catch (e1) {
-        try {
-          await createGroup(payload.name, payload.members);
-        } catch (e2) {
-          await createGroup(payload.name);
-        }
-      }
+      await createGroup(payload);
 
       setGroupName("");
       setSelectedGroupMembers([]);
       setShowCreateGroup(false);
+
     } catch (err) {
-      console.error("Create group error:", err);
+      console.error(err);
       alert("Không tạo được group");
     }
   };
 
-  // ADD FRIEND UI
-  //  ADD FRIEND STATE
-  const [showAddFriend, setShowAddFriend] = useState(false);
-  const [friendSearch, setFriendSearch] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+  // ADD FRIEND
+  const [showAddFriend, setShowAddFriend] =
+    useState(false);
+
+  const [friendSearch, setFriendSearch] =
+    useState("");
+
+  const [searchResults, setSearchResults] =
+    useState([]);
 
   const handleSearchFriend = async () => {
-    if (!friendSearch.trim() || !currentUser) return;
+    if (!friendSearch.trim() || !currentUser)
+      return;
 
     try {
-      const token = await currentUser.getIdToken();
+      const token =
+        await currentUser.getIdToken();
 
       const res = await fetch(
         `${import.meta.env.VITE_APP_BACKEND_URL}/api/users/search?query=${encodeURIComponent(friendSearch.trim())}`,
@@ -237,22 +276,28 @@ export function Message() {
         }
       );
 
-      if (!res.ok) throw new Error("Search failed");
+      if (!res.ok)
+        throw new Error("Search failed");
 
       const data = await res.json();
+
       const filtered = Array.isArray(data)
-        ? data.filter(u => u.uid !== currentUser.uid)
+        ? data.filter(
+            u => u.uid !== currentUser.uid
+          )
         : [];
 
       setSearchResults(filtered);
+
     } catch (err) {
-      console.error("Search error:", err);
+      console.error(err);
       setSearchResults([]);
     }
   };
 
   const handleSendRequest = async (user) => {
     await sendRequest(user.uid);
+
     setShowAddFriend(false);
     setFriendSearch("");
     setSearchResults([]);
@@ -264,24 +309,27 @@ export function Message() {
 
       <Container>
 
-        {/* ===== LEFT ===== */}
+        {/* SIDEBAR */}
         <Sidebar>
 
-          {/* BUTTON AREA */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+          <div style={styleSheet.buttonArea}>
 
             <button
               className="btn btn-warning"
-              style={{ flex: 1 }}
-              onClick={() => setShowCreateGroup(true)}
+              style={styleSheet.flexButton}
+              onClick={() =>
+                setShowCreateGroup(true)
+              }
             >
               + Group
             </button>
 
             <button
               className="btn btn-success"
-              style={{ flex: 1 }}
-              onClick={() => setShowAddFriend(true)}
+              style={styleSheet.flexButton}
+              onClick={() =>
+                setShowAddFriend(true)
+              }
             >
               + Add
             </button>
@@ -303,20 +351,19 @@ export function Message() {
             selectedUserId={selectedUserId}
           />
 
-          <div style={{ marginTop: "10px", color: "white" }}>
+          <div style={styleSheet.groupsContainer}>
             <strong>Groups</strong>
-            {groups.map(g => (
+
+            {groups.map((g) => (
               <div
                 key={g.id}
                 onClick={() => {
                   setSelectedGroupId(g.id);
                   setSelectedUserId(null);
                 }}
-                style={{
-                  padding: "8px",
-                  cursor: "pointer",
-                  background: selectedGroupId === g.id ? "#333" : "transparent"
-                }}
+                style={styleSheet.groupItem(
+                  selectedGroupId === g.id
+                )}
               >
                 👥 {g.name}
               </div>
@@ -325,10 +372,11 @@ export function Message() {
 
         </Sidebar>
 
-        {/* ===== RIGHT ===== */}
+        {/* CHAT */}
         <ChatArea>
 
           <Header>
+
             <div>
               {selectedGroup
                 ? `👥 ${selectedGroup.name}`
@@ -336,337 +384,431 @@ export function Message() {
                 ? selectedFriend.email
                 : "Select a conversation"}
             </div>
-              {selectedGroupId && (
-                <CallBtn onClick={() => startGroupCall(selectedGroup)}>
+
+            {selectedGroupId && (
+              <CallBtn
+                onClick={() =>
+                  startGroupCall(selectedGroup)
+                }
+              >
                 👥 Call Group
-                </CallBtn>
-              )}
+              </CallBtn>
+            )}
+
             {selectedUserId && (
-              <CallBtn onClick={() => startCall(selectedUserId)}>
+              <CallBtn
+                onClick={() =>
+                  startCall(selectedUserId)
+                }
+              >
                 📹 Call
               </CallBtn>
             )}
+
           </Header>
 
+          {/* INCOMING CALL */}
           {incomingCall && (
             <IncomingBox>
               <p>📞 {incomingCall.callerId}</p>
-              <button onClick={acceptCall}>Accept</button>
-              <button onClick={endCall}>Reject</button>
+
+              <button onClick={acceptCall}>
+                Accept
+              </button>
+
+              <button onClick={endCall}>
+                Reject
+              </button>
             </IncomingBox>
           )}
 
+          {/* INCOMING GROUP CALL */}
           {incomingGroupCall && (
             <IncomingBox>
               <p>📞 Group call incoming</p>
 
-              <button onClick={acceptGroupCall}>
-              Accept
+              <button
+                onClick={acceptGroupCall}
+              >
+                Accept
               </button>
 
-              <button onClick={endGroupCall}>
-              Reject
+              <button
+                onClick={endGroupCall}
+              >
+                Reject
               </button>
             </IncomingBox>
           )}
 
+          {/* CHAT BODY */}
           <ChatBody>
-            {(selectedUserId || selectedGroupId) ? (
+
+            {(selectedUserId ||
+              selectedGroupId) ? (
               messages.map((msg) => {
-                const isMe = msg.senderId === currentUser.uid;
+                const isMe =
+                  msg.senderId ===
+                  currentUser.uid;
 
                 return (
-                  <Row key={msg.id} isMe={isMe}>
+                  <Row
+                    key={msg.id}
+                    isMe={isMe}
+                  >
                     <Bubble isMe={isMe}>
-                      {msg.text && <div>{msg.text}</div>}
 
-                      {msg.type === "voice" && msg.voiceDataUrl && (
-                        <audio controls src={msg.voiceDataUrl} style={{ width: "220px" }} />
+                      {msg.text && (
+                        <div>{msg.text}</div>
                       )}
 
-                      {msg.fileUrl && msg.fileType?.startsWith("image") && (
-                        <img src={msg.fileUrl} style={{ maxWidth: "200px", borderRadius: "10px" }} />
-                      )}
+                      {msg.type === "voice" &&
+                        msg.voiceDataUrl && (
+                          <audio
+                            controls
+                            src={msg.voiceDataUrl}
+                            style={styleSheet.audio}
+                          />
+                        )}
 
-                      {msg.fileUrl && !msg.fileType?.startsWith("image") && (
-                        <a href={msg.fileUrl} target="_blank" rel="noreferrer">
-                          📎 {msg.fileName}
-                        </a>
-                      )}
+                      {msg.fileUrl &&
+                        msg.fileType?.startsWith(
+                          "image"
+                        ) && (
+                          <img
+                            src={msg.fileUrl}
+                            alt="shared-file"
+                            style={
+                              styleSheet.imageMessage
+                            }
+                          />
+                        )}
+
+                      {msg.fileUrl &&
+                        !msg.fileType?.startsWith(
+                          "image"
+                        ) && (
+                          <a
+                            href={msg.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            📎 {msg.fileName}
+                          </a>
+                        )}
+
                     </Bubble>
                   </Row>
                 );
               })
             ) : (
-              <Empty>Select a conversation</Empty>
+              <Empty>
+                Select a conversation
+              </Empty>
             )}
 
             <div ref={bottomRef} />
+
           </ChatBody>
 
+          {/* FILE PREVIEW */}
           {filePreview && (
             <PreviewBox>
-              {filePreview.file.type.startsWith("image") ? (
-                <img src={filePreview.url} width="80" />
+
+              {filePreview.file.type.startsWith(
+                "image"
+              ) ? (
+                <img
+                  src={filePreview.url}
+                  alt="preview"
+                  style={
+                    styleSheet.previewImage
+                  }
+                />
               ) : (
-                <span>{filePreview.file.name}</span>
+                <span>
+                  {filePreview.file.name}
+                </span>
               )}
 
-              <button onClick={handleSendFile}>Send</button>
-              <button onClick={() => setFilePreview(null)}>❌</button>
+              <button onClick={handleSendFile}>
+                Send
+              </button>
+
+              <button
+                onClick={() =>
+                  setFilePreview(null)
+                }
+              >
+                ❌
+              </button>
+
             </PreviewBox>
           )}
 
-          {uploading && <Uploading>Uploading...</Uploading>}
+          {uploading && (
+            <Uploading>
+              Uploading...
+            </Uploading>
+          )}
 
+          {/* FOOTER */}
           <Footer>
 
-            <FileBtn onClick={() => fileInputRef.current.click()}>
+            <FileBtn
+              onClick={() =>
+                fileInputRef.current.click()
+              }
+            >
               📎
             </FileBtn>
 
-            <input type="file" hidden ref={fileInputRef} onChange={handleFileChange} />
+            <input
+              type="file"
+              hidden
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
 
             <button
-              onClick={isRecording ? stopRecording : startRecording}
-              style={{
-                marginRight: "8px",
-                background: isRecording ? "#ff4d4f" : "#333",
-                color: "white",
-                borderRadius: "8px",
-                padding: "6px 10px"
-              }}
+              onClick={
+                isRecording
+                  ? stopRecording
+                  : startRecording
+              }
+              style={styleSheet.recordButton(
+                isRecording
+              )}
             >
               {isRecording ? "⏹" : "🎤"}
             </button>
 
             <Input
               value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onChange={(e) =>
+                setText(e.target.value)
+              }
+              onKeyDown={(e) =>
+                e.key === "Enter" &&
+                handleSend()
+              }
               placeholder="Type a message..."
             />
 
-            <SendBtn onClick={handleSend}>Send</SendBtn>
+            <SendBtn onClick={handleSend}>
+              Send
+            </SendBtn>
 
           </Footer>
 
         </ChatArea>
+
       </Container>
 
-      {((localStream && localStream.current) || remoteStream) && (
-  <CallModal
-    localStream={localStream?.current}
-    remoteStream={remoteStream}
-    endCall={endCall}
-  />
-)}
+      {/* CALL MODAL */}
+      {((localStream &&
+        localStream.current) ||
+        remoteStream) && (
+        <CallModal
+          localStream={
+            localStream?.current
+          }
+          remoteStream={remoteStream}
+          endCall={endCall}
+        />
+      )}
 
+      {/* GROUP CALL MODAL */}
       {(groupLocalStream ||
-        Object.keys(groupRemoteStreams || {}).length > 0) && (
+        Object.keys(
+          groupRemoteStreams || {}
+        ).length > 0) && (
         <CallModalGroup
           localStream={groupLocalStream}
-          remoteStreams={groupRemoteStreams}
+          remoteStreams={
+            groupRemoteStreams
+          }
           endCall={endGroupCall}
         />
       )}
 
-      {/* ADD FRIEND MODAL */}
-      {showAddFriend && (
-        <AddFriendOverlay>
-          <AddFriendBox>
-            <h3>Add Friend</h3>
-
-            <input
-              value={friendSearch}
-              onChange={(e) => setFriendSearch(e.target.value)}
-              placeholder="Search email..."
-              style={{
-                width: "100%",
-                padding: "8px",
-                marginBottom: "10px",
-                borderRadius: "8px",
-                border: "1px solid #ccc"
-              }}
-            />
-
-            <button
-              onClick={handleSearchFriend}
-              className="btn btn-primary w-100"
-            >
-              Search
-            </button>
-
-            <div style={{ marginTop: "10px" }}>
-              {searchResults.map((user) => (
-                <div
-                  key={user.uid}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "8px",
-                    padding: "6px 8px",
-                    border: "1px solid #ddd",
-                    borderRadius: "6px"
-                  }}
-                >
-                  <span>{user.email}</span>
-
-                  <button
-                    onClick={() => handleSendRequest(user)}
-                    style={{
-                      background: "green",
-                      color: "white",
-                      border: "none",
-                      padding: "4px 8px",
-                      borderRadius: "4px"
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => {
-                setShowAddFriend(false);
-                setFriendSearch("");
-                setSearchResults([]);
-              }}
-              className="btn btn-secondary w-100 mt-2"
-            >
-              Close
-            </button>
-          </AddFriendBox>
-        </AddFriendOverlay>
-      )}
-
-      {/* CREATE GROUP MODAL */}
-      {showCreateGroup && (
-        <AddFriendOverlay>
-          <AddFriendBox>
-            <h3>Create Group</h3>
-
-            <input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Group name..."
-              style={{
-                width: "100%",
-                padding: "8px",
-                marginBottom: "10px",
-                borderRadius: "8px",
-                border: "1px solid #ccc"
-              }}
-            />
-
-            <div style={{ maxHeight: "220px", overflowY: "auto", marginBottom: "10px" }}>
-              <div style={{ marginBottom: "8px", color: "#666" }}>
-                Select friends to add:
-              </div>
-
-              {friends.map((friend) => (
-                <label
-                  key={friend.uid}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "6px 0",
-                    cursor: "pointer"
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedGroupMembers.includes(friend.uid)}
-                    onChange={() => toggleGroupMember(friend.uid)}
-                  />
-                  <span>{friend.email || friend.name || friend.uid}</span>
-                </label>
-              ))}
-            </div>
-
-            <div style={{ marginBottom: "10px" }}>
-              <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
-                Selected members:
-              </div>
-
-              {selectedGroupMembers.length === 0 ? (
-                <div style={{ color: "#aaa", fontSize: "13px" }}>
-                  No members selected
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {[currentUser?.uid, ...selectedGroupMembers]
-                    .filter(Boolean)
-                    .map((uid) => {
-                      const user = friends.find(f => f.uid === uid);
-                      const label = uid === currentUser?.uid
-                        ? "You"
-                        : (user?.email || user?.name || uid);
-
-                      return (
-                        <div
-                          key={uid}
-                          style={{
-                            background: "#e0e0e0",
-                            padding: "4px 8px",
-                            borderRadius: "12px",
-                            fontSize: "12px"
-                          }}
-                        >
-                          {label}
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleCreateGroup}
-              className="btn btn-primary w-100"
-            >
-              Create
-            </button>
-
-            <button
-              onClick={() => {
-                setShowCreateGroup(false);
-                setGroupName("");
-                setSelectedGroupMembers([]);
-              }}
-              className="btn btn-secondary w-100 mt-2"
-            >
-              Close
-            </button>
-          </AddFriendBox>
-        </AddFriendOverlay>
-      )}
     </div>
   );
 }
 
-/* ===== STYLE (giữ nguyên) ===== */
+const styleSheet = {
+  buttonArea: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "10px",
+  },
 
+  flexButton: {
+    flex: 1,
+  },
+
+  groupsContainer: {
+    marginTop: "10px",
+    color: "#222",
+  },
+
+  groupItem: (isSelected) => ({
+    padding: "8px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    background: isSelected
+      ? "#e3f2fd"
+      : "transparent",
+    color: "#222",
+  }),
+
+  audio: {
+    width: "220px",
+  },
+
+  imageMessage: {
+    maxWidth: "200px",
+    borderRadius: "10px",
+  },
+
+  previewImage: {
+    width: "80px",
+    borderRadius: "8px",
+  },
+
+  recordButton: (isRecording) => ({
+    marginRight: "8px",
+    background: isRecording
+      ? "#ff4d4f"
+      : "#eeeeee",
+    color: isRecording
+      ? "white"
+      : "#222",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    padding: "6px 10px",
+    cursor: "pointer",
+  }),
+};
+/* STYLES */
+
+// const Container = styled("div")(() => ({
+//   display: "flex",
+//   height: "calc(100vh - 64px)",
+//   background: "#0f0f0f",
+// }));
+
+// const Sidebar = styled("div")(() => ({
+//   width: "260px",
+//   borderRight: "1px solid #222",
+//   padding: "10px",
+// }));
+
+// const ChatArea = styled("div")(() => ({
+//   flex: 1,
+//   display: "flex",
+//   flexDirection: "column",
+// }));
+
+// const Header = styled("div")(() => ({
+//   height: "60px",
+//   padding: "0 15px",
+//   display: "flex",
+//   justifyContent: "space-between",
+//   alignItems: "center",
+//   borderBottom: "1px solid #222",
+//   color: "white",
+// }));
+
+// const ChatBody = styled("div")(() => ({
+//   flex: 1,
+//   overflowY: "auto",
+//   padding: "15px",
+//   background: "#121212",
+// }));
+
+// const Row = styled("div")(({ isMe }) => ({
+//   display: "flex",
+//   justifyContent: isMe
+//     ? "flex-end"
+//     : "flex-start",
+// }));
+
+// const Bubble = styled("div")(({ isMe }) => ({
+//   background: isMe
+//     ? "#0084ff"
+//     : "#2a2a2a",
+//   color: "white",
+//   padding: "10px",
+//   borderRadius: "16px",
+//   maxWidth: "60%",
+//   marginBottom: "8px",
+// }));
+
+// const Footer = styled("div")(() => ({
+//   display: "flex",
+//   padding: "10px",
+//   background: "#181818",
+// }));
+
+// const Input = styled("input")(() => ({
+//   flex: 1,
+//   borderRadius: "20px",
+//   padding: "10px",
+// }));
+
+// const SendBtn = styled("button")(() => ({
+//   marginLeft: "10px",
+//   background: "#0084ff",
+//   color: "white",
+// }));
+
+// const FileBtn = styled("button")(() => ({
+//   background: "transparent",
+//   color: "white",
+// }));
+
+// const PreviewBox = styled("div")(() => ({
+//   padding: "10px",
+//   background: "#222",
+//   color: "white",
+// }));
+
+// const Uploading = styled("div")(() => ({
+//   color: "white",
+// }));
+
+// const IncomingBox = styled("div")(() => ({
+//   color: "white",
+// }));
+
+// const Empty = styled("p")(() => ({
+//   color: "#aaa",
+// }));
+
+// const CallBtn = styled("button")(() => ({
+//   background: "#1f8f5f",
+//   color: "white",
+// }));
 const Container = styled("div")(() => ({
   display: "flex",
   height: "calc(100vh - 64px)",
-  background: "#0f0f0f",
+  background: "#f5f5f5",
 }));
 
 const Sidebar = styled("div")(() => ({
   width: "260px",
-  borderRight: "1px solid #222",
+  borderRight: "1px solid #ddd",
   padding: "10px",
+  background: "#ffffff",
 }));
 
 const ChatArea = styled("div")(() => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
+  background: "#fafafa",
+  height: "88vh",
 }));
 
 const Header = styled("div")(() => ({
@@ -675,90 +817,101 @@ const Header = styled("div")(() => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  borderBottom: "1px solid #222",
-  color: "white",
+  borderBottom: "1px solid #ddd",
+  background: "#ffffff",
+  color: "#222",
 }));
 
 const ChatBody = styled("div")(() => ({
   flex: 1,
   overflowY: "auto",
   padding: "15px",
-  background: "#121212",
+  background: "#f3f4f6",
 }));
 
 const Row = styled("div")(({ isMe }) => ({
   display: "flex",
-  justifyContent: isMe ? "flex-end" : "flex-start",
+  justifyContent: isMe
+    ? "flex-end"
+    : "flex-start",
 }));
 
 const Bubble = styled("div")(({ isMe }) => ({
-  background: isMe ? "#0084ff" : "#2a2a2a",
-  color: "white",
+  background: isMe
+    ? "#1976d2"
+    : "#ffffff",
+  color: isMe
+    ? "#ffffff"
+    : "#222",
   padding: "10px",
   borderRadius: "16px",
   maxWidth: "60%",
   marginBottom: "8px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
 }));
 
 const Footer = styled("div")(() => ({
   display: "flex",
   padding: "10px",
-  background: "#181818",
+  background: "#ffffff",
+  borderTop: "1px solid #ddd",
 }));
 
 const Input = styled("input")(() => ({
   flex: 1,
   borderRadius: "20px",
-  padding: "10px",
+  padding: "10px 14px",
+  border: "1px solid #ccc",
+  outline: "none",
+  background: "#fff",
 }));
 
 const SendBtn = styled("button")(() => ({
   marginLeft: "10px",
-  background: "#0084ff",
+  background: "#1976d2",
   color: "white",
+  border: "none",
+  borderRadius: "10px",
+  padding: "0 16px",
+  cursor: "pointer",
 }));
 
 const FileBtn = styled("button")(() => ({
   background: "transparent",
-  color: "white",
+  color: "#333",
+  border: "none",
+  cursor: "pointer",
+  fontSize: "18px",
 }));
 
 const PreviewBox = styled("div")(() => ({
   padding: "10px",
-  background: "#222",
-  color: "white",
+  background: "#ffffff",
+  color: "#222",
+  borderTop: "1px solid #ddd",
 }));
 
 const Uploading = styled("div")(() => ({
-  color: "white",
+  color: "#333",
+  padding: "6px 10px",
 }));
 
 const IncomingBox = styled("div")(() => ({
-  color: "white",
+  color: "#222",
+  background: "#fff3cd",
+  padding: "10px",
+  borderBottom: "1px solid #ffe69c",
 }));
 
 const Empty = styled("p")(() => ({
-  color: "#aaa",
+  color: "#777",
 }));
 
 const CallBtn = styled("button")(() => ({
-  background: "#1f8f5f",
+  background: "#2e7d32",
   color: "white",
-}));
-
-const AddFriendOverlay = styled("div")(() => ({
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.5)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 9999,
-}));
-
-const AddFriendBox = styled("div")(() => ({
-  background: "white",
-  padding: "20px",
-  width: "320px",
+  border: "none",
   borderRadius: "10px",
+  padding: "8px 14px",
+  cursor: "pointer",
 }));

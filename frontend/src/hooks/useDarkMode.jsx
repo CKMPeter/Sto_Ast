@@ -14,12 +14,10 @@ export function useDarkMode() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser || hasFetched.current) {
+    if (!currentUser ) {
       setLoading(false);
       return;
     }
-
-    hasFetched.current = true;
 
     const fetchDarkMode = async () => {
       try {
