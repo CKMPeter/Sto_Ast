@@ -1,46 +1,67 @@
-// import React from 'react';
-// import useFriends from '../../hooks/messageHook/useFriends';
-
-// export default function FriendsList({ userId }) {
-//   const { friends, loading, error, refresh } = useFriends(userId);
-
-//   return (
-//     <div className="friends-list">
-//       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-//         <h3>Friends</h3>
-//         <button onClick={refresh} disabled={loading} style={{ fontSize: 12 }}>
-//           {loading ? 'Loading...' : 'Refresh'}
-//         </button>
-//       </div>
-//       {error && <div style={{ color: 'red' }}>Error: {error}</div>}
-//       {!loading && friends.length === 0 && <div>No friends found.</div>}
-//       <ul style={{ listStyle: 'none', padding: 0 }}>
-//         {friends.map((f) => (
-//           <li key={f.id || f._id || f.userid} style={{ padding: '8px 0', borderBottom: '1px solid #eee' }}>
-//             <div style={{ fontWeight: 600 }}>{f.name || f.username || f.displayName || f.id}</div>
-//             {f.status && <div style={{ fontSize: 12, color: '#666' }}>{f.status}</div>}
-//           </li>
-//         ))}
-//       </ul>
-//     </div>
-//   );
-// }
 import React from "react";
 import useFriends from "../../hooks/messageHook/useFriends";
-import FriendBox from "./FriendBox";
 
-export default function FriendsList({ userId }) {
-  const { friends, loadingFriends } = useFriends(userId);
+export default function FriendsList({ userId, onSelect, selectedUserId }) {
+  const {
+    friends = [],
+    loading
+  } = useFriends(userId);
 
-  if (loadingFriends) return <p>Loading...</p>;
-
-  if (!friends.length) return <p>No friends yet</p>;
+  if (!userId) return <p>Loading user...</p>;
 
   return (
-    <ul style={{ padding: 0, listStyle: "none" }}>
+    <div>
+      <h5 style={{ marginBottom: "10px" }}>Friends</h5>
+
+      {loading && <p>Loading...</p>}
+
+      {!loading && friends.length === 0 && (
+        <p style={{ color: "#888" }}>No friends yet</p>
+      )}
+
       {friends.map((friend) => (
-        <FriendBox name={friend.email} photoURL={""} uid={friend.uid}/>
+        <div
+          key={friend.uid}
+          onClick={() => onSelect && onSelect(friend.uid)}
+          style={{
+            padding: "10px",
+            marginBottom: "5px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background:
+              selectedUserId === friend.uid ? "#e3f2fd" : "transparent",
+            border:
+              selectedUserId === friend.uid
+                ? "1px solid #2196f3"
+                : "1px solid #eee",
+          }}
+        >
+          {/* AVATAR */}
+          <img
+            src={
+              friend.photoURL ||
+              "https://via.placeholder.com/40"
+            }
+            alt="avatar"
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              objectFit: "cover",
+            }}
+          />
+
+          {/* NAME */}
+          <div>
+            <div style={{ fontWeight: "500" }}>
+              {friend.name || friend.email || friend.uid}
+            </div>
+          </div>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
