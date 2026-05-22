@@ -4,6 +4,7 @@ import Login from "./authentication/Login";
 import Dashboard from "./storage/Dashboard";
 import { Message } from "./message/Message";
 import Schedule from "./schedule/Schedule";
+import Task from "./task/Task";
 import { AuthProvider } from "../contexts/AuthContext";
 import { CallProvider } from "../contexts/CallContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -86,6 +87,17 @@ function AppWrapper() {
           }
         />
 
+          {/* Task */}
+        <Route
+          path="/task"
+          element={
+            <PrivateRoute>
+              <Task />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Auth */}
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/loading" element={<LoadingPage />} />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 const getBackendUrl = () => {
@@ -14,11 +14,12 @@ export function useDarkMode() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) {
-      setDarkMode(false);
+    if (!currentUser || hasFetched.current) {
       setLoading(false);
       return;
     }
+
+    hasFetched.current = true;
 
     const fetchDarkMode = async () => {
       try {
@@ -33,7 +34,6 @@ export function useDarkMode() {
 
         const data = await res.json();
         setDarkMode(data.darkMode ?? false);
-
       } catch (error) {
         console.error("Failed to fetch dark mode:", error);
       } finally {
@@ -57,7 +57,7 @@ export function useDarkMode() {
     if (!currentUser) return;
 
     try {
-      const token = await currentUser.getIdToken();
+      const token = await currentUser.getIdToken(true); // ✅ fix here too
 
       const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
         method: "PUT",

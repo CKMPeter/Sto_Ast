@@ -16,7 +16,13 @@ import CallModalGroup from "./CallModalGroup";
 export function Message() {
   const { currentUser } = useAuth();
 
-  // CALL
+  // CALL LOGIC
+  const { startCall, incomingCall, acceptCall, endCall } = useCall(currentUser?.uid);
+
+  // STREAM CONTEXT
+  const { call } = useCallContext();
+
+  //  FRIEND HOOK (REAL DATA)
   const {
   startCall,
   incomingCall,
@@ -211,6 +217,7 @@ export function Message() {
   };
 
   // ADD FRIEND UI
+  //  ADD FRIEND STATE
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);

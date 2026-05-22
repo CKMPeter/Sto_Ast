@@ -30,6 +30,7 @@ const {
   fetchFilesByFolderId,
   fetchAllFilesByUser,
   fetchFileOrFolderById,
+  fetchFilesByExactDate
 } = require("./controllers/FileController");
 const {
   describeImage,
@@ -55,6 +56,18 @@ const {
   acceptFriendRequest,
   rejectFriendRequest,
 } = require("./controllers/FriendController");
+
+const {
+  createMainTask,
+  getMainTasks,
+  updateMainTask,
+  deleteMainTask,
+  createSubTask,
+  getSubTasks,
+  updateSubTask,
+  deleteSubTask,
+  getTaskLogs
+} = require("./controllers/TaskController");
 
 // Express setup
 const app = express();
@@ -85,14 +98,21 @@ app.delete("/api/folders/:folderId", deleteFolder);
 app.get("/api/folders/:folderId", fetchFolderById);
 app.get("/api/folders", fetchFoldersByParentId);
 
+
 // --- File API ---
-app.post("/api/files", uploadFile);
-app.get("/api/files/user", fetchAllFilesByUser);
-app.put("/api/files/:fileId", updateFile);
-app.delete("/api/files/:fileId", deleteFile);
-app.get("/api/files/:fileId", fetchFileOrFolderById);
+app.post("/api/files", uploadFile); // Upload file
+app.get("/api/files/user", fetchAllFilesByUser); // Fetch all files by user
+// Fetch files by exact date
+app.get("/api/files/by-date", fetchFilesByExactDate);
+app.put("/api/files/:fileId", updateFile); // Update file
+app.delete("/api/files/:fileId", deleteFile); // Delete file
+app.get("/api/files/:fileId", fetchFileOrFolderById); // Fetch file or folder by ID
+
+// Fetch files by folderPath (query param)
 app.get("/api/files", fetchFilesByFolderPath);
 app.get("/api/folders/:folderId/files", fetchFilesByFolderId);
+  
+
 
 // --- Scheduling API ---
 app.post("/api/schedules", addSchedule);
@@ -136,6 +156,36 @@ if (useHttps) {
       console.log(`HTTP server running at http://localhost:${PORT}`);
     });
   }
+app.get('/api/messages/:userid/:friendid', getMessages);
+
+// --- Tasks API ---
+
+// Main Tasks
+app.post("/api/tasks", createMainTask);
+app.get("/api/tasks", getMainTasks);
+app.put("/api/tasks/:taskId", updateMainTask);
+app.delete("/api/tasks/:taskId", deleteMainTask);
+
+// Sub Tasks
+app.post("/api/tasks/:taskId/subtasks", createSubTask);
+app.get("/api/tasks/:taskId/subtasks", getSubTasks);
+
+app.put("/api/tasks/:taskId/subtasks/:subTaskId",updateSubTask);
+
+app.delete("/api/tasks/:taskId/subtasks/:subTaskId",deleteSubTask);
+  
+// Task Logs
+app.get("/api/tasks/:taskId/logs", getTaskLogs);
+// --- HTTPS Server Setup ---
+if (process.env.HTTPS === "true") {
+  const options = {
+    key: fs.readFileSync(path.join(__dirname, "key.pem")),
+    cert: fs.readFileSync(path.join(__dirname, "cert.pem")),
+  };
+
+  https.createServer(options, app).listen(PORT, () => {
+    console.log(`HTTPS server running at https://localhost:${PORT}`);
+  });
 } else {
   app.listen(PORT, () => {
     console.log(`HTTP server running at http://localhost:${PORT}`);

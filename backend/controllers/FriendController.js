@@ -1,7 +1,7 @@
 const { realtimeDatabase, auth } = require('../firebase-admin-setup');
 
 //
-// 🔥 HELPER: GET UID FROM TOKEN
+//  HELPER: GET UID FROM TOKEN
 //
 async function getUidFromRequest(req, res) {
   const authHeader = req.headers.authorization;
@@ -46,6 +46,7 @@ async function getFriends(req, res) {
 
     const friendIds = Object.keys(data);
 
+    //  fetch each friend's profile
     const promises = friendIds.map(async (uid) => {
       const userSnap = await realtimeDatabase
         .ref(`users/${uid}`)
@@ -92,6 +93,7 @@ async function getFriendRequests(req, res) {
 
     const requesterIds = Object.keys(data);
 
+    //  fetch user info for each requester
     const promises = requesterIds.map(async (uid) => {
       const userSnap = await realtimeDatabase
         .ref(`users/${uid}`)
@@ -147,6 +149,7 @@ async function sendFriendRequest(req, res) {
 
     const dbRef = realtimeDatabase.ref();
 
+    //  get both users
     const [fromSnap, toSnap] = await Promise.all([
       dbRef.child(`users/${from}`).once("value"),
       dbRef.child(`users/${to}`).once("value"),
@@ -159,6 +162,7 @@ async function sendFriendRequest(req, res) {
     const fromData = fromSnap.val() || {};
     const toData = toSnap.val() || {};
 
+    //  check if already friends
     const alreadyFriend = await dbRef
       .child(`users/${from}/friends/${to}`)
       .once("value");
@@ -167,6 +171,7 @@ async function sendFriendRequest(req, res) {
       return res.status(400).json({ error: "Already friends" });
     }
 
+    //  check if request already sent
     const alreadyRequested = await dbRef
       .child(`users/${to}/friendRequests/${from}`)
       .once("value");
@@ -215,6 +220,7 @@ async function acceptFriendRequest(req, res) {
 
     const rootRef = realtimeDatabase.ref();
 
+    //  get BOTH user profiles
     const [currentSnap, requesterSnap] = await Promise.all([
       rootRef.child(`users/${uid}`).once("value"),
       rootRef.child(`users/${requesterId}`).once("value"),

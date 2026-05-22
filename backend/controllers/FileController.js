@@ -6,13 +6,20 @@ const {
   uploadFileToDB,
   getAllFilesByUserFromDB,
   getFileOrFolderById,
+  getFilesByExactDate,
 } = require("../DAOs/FileDAO");
-const { FieldValue } = require("../firebase-admin-setup");
 
 module.exports = {
-  //Function to upload a file
   uploadFile: async (req, res) => {
-    const { name, content, preview, path, folderId } = req.body;
+    const {
+      name,
+      content,
+      preview,
+      path,
+      folderId,
+      linkedDates = [],
+    } = req.body;
+
     const { uid: userId } = req.decodedToken;
 
     if (!name || !content || !path) {
@@ -20,126 +27,105 @@ module.exports = {
     }
 
     try {
-      console.log(
-        "Uploading file:",
-        name + "\n" + preview + "\n" + path + "\n" + folderId
-      );
       const uploadedFile = await uploadFileToDB(
         name.trim(),
         content,
         preview,
         path,
         folderId,
-        userId
+        userId,
+        linkedDates
       );
 
-      console.log(
-        "File uploaded successfully. File id: ",
-        uploadedFile.id,
-        "\nname: ",
-        uploadedFile.name,
-        "\nfolderId: ",
-        uploadedFile.folderId,
-        "\nuserId: ",
-        uploadedFile.userId
-      );
-
-      res
-        .status(200)
-        .json({ message: "File uploaded successfully", file: uploadedFile });
+      res.status(200).json({
+        message: "File uploaded successfully",
+        file: uploadedFile,
+      });
     } catch (err) {
-      console.error("Error uploading file to Firebase:", err);
+      console.error("Error uploading file:", err);
       res.status(500).json({ error: "Internal server error" });
     }
   },
 
-  // Function to update a file
   updateFile: async (req, res) => {
     const { fileId } = req.params;
-    const { name, content, preview, filePath } = req.body;
-    const { uid: userId } = req.decodedToken;
+
+    const { name, content, preview, linkedDates } = req.body; // ⚠️ no default []
 
     if (!name || !content) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Missing name or content" });
+      return res.status(400).json({
+        success: false,
+        error: "Missing name or content",
+      });
     }
 
     try {
-      console.log(
-        "Updating file:",
-        fileId + "\n" + name + "\n" + preview + "\n" + filePath
+      await updateFileInDB(
+        fileId,
+        name.trim(),
+        content,
+        preview,
+        linkedDates
       );
-
-      await updateFileInDB(fileId, name.trim(), content, preview);
-
-      console.log("File updated successfully");
 
       res.json({ success: true });
     } catch (error) {
       console.error("Error updating file:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
     }
   },
 
-  // Function to delete a file
   deleteFile: async (req, res) => {
     const { fileId } = req.params;
-    const { filePath } = req.body;
-    const { uid: userId } = req.decodedToken;
 
     try {
-      console.log("Deleting file:", fileId + "\n" + filePath);
-
       await deleteFileFromDB(fileId);
-
-      console.log("File deleted successfully");
-
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting file:", error);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
     }
   },
 
-  // Function to fetch files by folderPath
   fetchFilesByFolderPath: async (req, res) => {
     const { folderPath } = req.query;
     const { uid: userId } = req.decodedToken;
 
-    if (!folderPath)
-      return res.status(400).json({ error: "Missing folderPath or userId" });
+    if (!folderPath) {
+      return res.status(400).json({
+        error: "Missing folderPath",
+      });
+    }
 
     try {
-      console.log("Fetching files in folder:", folderPath);
-
       const files = await getFileByFolderPathFromDB(folderPath, userId);
-
-      console.log("Files fetched successfully");
-
       res.json({ files });
     } catch (error) {
       console.error("Fetch files error:", error.message);
-      res.status(500).json({ error: "Failed to fetch files" });
+      res.status(500).json({
+        error: "Failed to fetch files",
+      });
     }
   },
 
-  // Function to fetch files by folderId
   fetchFilesByFolderId: async (req, res) => {
     const { folderId } = req.params;
     const { uid: userId } = req.decodedToken;
 
     try {
-      console.log("Fetching files in folder with ID:", folderId);
-
       const files = await getFilesByFolderIdFromDB(folderId, userId);
-
-      console.log("Files fetched successfully");
-
       res.json({ files });
     } catch (error) {
       console.error("Fetch files error:", error.message);
-      res.status(500).json({ error: "Failed to fetch files" });
+      res.status(500).json({
+        error: "Failed to fetch files",
+      });
     }
   },
 
@@ -147,38 +133,57 @@ module.exports = {
     const { uid: userId } = req.decodedToken;
 
     try {
-      console.log("Fetching all files for user:", userId);
-
       const files = await getAllFilesByUserFromDB(userId);
-
-      console.log("All files fetched successfully");
-
       res.json({ files });
     } catch (error) {
       console.error("Fetch all files error:", error.message);
-      res.status(500).json({ error: "Failed to fetch all files" });
+      res.status(500).json({
+        error: "Failed to fetch all files",
+      });
     }
   },
-  // Function to get a file or folder by ID
 
   fetchFileOrFolderById: async (req, res) => {
     const { id } = req.params;
-    const { collection = "files" } = req.query; // Default to "files" if not provided
+    const { collection = "files" } = req.query;
+    console.log("HIT fetchFilesByExactDate");
 
     try {
-      console.log("Fetching file or folder with ID:", id);
-
-      const item = await getFileOrFolderById(fileId, collection);
+      const item = await getFileOrFolderById(id, collection);
 
       if (!item) {
-        return res.status(404).json({ error: "Item not found" });
+        return res.status(404).json({
+          error: "Item not found",
+        });
       }
-      console.log("Item fetched successfully");
 
       res.json({ item });
     } catch (error) {
       console.error("Fetch item error:", error.message);
-      res.status(500).json({ error: "Failed to fetch item" });
+      res.status(500).json({
+        error: "Failed to fetch item",
+      });
+    }
+  },
+
+  fetchFilesByExactDate: async (req, res) => {
+    const { date } = req.query;
+    const { uid: userId } = req.decodedToken;
+
+    if (!date) {
+      return res.status(400).json({
+        error: "Missing date",
+      });
+    }
+
+    try {
+      const files = await getFilesByExactDate(userId, date);
+      res.json({ files });
+    } catch (error) {
+      console.error("Fetch by date error:", error.message);
+      res.status(500).json({
+        error: "Failed to fetch files by date",
+      });
     }
   },
 };
