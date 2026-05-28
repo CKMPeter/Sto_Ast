@@ -205,3 +205,29 @@ export const fetchTaskLogsService = async (
 
   return await response.json()
 }
+
+// =========================
+// OTHER SERVICES (if needed)
+// =========================
+
+export const createTaskUsingAIService = async (
+  getIdToken,
+  taskData
+) => {
+
+  const token = await getIdToken()
+
+  const response = await fetch(
+    `${BACKEND_URL}/api/create-task`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(taskData)
+    }
+  )
+
+  return await response.json()
+}

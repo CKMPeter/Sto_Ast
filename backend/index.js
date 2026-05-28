@@ -36,6 +36,7 @@ const {
   describeImage,
   aiRename,
   aiPreview,
+  createMainTaskAI
 } = require("./controllers/openAIController");
 const {
   getDarkMode,
@@ -89,6 +90,7 @@ app.post("/api/aiRename", aiRename);
 app.post("/api/aiPreview", aiPreview);
 app.post("/api/chatbot", chatWithBot);
 app.post("/api/describe-image", describeImage);
+app.post("/api/create-task", createMainTaskAI);
 
 // --- Folder API ---
 app.post("/api/folders", createFolder);
@@ -130,34 +132,6 @@ app.get("/api/users/search", searchUsers);
 
 // --- Messages API ---
 app.get("/api/messages/:userid/:friendid", getMessages);
-
-// --- Server Setup ---
-const useHttps = String(process.env.HTTPS).toLowerCase() === "true";
-
-if (useHttps) {
-  const keyPath = path.join(__dirname, "key.pem");
-  const certPath = path.join(__dirname, "cert.pem");
-
-  if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-    const options = {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-    };
-
-    https.createServer(options, app).listen(PORT, () => {
-      console.log(`HTTPS server running at https://localhost:${PORT}`);
-    });
-  } else {
-    console.warn(
-      "HTTPS=true but cert.pem/key.pem not found. Falling back to HTTP."
-    );
-
-    app.listen(PORT, () => {
-      console.log(`HTTP server running at http://localhost:${PORT}`);
-    });
-  }
-app.get('/api/messages/:userid/:friendid', getMessages);
-
 // --- Tasks API ---
 
 // Main Tasks

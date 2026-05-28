@@ -17,7 +17,13 @@ class TaskDAO {
         createdAt:
           admin.firestore.FieldValue.serverTimestamp(),
         updatedAt:
-          admin.firestore.FieldValue.serverTimestamp()
+          admin.firestore.FieldValue.serverTimestamp(),
+        expireAt: taskData.expireAt
+          ? admin.firestore.Timestamp.fromDate(
+              new Date(taskData.expireAt)
+            )
+          : null,
+        description: taskData.description || ""
       })
 
     // create logs subcollection starter log
@@ -132,7 +138,9 @@ class TaskDAO {
         createdAt:
           admin.firestore.FieldValue.serverTimestamp(),
         updatedAt:
-          admin.firestore.FieldValue.serverTimestamp()
+          admin.firestore.FieldValue.serverTimestamp(),
+        timeLogged: 0,
+        assignedTo: subTaskData.assignedTo || null
       })
 
     // log create
