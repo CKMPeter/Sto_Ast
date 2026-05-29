@@ -10,8 +10,12 @@ const getBackendUrl = () => {
 
 export function useDarkMode() {
   const { currentUser } = useAuth();
+
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // ✅ FIX
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     if (!currentUser || hasFetched.current) {
@@ -24,18 +28,29 @@ export function useDarkMode() {
     const fetchDarkMode = async () => {
       try {
         const token = await currentUser.getIdToken();
-        const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
 
-        if (!res.ok) throw new Error("Failed request");
+        const res = await fetch(
+          `${getBackendUrl()}/api/user/theme`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed request");
+        }
 
         const data = await res.json();
+
         setDarkMode(data.darkMode ?? false);
+
       } catch (error) {
-        console.error("Failed to fetch dark mode:", error);
+        console.error(
+          "Failed to fetch dark mode:",
+          error
+        );
       } finally {
         setLoading(false);
       }
@@ -44,37 +59,63 @@ export function useDarkMode() {
     fetchDarkMode();
   }, [currentUser]);
 
-  // ✅ GLOBAL APPLY (CRITICAL FIX)
+  // ✅ Apply dark mode globally
   useEffect(() => {
-    document.body.classList.toggle("dark-mode", darkMode);
-    document.body.classList.toggle("light-mode", !darkMode);
+    document.body.classList.toggle(
+      "dark-mode",
+      darkMode
+    );
+
+    document.body.classList.toggle(
+      "light-mode",
+      !darkMode
+    );
   }, [darkMode]);
 
   const toggleDarkMode = async () => {
     const newValue = !darkMode;
+
+    // optimistic update
     setDarkMode(newValue);
 
     if (!currentUser) return;
 
     try {
-      const token = await currentUser.getIdToken(true); // ✅ fix here too
+      const token =
+        await currentUser.getIdToken(true);
 
-      const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ darkMode: newValue }),
-      });
+      const res = await fetch(
+        `${getBackendUrl()}/api/user/theme`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            darkMode: newValue,
+          }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Update failed");
+      if (!res.ok) {
+        throw new Error("Update failed");
+      }
 
     } catch (error) {
-      console.error("Error updating dark mode:", error);
+      console.error(
+        "Error updating dark mode:",
+        error
+      );
+
+      // rollback
       setDarkMode(!newValue);
     }
   };
 
-  return { darkMode, toggleDarkMode, loading };
+  return {
+    darkMode,
+    toggleDarkMode,
+    loading,
+  };
 }

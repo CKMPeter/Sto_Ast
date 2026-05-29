@@ -12,41 +12,49 @@ export default function useCall(currentUserId) {
 
   const db = getDatabase();
 
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [incomingCall, setIncomingCall] =
+    useState(null);
+
+  const [remoteStream, setRemoteStream] =
+    useState(null);
+
+  const [localStream, setLocalStream] =
+    useState(null);
+
+  const [callAccepted, setCallAccepted] =
+    useState(false);
+
+  const [targetUserId, setTargetUserId] =
+    useState(null);
 
   const peerConnection = useRef(null);
-  const localStream = useRef(null);
 
   const listeners = useRef([]);
 
   // =========================
-  // CLEANUP
+  // CLEANUP MEDIA
   // =========================
 
   const cleanupMedia = () => {
 
-    // local stream
-    if (localStream.current) {
+    if (localStream) {
 
-      localStream.current.getTracks().forEach((track) => {
-        track.stop();
-      });
+      localStream
+        .getTracks()
+        .forEach((track) => track.stop());
 
-      localStream.current = null;
+      setLocalStream(null);
     }
 
-    // remote stream
     if (remoteStream) {
 
-      remoteStream.getTracks().forEach((track) => {
-        track.stop();
-      });
+      remoteStream
+        .getTracks()
+        .forEach((track) => track.stop());
 
       setRemoteStream(null);
     }
 
-    // peer
     if (peerConnection.current) {
 
       peerConnection.current.ontrack = null;
@@ -55,45 +63,6 @@ export default function useCall(currentUserId) {
       peerConnection.current.close();
 
       peerConnection.current = null;
-    }
-  };
-
-  // =========================
-  // END CALL
-  // =========================
-
-  const endCall = async (targetUserId = null) => {
-
-    try {
-
-      cleanupMedia();
-
-      setIncomingCall(null);
-
-      // remove listeners
-      listeners.current.forEach((item) => {
-        off(item.ref, item.callback);
-      });
-
-      listeners.current = [];
-
-      // remove my data
-      await remove(ref(db, `calls/${currentUserId}`));
-      await remove(ref(db, `calls/${currentUserId}/offer`));
-      await remove(ref(db, `calls/${currentUserId}/answer`));
-      await remove(ref(db, `calls/${currentUserId}/candidate`));
-
-      // remove target data
-      if (targetUserId) {
-
-        await remove(ref(db, `calls/${targetUserId}`));
-        await remove(ref(db, `calls/${targetUserId}/offer`));
-        await remove(ref(db, `calls/${targetUserId}/answer`));
-        await remove(ref(db, `calls/${targetUserId}/candidate`));
-      }
-
-    } catch (err) {
-      console.error("endCall error:", err);
     }
   };
 
@@ -117,33 +86,90 @@ export default function useCall(currentUserId) {
   };
 
   // =========================
+  // END CALL
+  // =========================
+
+  const endCall = async (
+    userId = targetUserId
+  ) => {
+
+    try {
+
+      cleanupMedia();
+
+      setIncomingCall(null);
+
+      setCallAccepted(false);
+
+      // remove listeners
+      listeners.current.forEach((item) => {
+        off(item.ref, item.callback);
+      });
+
+      listeners.current = [];
+
+      // remove mine
+      await remove(
+        ref(db, `calls/${currentUserId}`)
+      );
+
+      // remove target
+      if (userId) {
+
+        await remove(
+          ref(db, `calls/${userId}`)
+        );
+      }
+
+      setTargetUserId(null);
+
+    } catch (err) {
+
+      console.error(
+        "endCall error:",
+        err
+      );
+    }
+  };
+
+  // =========================
   // START CALL
   // =========================
 
-  const startCall = async (targetUserId) => {
+  const startCall = async (
+    targetId
+  ) => {
 
     try {
 
       await endCall();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      setTargetUserId(targetId);
 
-      localStream.current = stream;
+      setCallAccepted(true);
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+      setLocalStream(stream);
 
       const pc = createPeer();
 
-      // add local tracks
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+      // local tracks
+      stream
+        .getTracks()
+        .forEach((track) => {
+          pc.addTrack(track, stream);
+        });
 
       // remote stream
       pc.ontrack = (event) => {
 
-        const stream = event.streams[0];
+        const stream =
+          event.streams[0];
 
         if (stream) {
           setRemoteStream(stream);
@@ -151,105 +177,140 @@ export default function useCall(currentUserId) {
       };
 
       // ICE
-      pc.onicecandidate = async (event) => {
+      pc.onicecandidate =
+        async (event) => {
 
-        if (!event.candidate) return;
+          if (!event.candidate)
+            return;
 
-        await set(
-          ref(db, `calls/${targetUserId}/candidate`),
-          JSON.stringify(event.candidate)
-        );
-      };
+          await set(
+            ref(
+              db,
+              `calls/${targetId}/candidate`
+            ),
+            JSON.stringify(
+              event.candidate
+            )
+          );
+        };
 
-      // create offer
-      const offer = await pc.createOffer();
+      // offer
+      const offer =
+        await pc.createOffer();
 
-      await pc.setLocalDescription(offer);
+      await pc.setLocalDescription(
+        offer
+      );
 
       await set(
-        ref(db, `calls/${targetUserId}/offer`),
+        ref(
+          db,
+          `calls/${targetId}/offer`
+        ),
         {
-          callerId: currentUserId,
-          offer: JSON.stringify(offer),
+          callerId:
+            currentUserId,
+
+          offer:
+            JSON.stringify(offer),
         }
       );
 
-      // =========================
+      // =====================
       // LISTEN ANSWER
-      // =========================
+      // =====================
 
       const answerRef = ref(
         db,
         `calls/${currentUserId}/answer`
       );
 
-      const answerCallback = async (snapshot) => {
+      const answerCallback =
+        async (snapshot) => {
 
-        const data = snapshot.val();
+          const data =
+            snapshot.val();
 
-        if (!data) return;
+          if (!data) return;
 
-        if (!peerConnection.current) return;
+          if (
+            pc.remoteDescription
+          )
+            return;
 
-        if (pc.remoteDescription) return;
+          try {
 
-        try {
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(
+                JSON.parse(
+                  data.answer
+                )
+              )
+            );
 
-          await pc.setRemoteDescription(
-            new RTCSessionDescription(
-              JSON.parse(data.answer)
-            )
-          );
+          } catch (err) {
+            console.error(err);
+          }
+        };
 
-        } catch (err) {
-          console.error(err);
-        }
-      };
-
-      onValue(answerRef, answerCallback);
+      onValue(
+        answerRef,
+        answerCallback
+      );
 
       listeners.current.push({
         ref: answerRef,
-        callback: answerCallback,
+        callback:
+          answerCallback,
       });
 
-      // =========================
+      // =====================
       // LISTEN CANDIDATE
-      // =========================
+      // =====================
 
       const candidateRef = ref(
         db,
         `calls/${currentUserId}/candidate`
       );
 
-      const candidateCallback = async (snapshot) => {
+      const candidateCallback =
+        async (snapshot) => {
 
-        const data = snapshot.val();
+          const data =
+            snapshot.val();
 
-        if (!data) return;
+          if (!data) return;
 
-        try {
+          try {
 
-          await pc.addIceCandidate(
-            new RTCIceCandidate(
-              JSON.parse(data)
-            )
-          );
+            await pc.addIceCandidate(
+              new RTCIceCandidate(
+                JSON.parse(data)
+              )
+            );
 
-        } catch (err) {
-          console.error(err);
-        }
-      };
+          } catch (err) {
+            console.error(err);
+          }
+        };
 
-      onValue(candidateRef, candidateCallback);
+      onValue(
+        candidateRef,
+        candidateCallback
+      );
 
       listeners.current.push({
         ref: candidateRef,
-        callback: candidateCallback,
+        callback:
+          candidateCallback,
       });
 
     } catch (err) {
-      console.error("startCall error:", err);
+
+      console.error(
+        "startCall error:",
+        err
+      );
     }
   };
 
@@ -261,57 +322,77 @@ export default function useCall(currentUserId) {
 
     try {
 
-      if (!incomingCall) return;
+      if (!incomingCall)
+        return;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      setTargetUserId(
+        incomingCall.callerId
+      );
 
-      localStream.current = stream;
+      setCallAccepted(true);
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+      setLocalStream(stream);
 
       const pc = createPeer();
 
-      // add local tracks
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+      // local tracks
+      stream
+        .getTracks()
+        .forEach((track) => {
+          pc.addTrack(track, stream);
+        });
 
       // remote stream
       pc.ontrack = (event) => {
 
-        const stream = event.streams[0];
+        const stream =
+          event.streams[0];
 
         if (stream) {
           setRemoteStream(stream);
         }
       };
 
-      // set remote offer
+      // remote offer
       await pc.setRemoteDescription(
         new RTCSessionDescription(
-          JSON.parse(incomingCall.offer)
+          JSON.parse(
+            incomingCall.offer
+          )
         )
       );
 
       // ICE
-      pc.onicecandidate = async (event) => {
+      pc.onicecandidate =
+        async (event) => {
 
-        if (!event.candidate) return;
+          if (!event.candidate)
+            return;
 
-        await set(
-          ref(
-            db,
-            `calls/${incomingCall.callerId}/candidate`
-          ),
-          JSON.stringify(event.candidate)
-        );
-      };
+          await set(
+            ref(
+              db,
+              `calls/${incomingCall.callerId}/candidate`
+            ),
+            JSON.stringify(
+              event.candidate
+            )
+          );
+        };
 
-      // create answer
-      const answer = await pc.createAnswer();
+      // answer
+      const answer =
+        await pc.createAnswer();
 
-      await pc.setLocalDescription(answer);
+      await pc.setLocalDescription(
+        answer
+      );
 
       await set(
         ref(
@@ -319,54 +400,60 @@ export default function useCall(currentUserId) {
           `calls/${incomingCall.callerId}/answer`
         ),
         {
-          answer: JSON.stringify(answer),
+          answer:
+            JSON.stringify(answer),
         }
       );
 
-      // remove old offer
-      await remove(
-        ref(db, `calls/${currentUserId}/offer`)
-      );
-
-      // =========================
+      // =====================
       // LISTEN CANDIDATE
-      // =========================
+      // =====================
 
       const candidateRef = ref(
         db,
         `calls/${currentUserId}/candidate`
       );
 
-      const candidateCallback = async (snapshot) => {
+      const candidateCallback =
+        async (snapshot) => {
 
-        const data = snapshot.val();
+          const data =
+            snapshot.val();
 
-        if (!data) return;
+          if (!data) return;
 
-        try {
+          try {
 
-          await pc.addIceCandidate(
-            new RTCIceCandidate(
-              JSON.parse(data)
-            )
-          );
+            await pc.addIceCandidate(
+              new RTCIceCandidate(
+                JSON.parse(data)
+              )
+            );
 
-        } catch (err) {
-          console.error(err);
-        }
-      };
+          } catch (err) {
+            console.error(err);
+          }
+        };
 
-      onValue(candidateRef, candidateCallback);
+      onValue(
+        candidateRef,
+        candidateCallback
+      );
 
       listeners.current.push({
         ref: candidateRef,
-        callback: candidateCallback,
+        callback:
+          candidateCallback,
       });
 
       setIncomingCall(null);
 
     } catch (err) {
-      console.error("acceptCall error:", err);
+
+      console.error(
+        "acceptCall error:",
+        err
+      );
     }
   };
 
@@ -376,33 +463,39 @@ export default function useCall(currentUserId) {
 
   useEffect(() => {
 
-    if (!currentUserId) return;
+    if (!currentUserId)
+      return;
 
     const offerRef = ref(
       db,
       `calls/${currentUserId}/offer`
     );
 
-    const callback = (snapshot) => {
+    const callback =
+      (snapshot) => {
 
-      const data = snapshot.val();
+        const data =
+          snapshot.val();
 
-      if (!data || !data.offer) {
+        if (
+          !data ||
+          !data.offer
+        ) {
 
-        setIncomingCall(null);
+          setIncomingCall(
+            null
+          );
 
-        return;
-      }
+          return;
+        }
 
-      setIncomingCall(data);
-    };
+        setIncomingCall(data);
+      };
 
-    onValue(offerRef, callback);
-
-    listeners.current.push({
-      ref: offerRef,
-      callback,
-    });
+    onValue(
+      offerRef,
+      callback
+    );
 
     return () => {
       off(offerRef, callback);
@@ -417,7 +510,8 @@ export default function useCall(currentUserId) {
     incomingCall,
     acceptCall,
     endCall,
-    localStream: localStream.current,
+    localStream,
     remoteStream,
+    callAccepted,
   };
 }

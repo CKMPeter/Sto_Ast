@@ -1,20 +1,29 @@
-require('dotenv').config();
-const { OpenAi } = require('openai');
+require("dotenv").config();
+
+const OpenAI = require("openai");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
 async function listAvailableModels() {
   try {
     const models = await openai.models.list();
-    const modelIds = models.data.map((model) => model.id);
+
     console.log("✅ Models accessible to this API key:");
-    modelIds.forEach((id) => console.log(`- ${id}`));
+
+    models.data.forEach((model) => {
+      console.log(`- ${model.id}`);
+    });
   } catch (error) {
-    console.error("❌ Error listing models:", error.message);
+    console.error(
+      "❌ Error listing models:",
+      error.message
+    );
   }
 }
 
+// Optional
 listAvailableModels();
-export default openai;
-//module.exports = openai;
+
+module.exports = openai;
