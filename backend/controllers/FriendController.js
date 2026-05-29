@@ -24,7 +24,7 @@ async function getUidFromRequest(req, res) {
 }
 
 //
-// ✅ GET FRIENDS
+//  GET FRIENDS
 //
 async function getFriends(req, res) {
   try {
@@ -71,7 +71,7 @@ async function getFriends(req, res) {
 }
 
 //
-// ✅ GET FRIEND REQUESTS
+//  GET FRIEND REQUESTS
 //
 async function getFriendRequests(req, res) {
   try {
@@ -109,6 +109,7 @@ async function getFriendRequests(req, res) {
     });
 
     const requests = await Promise.all(promises);
+    console.log("Fetched requests:", requests);
 
     return res.status(200).json(requests);
   } catch (error) {
@@ -118,7 +119,7 @@ async function getFriendRequests(req, res) {
 }
 
 //
-// ✅ SEND FRIEND REQUEST
+//  SEND FRIEND REQUEST
 // Supports both:
 // - { from, to }
 // - { toUid }
@@ -204,7 +205,7 @@ async function sendFriendRequest(req, res) {
 }
 
 //
-// ✅ ACCEPT FRIEND REQUEST
+//  ACCEPT FRIEND REQUEST
 // body: { requesterId }
 //
 async function acceptFriendRequest(req, res) {
@@ -220,7 +221,7 @@ async function acceptFriendRequest(req, res) {
 
     const rootRef = realtimeDatabase.ref();
 
-    //  get BOTH user profiles
+    // get BOTH user profiles
     const [currentSnap, requesterSnap] = await Promise.all([
       rootRef.child(`users/${uid}`).once("value"),
       rootRef.child(`users/${requesterId}`).once("value"),
@@ -231,6 +232,7 @@ async function acceptFriendRequest(req, res) {
 
     const updates = {};
 
+    // add both as friends
     updates[`users/${uid}/friends/${requesterId}`] = {
       uid: requesterId,
       email: requesterUser.email || "",
@@ -243,21 +245,28 @@ async function acceptFriendRequest(req, res) {
       name: currentUser.name || ""
     };
 
+    // remove request
     updates[`users/${uid}/friendRequests/${requesterId}`] = null;
-    updates[`users/${uid}/sentRequests/${requesterId}`] = null;
+
+    // remove sender pending request
     updates[`users/${requesterId}/sentRequests/${uid}`] = null;
 
     await rootRef.update(updates);
 
-    return res.status(200).json({ message: "Friend added" });
+    return res.status(200).json({
+      message: "Friend added"
+    });
+
   } catch (error) {
     console.error("Error accepting request:", error);
-    return res.status(500).json({ error: error.message });
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 }
-
 //
-// ✅ REJECT FRIEND REQUEST
+//  REJECT FRIEND REQUEST
 // body: { requesterId }
 //
 async function rejectFriendRequest(req, res) {
@@ -272,8 +281,11 @@ async function rejectFriendRequest(req, res) {
     }
 
     const updates = {};
+
+    // remove incoming request
     updates[`users/${uid}/friendRequests/${requesterId}`] = null;
-    updates[`users/${uid}/sentRequests/${requesterId}`] = null;
+
+    // remove sender pending request
     updates[`users/${requesterId}/sentRequests/${uid}`] = null;
 
     await realtimeDatabase.ref().update(updates);
@@ -286,7 +298,7 @@ async function rejectFriendRequest(req, res) {
 }
 
 //
-// ✅ GET MESSAGES
+//  GET MESSAGES
 //
 async function getMessages(req, res) {
   try {
@@ -318,7 +330,7 @@ async function getMessages(req, res) {
 }
 
 //
-// ✅ SEARCH USERS (email)
+//  SEARCH USERS (email)
 // GET /api/users/search?query=abc
 //
 async function searchUsers(req, res) {

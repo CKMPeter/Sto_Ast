@@ -70,6 +70,17 @@ const {
   getTaskLogs
 } = require("./controllers/TaskController");
 
+const {
+  createGroup,
+  getUserGroups,
+  getGroupById,
+  updateGroup,
+  deleteGroup,
+  addMember,
+  removeMember
+} = require("./controllers/GroupController");
+
+
 // Express setup
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -147,6 +158,15 @@ app.get("/api/tasks/:taskId/subtasks", getSubTasks);
 app.put("/api/tasks/:taskId/subtasks/:subTaskId",updateSubTask);
 
 app.delete("/api/tasks/:taskId/subtasks/:subTaskId",deleteSubTask);
+
+// Group API
+app.post("/api/groups", createGroup);
+app.get("/api/groups/user/:userId", getUserGroups);
+app.get("/api/groups/:groupId", getGroupById);
+app.put("/api/groups/:groupId", updateGroup);
+app.delete("/api/groups/:groupId", deleteGroup);
+app.post("/api/groups/:groupId/add-member", addMember);
+app.post("/api/groups/:groupId/remove-member", removeMember);
   
 // Task Logs
 app.get("/api/tasks/:taskId/logs", getTaskLogs);

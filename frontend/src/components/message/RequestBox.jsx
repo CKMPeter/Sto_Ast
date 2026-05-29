@@ -2,7 +2,7 @@ import React from 'react';
 
 export function RequestBox({ friendRequests = [], onAccept, onReject }) {
 
-  // ✅ if empty → render nothing
+  //  if empty → render nothing
   if (!friendRequests.length) return null;
 
   return (

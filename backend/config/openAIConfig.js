@@ -15,6 +15,6 @@ async function listAvailableModels() {
   }
 }
 
-listAvailableModels();
+//listAvailableModels();
 //export default openai;
 module.exports = openai;

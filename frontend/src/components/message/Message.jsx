@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Navbar from '../shared/Navbar';
+import React, { useState, useEffect, useRef } from "react";
+import Navbar from "../shared/Navbar";
 import useCall from "../../webrtc/useCall";
-import { RequestBox } from './RequestBox';
-import FriendsList from './FriendsList';
-import { useAuth } from '../../contexts/AuthContext';
-import useFriends from '../../hooks/messageHook/useFriends';
-import useChat from '../../hooks/useChat';
-import useGroups from '../../hooks/messageHook/useGroups';
-import CallModal from './CallModal';
+import { RequestBox } from "./RequestBox";
+import FriendsList from "./FriendsList";
+import { useAuth } from "../../contexts/AuthContext";
+import useFriends from "../../hooks/messageHook/useFriends";
+import useChat from "../../hooks/useChat";
+import useGroups from "../../hooks/messageHook/useGroups";
+import CallModal from "./CallModal";
 import { styled } from "@mui/material/styles";
 import useCallGroup from "../../webrtc/useCallGroup";
 import CallModalGroup from "./CallModalGroup";
@@ -59,22 +59,14 @@ export function Message() {
     sendFile,
     sendVoiceMessage,
     uploading,
-  } = useChat(
-    currentUser?.uid,
-    selectedUserId,
-    selectedGroupId
-  );
+  } = useChat(currentUser?.uid, selectedUserId, selectedGroupId);
 
-  const selectedFriend = friends.find(
-    f => f.uid === selectedUserId
-  );
+  const selectedFriend = friends.find((f) => f.uid === selectedUserId);
 
-  const selectedGroup = groups.find(
-    g => g.id === selectedGroupId
-  );
+  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
 
   // // AUTO SCROLL
-   const bottomRef = useRef();
+  const bottomRef = useRef();
 
   // useEffect(() => {
   //   bottomRef.current?.scrollIntoView({
@@ -86,11 +78,7 @@ export function Message() {
   useEffect(() => {
     if (!currentUser?.uid || groups.length === 0) return;
 
-    const allMembers = [
-      ...new Set(
-        groups.flatMap(g => g.members || [])
-      ),
-    ];
+    const allMembers = [...new Set(groups.flatMap((g) => g.members || []))];
 
     listenGroupIncoming(allMembers);
 
@@ -138,17 +126,13 @@ export function Message() {
 
   const startRecording = async () => {
     try {
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
 
-      const mimeType =
-        MediaRecorder.isTypeSupported(
-          "audio/webm;codecs=opus"
-        )
-          ? "audio/webm;codecs=opus"
-          : "audio/webm";
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
 
       const recorder = new MediaRecorder(stream, {
         mimeType,
@@ -170,10 +154,9 @@ export function Message() {
           type: mimeType,
         });
 
-        const duration =
-          Date.now() - recordStartRef.current;
+        const duration = Date.now() - recordStartRef.current;
 
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach((t) => t.stop());
 
         await sendVoiceMessage(blob, duration);
       };
@@ -182,7 +165,6 @@ export function Message() {
 
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
-
     } catch (err) {
       console.error(err);
       alert("Không bật được micro");
@@ -192,9 +174,7 @@ export function Message() {
   const stopRecording = () => {
     if (!mediaRecorderRef.current) return;
 
-    if (
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
+    if (mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
 
@@ -202,21 +182,15 @@ export function Message() {
   };
 
   // CREATE GROUP
-  const [showCreateGroup, setShowCreateGroup] =
-    useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   const [groupName, setGroupName] = useState("");
 
-  const [
-    selectedGroupMembers,
-    setSelectedGroupMembers,
-  ] = useState([]);
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState([]);
 
   const toggleGroupMember = (uid) => {
     setSelectedGroupMembers((prev) =>
-      prev.includes(uid)
-        ? prev.filter((id) => id !== uid)
-        : [...prev, uid]
+      prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid],
     );
   };
 
@@ -225,24 +199,17 @@ export function Message() {
 
     try {
       const members = [
-        ...new Set([
-          currentUser?.uid,
-          ...selectedGroupMembers,
-        ].filter(Boolean)),
+        ...new Set([currentUser?.uid, ...selectedGroupMembers].filter(Boolean)),
       ];
 
-      const payload = {
-        name: groupName.trim(),
-        members,
-        createdAt: Date.now(),
-      };
-
-      await createGroup(payload);
+      await createGroup(
+        groupName.trim(),
+        members
+      );
 
       setGroupName("");
       setSelectedGroupMembers([]);
       setShowCreateGroup(false);
-
     } catch (err) {
       console.error(err);
       alert("Không tạo được group");
@@ -250,22 +217,17 @@ export function Message() {
   };
 
   // ADD FRIEND
-  const [showAddFriend, setShowAddFriend] =
-    useState(false);
+  const [showAddFriend, setShowAddFriend] = useState(false);
 
-  const [friendSearch, setFriendSearch] =
-    useState("");
+  const [friendSearch, setFriendSearch] = useState("");
 
-  const [searchResults, setSearchResults] =
-    useState([]);
+  const [searchResults, setSearchResults] = useState([]);
 
   const handleSearchFriend = async () => {
-    if (!friendSearch.trim() || !currentUser)
-      return;
+    if (!friendSearch.trim() || !currentUser) return;
 
     try {
-      const token =
-        await currentUser.getIdToken();
+      const token = await currentUser.getIdToken();
 
       const res = await fetch(
         `${import.meta.env.VITE_APP_BACKEND_URL}/api/users/search?query=${encodeURIComponent(friendSearch.trim())}`,
@@ -273,22 +235,18 @@ export function Message() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
-      if (!res.ok)
-        throw new Error("Search failed");
+      if (!res.ok) throw new Error("Search failed");
 
       const data = await res.json();
 
       const filtered = Array.isArray(data)
-        ? data.filter(
-            u => u.uid !== currentUser.uid
-          )
+        ? data.filter((u) => u.uid !== currentUser.uid)
         : [];
 
       setSearchResults(filtered);
-
     } catch (err) {
       console.error(err);
       setSearchResults([]);
@@ -306,20 +264,14 @@ export function Message() {
   return (
     <div>
       <Navbar />
-
       <Container>
-
         {/* SIDEBAR */}
         <Sidebar>
-
           <div style={styleSheet.buttonArea}>
-
             <button
               className="btn btn-warning"
               style={styleSheet.flexButton}
-              onClick={() =>
-                setShowCreateGroup(true)
-              }
+              onClick={() => setShowCreateGroup(true)}
             >
               + Group
             </button>
@@ -327,13 +279,10 @@ export function Message() {
             <button
               className="btn btn-success"
               style={styleSheet.flexButton}
-              onClick={() =>
-                setShowAddFriend(true)
-              }
+              onClick={() => setShowAddFriend(true)}
             >
               + Add
             </button>
-
           </div>
 
           <RequestBox
@@ -345,8 +294,13 @@ export function Message() {
           <FriendsList
             userId={currentUser?.uid}
             onSelect={(uid) => {
-              setSelectedUserId(uid);
-              setSelectedGroupId(null);
+              if (uid === selectedUserId) {
+                setSelectedUserId(null);
+                setSelectedGroupId(null);
+              } else {
+                setSelectedUserId(uid);
+                setSelectedGroupId(null);
+              }
             }}
             selectedUserId={selectedUserId}
           />
@@ -361,50 +315,36 @@ export function Message() {
                   setSelectedGroupId(g.id);
                   setSelectedUserId(null);
                 }}
-                style={styleSheet.groupItem(
-                  selectedGroupId === g.id
-                )}
+                style={styleSheet.groupItem(selectedGroupId === g.id)}
               >
                 👥 {g.name}
               </div>
             ))}
           </div>
-
         </Sidebar>
 
         {/* CHAT */}
         <ChatArea>
-
           <Header>
-
             <div>
               {selectedGroup
                 ? `👥 ${selectedGroup.name}`
                 : selectedFriend
-                ? selectedFriend.email
-                : "Select a conversation"}
+                  ? selectedFriend.email
+                  : "Select a conversation"}
             </div>
 
             {selectedGroupId && (
-              <CallBtn
-                onClick={() =>
-                  startGroupCall(selectedGroup)
-                }
-              >
+              <CallBtn onClick={() => startGroupCall(selectedGroup)}>
                 👥 Call Group
               </CallBtn>
             )}
 
             {selectedUserId && (
-              <CallBtn
-                onClick={() =>
-                  startCall(selectedUserId)
-                }
-              >
+              <CallBtn onClick={() => startCall(selectedUserId)}>
                 📹 Call
               </CallBtn>
             )}
-
           </Header>
 
           {/* INCOMING CALL */}
@@ -412,13 +352,9 @@ export function Message() {
             <IncomingBox>
               <p>📞 {incomingCall.callerId}</p>
 
-              <button onClick={acceptCall}>
-                Accept
-              </button>
+              <button onClick={acceptCall}>Accept</button>
 
-              <button onClick={endCall}>
-                Reject
-              </button>
+              <button onClick={endCall}>Reject</button>
             </IncomingBox>
           )}
 
@@ -427,141 +363,79 @@ export function Message() {
             <IncomingBox>
               <p>📞 Group call incoming</p>
 
-              <button
-                onClick={acceptGroupCall}
-              >
-                Accept
-              </button>
+              <button onClick={acceptGroupCall}>Accept</button>
 
-              <button
-                onClick={endGroupCall}
-              >
-                Reject
-              </button>
+              <button onClick={endGroupCall}>Reject</button>
             </IncomingBox>
           )}
 
           {/* CHAT BODY */}
           <ChatBody>
-
-            {(selectedUserId ||
-              selectedGroupId) ? (
+            {selectedUserId || selectedGroupId ? (
               messages.map((msg) => {
-                const isMe =
-                  msg.senderId ===
-                  currentUser.uid;
+                const isMe = msg.senderId === currentUser.uid;
 
                 return (
-                  <Row
-                    key={msg.id}
-                    isMe={isMe}
-                  >
+                  <Row key={msg.id} isMe={isMe}>
                     <Bubble isMe={isMe}>
+                      {msg.text && <div>{msg.text}</div>}
 
-                      {msg.text && (
-                        <div>{msg.text}</div>
+                      {msg.type === "voice" && msg.voiceDataUrl && (
+                        <audio
+                          controls
+                          src={msg.voiceDataUrl}
+                          style={styleSheet.audio}
+                        />
                       )}
 
-                      {msg.type === "voice" &&
-                        msg.voiceDataUrl && (
-                          <audio
-                            controls
-                            src={msg.voiceDataUrl}
-                            style={styleSheet.audio}
-                          />
-                        )}
+                      {msg.fileUrl && msg.fileType?.startsWith("image") && (
+                        <img
+                          src={msg.fileUrl}
+                          alt="shared-file"
+                          style={styleSheet.imageMessage}
+                        />
+                      )}
 
-                      {msg.fileUrl &&
-                        msg.fileType?.startsWith(
-                          "image"
-                        ) && (
-                          <img
-                            src={msg.fileUrl}
-                            alt="shared-file"
-                            style={
-                              styleSheet.imageMessage
-                            }
-                          />
-                        )}
-
-                      {msg.fileUrl &&
-                        !msg.fileType?.startsWith(
-                          "image"
-                        ) && (
-                          <a
-                            href={msg.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            📎 {msg.fileName}
-                          </a>
-                        )}
-
+                      {msg.fileUrl && !msg.fileType?.startsWith("image") && (
+                        <a href={msg.fileUrl} target="_blank" rel="noreferrer">
+                          📎 {msg.fileName}
+                        </a>
+                      )}
                     </Bubble>
                   </Row>
                 );
               })
             ) : (
-              <Empty>
-                Select a conversation
-              </Empty>
+              <Empty>Select a conversation</Empty>
             )}
 
             <div ref={bottomRef} />
-
           </ChatBody>
 
           {/* FILE PREVIEW */}
           {filePreview && (
             <PreviewBox>
-
-              {filePreview.file.type.startsWith(
-                "image"
-              ) ? (
+              {filePreview.file.type.startsWith("image") ? (
                 <img
                   src={filePreview.url}
                   alt="preview"
-                  style={
-                    styleSheet.previewImage
-                  }
+                  style={styleSheet.previewImage}
                 />
               ) : (
-                <span>
-                  {filePreview.file.name}
-                </span>
+                <span>{filePreview.file.name}</span>
               )}
 
-              <button onClick={handleSendFile}>
-                Send
-              </button>
+              <button onClick={handleSendFile}>Send</button>
 
-              <button
-                onClick={() =>
-                  setFilePreview(null)
-                }
-              >
-                ❌
-              </button>
-
+              <button onClick={() => setFilePreview(null)}>❌</button>
             </PreviewBox>
           )}
 
-          {uploading && (
-            <Uploading>
-              Uploading...
-            </Uploading>
-          )}
+          {uploading && <Uploading>Uploading...</Uploading>}
 
           {/* FOOTER */}
           <Footer>
-
-            <FileBtn
-              onClick={() =>
-                fileInputRef.current.click()
-              }
-            >
-              📎
-            </FileBtn>
+            <FileBtn onClick={() => fileInputRef.current.click()}>📎</FileBtn>
 
             <input
               type="file"
@@ -571,67 +445,174 @@ export function Message() {
             />
 
             <button
-              onClick={
-                isRecording
-                  ? stopRecording
-                  : startRecording
-              }
-              style={styleSheet.recordButton(
-                isRecording
-              )}
+              onClick={isRecording ? stopRecording : startRecording}
+              style={styleSheet.recordButton(isRecording)}
             >
               {isRecording ? "⏹" : "🎤"}
             </button>
 
             <Input
               value={text}
-              onChange={(e) =>
-                setText(e.target.value)
-              }
-              onKeyDown={(e) =>
-                e.key === "Enter" &&
-                handleSend()
-              }
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Type a message..."
             />
 
-            <SendBtn onClick={handleSend}>
-              Send
-            </SendBtn>
-
+            <SendBtn onClick={handleSend}>Send</SendBtn>
           </Footer>
-
         </ChatArea>
-
       </Container>
-
       {/* CALL MODAL */}
-      {((localStream &&
-        localStream.current) ||
-        remoteStream) && (
+      {((localStream && localStream.current) || remoteStream) && (
         <CallModal
-          localStream={
-            localStream?.current
-          }
+          localStream={localStream?.current}
           remoteStream={remoteStream}
           endCall={endCall}
         />
       )}
-
       {/* GROUP CALL MODAL */}
       {(groupLocalStream ||
-        Object.keys(
-          groupRemoteStreams || {}
-        ).length > 0) && (
+        Object.keys(groupRemoteStreams || {}).length > 0) && (
         <CallModalGroup
           localStream={groupLocalStream}
-          remoteStreams={
-            groupRemoteStreams
-          }
+          remoteStreams={groupRemoteStreams}
           endCall={endGroupCall}
         />
       )}
+      {/* ADD FRIEND MODAL */}
+      {showAddFriend && (
+        <div style={modalStyles.overlay}>
+          <div style={modalStyles.modal}>
+            <h3>Add Friend</h3>
 
+            <div style={modalStyles.searchRow}>
+              <input
+                type="text"
+                placeholder="Search email..."
+                value={friendSearch}
+                onChange={(e) => setFriendSearch(e.target.value)}
+                style={modalStyles.input}
+              />
+
+              <button
+                onClick={handleSearchFriend}
+                style={modalStyles.searchButton}
+              >
+                Search
+              </button>
+            </div>
+
+            <div style={modalStyles.results}>
+              {searchResults.length > 0 ? (
+                searchResults.map((user) => (
+                  <div key={user.uid} style={modalStyles.userCard}>
+                    <div>
+                      <div style={modalStyles.userName}>
+                        {user.name || "Unnamed"}
+                      </div>
+
+                      <div style={modalStyles.userEmail}>{user.email}</div>
+                    </div>
+
+                    <button
+                      style={modalStyles.addButton}
+                      onClick={() => handleSendRequest(user)}
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p style={{ color: "#777" }}>No users found</p>
+              )}
+            </div>
+
+            <button
+              style={modalStyles.closeButton}
+              onClick={() => {
+                setShowAddFriend(false);
+                setFriendSearch("");
+                setSearchResults([]);
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      {/* CREATE GROUP MODAL */}
+      {showCreateGroup && (
+        <div style={modalStyles.overlay}>
+          <div style={modalStyles.modal}>
+            <h3>Create Group</h3>
+
+            {/* GROUP NAME */}
+            <div style={{ marginBottom: "16px" }}>
+              <input
+                type="text"
+                placeholder="Group name..."
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                style={modalStyles.input}
+              />
+            </div>
+
+            {/* FRIEND LIST */}
+            <div style={groupStyles.membersContainer}>
+              <p style={groupStyles.label}>Select Members</p>
+
+              {friends.length > 0 ? (
+                friends.map((friend) => {
+                  const selected = selectedGroupMembers.includes(friend.uid);
+
+                  return (
+                    <div
+                      key={friend.uid}
+                      style={groupStyles.memberCard(selected)}
+                      onClick={() => toggleGroupMember(friend.uid)}
+                    >
+                      <div>
+                        <div style={groupStyles.memberName}>
+                          {friend.name || "Unnamed"}
+                        </div>
+
+                        <div style={groupStyles.memberEmail}>
+                          {friend.email}
+                        </div>
+                      </div>
+
+                      <div>{selected ? "✅" : "⬜"}</div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p style={{ color: "#777" }}>No friends available</p>
+              )}
+            </div>
+
+            {/* ACTIONS */}
+            <div style={groupStyles.actions}>
+              <button
+                style={groupStyles.createButton}
+                onClick={handleCreateGroup}
+              >
+                Create Group
+              </button>
+
+              <button
+                style={groupStyles.cancelButton}
+                onClick={() => {
+                  setShowCreateGroup(false);
+                  setGroupName("");
+                  setSelectedGroupMembers([]);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -656,9 +637,7 @@ const styleSheet = {
     padding: "8px",
     cursor: "pointer",
     borderRadius: "8px",
-    background: isSelected
-      ? "#e3f2fd"
-      : "transparent",
+    background: isSelected ? "#e3f2fd" : "transparent",
     color: "#222",
   }),
 
@@ -678,12 +657,8 @@ const styleSheet = {
 
   recordButton: (isRecording) => ({
     marginRight: "8px",
-    background: isRecording
-      ? "#ff4d4f"
-      : "#eeeeee",
-    color: isRecording
-      ? "white"
-      : "#222",
+    background: isRecording ? "#ff4d4f" : "#eeeeee",
+    color: isRecording ? "white" : "#222",
     borderRadius: "8px",
     border: "1px solid #ccc",
     padding: "6px 10px",
@@ -831,18 +806,12 @@ const ChatBody = styled("div")(() => ({
 
 const Row = styled("div")(({ isMe }) => ({
   display: "flex",
-  justifyContent: isMe
-    ? "flex-end"
-    : "flex-start",
+  justifyContent: isMe ? "flex-end" : "flex-start",
 }));
 
 const Bubble = styled("div")(({ isMe }) => ({
-  background: isMe
-    ? "#1976d2"
-    : "#ffffff",
-  color: isMe
-    ? "#ffffff"
-    : "#222",
+  background: isMe ? "#1976d2" : "#ffffff",
+  color: isMe ? "#ffffff" : "#222",
   padding: "10px",
   borderRadius: "16px",
   maxWidth: "60%",
@@ -915,3 +884,160 @@ const CallBtn = styled("button")(() => ({
   padding: "8px 14px",
   cursor: "pointer",
 }));
+
+const modalStyles = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.4)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
+
+  modal: {
+    width: "400px",
+    maxHeight: "80vh",
+    overflowY: "auto",
+    background: "#fff",
+    borderRadius: "16px",
+    padding: "20px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+  },
+
+  searchRow: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "16px",
+  },
+
+  input: {
+    flex: 1,
+    padding: "10px",
+    borderRadius: "10px",
+    border: "1px solid #ccc",
+    outline: "none",
+  },
+
+  searchButton: {
+    border: "none",
+    borderRadius: "10px",
+    padding: "10px 14px",
+    background: "#1976d2",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  results: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+
+  userCard: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px",
+    border: "1px solid #eee",
+    borderRadius: "12px",
+    background: "#fafafa",
+  },
+
+  userName: {
+    fontWeight: 600,
+    color: "#222",
+  },
+
+  userEmail: {
+    fontSize: "14px",
+    color: "#666",
+  },
+
+  addButton: {
+    background: "#2e7d32",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    padding: "8px 12px",
+    cursor: "pointer",
+  },
+
+  closeButton: {
+    marginTop: "18px",
+    width: "100%",
+    border: "none",
+    borderRadius: "10px",
+    padding: "10px",
+    background: "#e53935",
+    color: "white",
+    cursor: "pointer",
+  },
+};
+
+const groupStyles = {
+  membersContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    maxHeight: "300px",
+    overflowY: "auto",
+    marginBottom: "20px",
+  },
+
+  label: {
+    fontWeight: 600,
+    color: "#222",
+    marginBottom: "8px",
+  },
+
+  memberCard: (selected) => ({
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px",
+    borderRadius: "12px",
+    border: selected ? "2px solid #1976d2" : "1px solid #ddd",
+    background: selected ? "#e3f2fd" : "#fafafa",
+    cursor: "pointer",
+    transition: "0.2s",
+  }),
+
+  memberName: {
+    fontWeight: 600,
+    color: "#222",
+  },
+
+  memberEmail: {
+    fontSize: "14px",
+    color: "#666",
+  },
+
+  actions: {
+    display: "flex",
+    gap: "10px",
+  },
+
+  createButton: {
+    flex: 1,
+    border: "none",
+    borderRadius: "10px",
+    padding: "12px",
+    background: "#1976d2",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+
+  cancelButton: {
+    flex: 1,
+    border: "none",
+    borderRadius: "10px",
+    padding: "12px",
+    background: "#e53935",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+};
