@@ -77,7 +77,8 @@ const {
   updateGroup,
   deleteGroup,
   addMember,
-  removeMember
+  removeMember,
+  addTaskToGroup
 } = require("./controllers/GroupController");
 
 
@@ -166,6 +167,7 @@ app.get("/api/groups/:groupId", getGroupById);
 app.put("/api/groups/:groupId", updateGroup);
 app.delete("/api/groups/:groupId", deleteGroup);
 app.post("/api/groups/:groupId/add-member", addMember);
+app.post("/api/groups/:groupId/add-task", addTaskToGroup);
 app.post("/api/groups/:groupId/remove-member", removeMember);
   
 // Task Logs

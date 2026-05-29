@@ -1,7 +1,6 @@
 const GroupDAO = require("../DAOs/GroupDAO");
 
 class GroupController {
-
   //  CREATE GROUP
   async createGroup(req, res) {
     try {
@@ -26,7 +25,6 @@ class GroupController {
         message: "Group created successfully",
         groupId,
       });
-
     } catch (error) {
       console.error("CREATE GROUP ERROR:", error);
 
@@ -60,7 +58,6 @@ class GroupController {
           })),
         },
       });
-
     } catch (error) {
       console.error("GET USER GROUPS ERROR:", error);
 
@@ -89,7 +86,6 @@ class GroupController {
         success: true,
         group,
       });
-
     } catch (error) {
       console.error("GET GROUP ERROR:", error);
 
@@ -112,7 +108,6 @@ class GroupController {
         success: true,
         message: "Group updated successfully",
       });
-
     } catch (error) {
       console.error("UPDATE GROUP ERROR:", error);
 
@@ -134,7 +129,6 @@ class GroupController {
         success: true,
         message: "Group deleted successfully",
       });
-
     } catch (error) {
       console.error("DELETE GROUP ERROR:", error);
 
@@ -164,7 +158,6 @@ class GroupController {
         success: true,
         message: "Member added successfully",
       });
-
     } catch (error) {
       console.error("ADD MEMBER ERROR:", error);
 
@@ -194,13 +187,40 @@ class GroupController {
         success: true,
         message: "Member removed successfully",
       });
-
     } catch (error) {
       console.error("REMOVE MEMBER ERROR:", error);
 
       return res.status(500).json({
         success: false,
         message: "Failed to remove member",
+      });
+    }
+  }
+
+  //  ADD TASK TO GROUP
+  async addTaskToGroup(req, res) {
+    try {
+      const { groupId, groupName } = req.params;
+      const { taskId } = req.body;
+
+      if (!taskId) {
+        return res.status(400).json({
+          success: false,
+          message: "Task ID is required",
+        });
+      }
+
+      await GroupDAO.addTaskToGroup(groupId, taskId);
+
+      return res.status(200).json({
+        success: true,
+        message: "Task added to group successfully",
+      });
+    } catch (error) {
+      console.error("ADD TASK TO GROUP ERROR:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to add task to group",
       });
     }
   }

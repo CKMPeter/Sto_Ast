@@ -251,3 +251,23 @@ export const fetchGroupTasksService = async (
   console.log('Group Tasks Response:', data)
   return data
 }
+
+export const addTaskToGroupService = async (
+  getIdToken,
+  groupId,
+  taskData
+) => {
+  const token = await getIdToken()
+  const response = await fetch(
+    `${BACKEND_URL}/api/groups/${groupId}/add-task`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(taskData)
+    }
+  )
+  return await response.json()
+}

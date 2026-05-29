@@ -1,104 +1,135 @@
-const { admin } = require("../firebase-admin-setup");
+const { realtimeDatabase } = require("../firebase-admin-setup");
 
 class GroupDAO {
 
-  //  CREATE GROUP
+  // CREATE GROUP
   async createGroup(groupData) {
-    const docRef = await admin
-      .firestore()
-      .collection("groups")
-      .add({
-        ...groupData,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    const groupRef = realtimeDatabase.ref("groups").push();
 
-    return docRef.id;
+    const groupId = groupRef.key;
+
+    await groupRef.set({
+      ...groupData,
+      id: groupId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      tasks: [],
+    });
+
+    return groupId;
   }
 
-  //  GET GROUP BY ID
+  // GET GROUP BY ID
   async getGroupById(groupId) {
-    const doc = await admin
-      .firestore()
-      .collection("groups")
-      .doc(groupId)
-      .get();
+    const snapshot = await realtimeDatabase
+      .ref(`groups/${groupId}`)
+      .once("value");
 
-    if (!doc.exists) {
+    if (!snapshot.exists()) {
       return null;
     }
 
-    return {
-      id: doc.id,
-      ...doc.data(),
-    };
+    return snapshot.val();
   }
 
-  //  GET USER GROUPS
+  // GET USER GROUPS
   async getUserGroups(userId) {
-    const snapshot = await admin
-      .firestore()
-      .collection("groups")
-      .where("members", "array-contains", userId)
-      .get();
+    const snapshot = await realtimeDatabase
+      .ref("groups")
+      .once("value");
 
-    if (snapshot.empty) {
+    if (!snapshot.exists()) {
       return [];
     }
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const groupsData = snapshot.val();
+
+    return Object.values(groupsData).filter((group) =>
+      Array.isArray(group.members) &&
+      group.members.includes(userId)
+    );
   }
 
-  //  UPDATE GROUP
+  // UPDATE GROUP
   async updateGroup(groupId, updateData) {
-    await admin
-      .firestore()
-      .collection("groups")
-      .doc(groupId)
+    await realtimeDatabase
+      .ref(`groups/${groupId}`)
       .update({
         ...updateData,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: Date.now(),
       });
 
     return true;
   }
 
-  //  DELETE GROUP
+  // DELETE GROUP
   async deleteGroup(groupId) {
-    await admin
-      .firestore()
-      .collection("groups")
-      .doc(groupId)
-      .delete();
+    await realtimeDatabase
+      .ref(`groups/${groupId}`)
+      .remove();
 
     return true;
   }
 
-  //  ADD MEMBER
+  // ADD MEMBER
   async addMember(groupId, userId) {
-    await admin
-      .firestore()
-      .collection("groups")
-      .doc(groupId)
+    const snapshot = await realtimeDatabase
+      .ref(`groups/${groupId}/members`)
+      .once("value");
+
+    const members = snapshot.val() || [];
+
+    if (!members.includes(userId)) {
+      members.push(userId);
+    }
+
+    await realtimeDatabase
+      .ref(`groups/${groupId}`)
       .update({
-        members: admin.firestore.FieldValue.arrayUnion(userId),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        members,
+        updatedAt: Date.now(),
       });
 
     return true;
   }
 
-  //  REMOVE MEMBER
+  // REMOVE MEMBER
   async removeMember(groupId, userId) {
-    await admin
-      .firestore()
-      .collection("groups")
-      .doc(groupId)
+    const snapshot = await realtimeDatabase
+      .ref(`groups/${groupId}/members`)
+      .once("value");
+
+    let members = snapshot.val() || [];
+
+    members = members.filter((id) => id !== userId);
+
+    await realtimeDatabase
+      .ref(`groups/${groupId}`)
       .update({
-        members: admin.firestore.FieldValue.arrayRemove(userId),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        members,
+        updatedAt: Date.now(),
+      });
+
+    return true;
+  }
+
+  // ADD TASK TO GROUP
+  async addTaskToGroup(groupId, taskId) {
+    const snapshot = await realtimeDatabase
+      .ref(`groups/${groupId}/tasks`)
+      .once("value");
+
+    const tasks = snapshot.val() || [];
+
+    if (!tasks.includes(taskId)) {
+      tasks.push(taskId);
+    }
+
+    await realtimeDatabase
+      .ref(`groups/${groupId}`)
+      .update({
+        tasks,
+        updatedAt: Date.now(),
       });
 
     return true;

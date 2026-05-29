@@ -39,7 +39,7 @@ export default function useGroups(userId) {
         throw new Error(data.message || "Failed to fetch groups");
       }
 
-      setGroups(data.groups || []);
+      setGroups(data.data.groups || []);
 
     } catch (err) {
       console.error("FETCH GROUPS ERROR:", err);

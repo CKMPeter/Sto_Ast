@@ -46,7 +46,10 @@ export function Message() {
   } = useFriends(currentUser?.uid);
 
   // GROUPS
-  const { groups = [], createGroup } = useGroups(currentUser?.uid);
+  const { groups = [], createGroup } = useGroups(
+    currentUser?.uid,
+    currentUser?.getIdToken
+  );
 
   // CHAT
   const [selectedUserId, setSelectedUserId] = useState(null);

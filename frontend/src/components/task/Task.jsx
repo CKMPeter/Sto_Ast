@@ -16,7 +16,8 @@ import {
   deleteSubTaskService,
   fetchTaskLogsService,
   createTaskUsingAIService,
-  fetchGroupTasksService
+  fetchGroupTasksService,
+  addTaskToGroupService,
 } from "./services/taskService";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
@@ -65,6 +66,8 @@ export default function Task() {
       if (data.success) {
         setMainTasks(data.data);
 
+        for (let task of data.data) console.log("Fetched main task:", task);
+
         if (data.data.length > 0 && !selectedTaskId) {
           setSelectedTaskId(data.data[0].id);
         }
@@ -101,7 +104,9 @@ export default function Task() {
       const data = await createMainTaskService(getIdToken, {
         name: mainTaskName,
         userId: currentUser.uid,
-        expireAt: mainTaskExpireAt ? new Date(mainTaskExpireAt).toISOString() : null,
+        expireAt: mainTaskExpireAt
+          ? new Date(mainTaskExpireAt).toISOString()
+          : null,
         description: mainTaskDescription,
       });
 
@@ -154,6 +159,18 @@ export default function Task() {
         name: editingTask.name,
         group: editingTask.group,
       });
+
+      const updatedTask = await addTaskToGroupService(
+        getIdToken,
+        editingTask.group,
+        { taskId: editingTask.id },
+      );
+      console.log("editingTask.group:", editingTask.group);
+      if (updatedTask.success) {
+        console.log("Task added to group successfully");
+      } else {
+        console.error("Failed to add task to group");
+      }
 
       if (data.success) {
         setMainTasks((prev) =>
@@ -274,13 +291,13 @@ export default function Task() {
     try {
       const data = await createTaskUsingAIService(getIdToken, {
         description,
-        userId: currentUser.uid
-      })
+        userId: currentUser.uid,
+      });
       setAiGeneratedTask(data.result);
-    }   catch (error) {
+    } catch (error) {
       console.error("Create using AI error:", error);
     }
-  }
+  };
 
   const fetchGroupList = async () => {
     try {
@@ -296,7 +313,7 @@ export default function Task() {
     } catch (error) {
       console.error("Fetch group list error:", error);
     }
-  }
+  };
 
   // =========================
   // EFFECTS
@@ -320,7 +337,6 @@ export default function Task() {
       getTaskLog(selectedTaskId);
     }
   }, [selectedTaskId]);
-
 
   // =========================
   // RENDER COLUMN
@@ -380,7 +396,7 @@ export default function Task() {
               />
             </button>
 
-            <button 
+            <button
               onClick={() => setIsCreatingUsingAI(true)}
               style={{
                 ...styleSheet.button,
@@ -449,7 +465,7 @@ export default function Task() {
                           onClick={() => {
                             setEditingTask({
                               ...task,
-                              group: task.group || "group1",
+                              group: task.group,
                             });
 
                             setOpenedMenuId(null);
@@ -506,6 +522,12 @@ export default function Task() {
               {renderColumn("In Progress")}
               {renderColumn("Done")}
             </div>
+
+            {/*Description*/}
+            <div style={{ marginTop: "20px" }}>
+              <h3>Description</h3>
+              <p>{mainTasks.find((task) => task.id === selectedTaskId)?.description || "No description"}</p>
+            </div>
           </div>
         ) : (
           <div style={styleSheet.placeholderContainer}>
@@ -549,7 +571,7 @@ export default function Task() {
               placeholder="description (optional)"
               value={mainTaskDescription}
               onChange={(e) => setMainTaskDescription(e.target.value)}
-              style={{...styleSheet.input, height: "80px", resize: "none"}}
+              style={{ ...styleSheet.input, height: "80px", resize: "none" }}
             />
 
             <div
@@ -643,7 +665,12 @@ export default function Task() {
               placeholder="AI Generated Task will appear here"
               value={aiGeneratedTask}
               readOnly
-              style={{...styleSheet.input, height: "80px", resize: "none", backgroundColor: "#e9ecef"}}
+              style={{
+                ...styleSheet.input,
+                height: "80px",
+                resize: "none",
+                backgroundColor: "#e9ecef",
+              }}
             />
 
             <button
@@ -652,9 +679,14 @@ export default function Task() {
                 ...styleSheet.button,
                 backgroundColor: "#6c757d",
               }}
-            >Close</button>
+            >
+              Close
+            </button>
 
-            <button onClick={() => createUsingAI(aiDescription)} style={styleSheet.button}>
+            <button
+              onClick={() => createUsingAI(aiDescription)}
+              style={styleSheet.button}
+            >
               Create Using AI
             </button>
           </div>
@@ -682,13 +714,17 @@ export default function Task() {
             />
 
             <select
-              value={editingTask.group || ""}
-              onChange={(e) =>
+              value={editingTask.group?.id || "default"}
+              onChange={(e) => {
+                const selectedGroup = groups.find(
+                  (group) => group.id === e.target.value,
+                );
+
                 setEditingTask({
                   ...editingTask,
-                  group: e.target.value,
-                })
-              }
+                  group: selectedGroup,
+                });
+              }}
               style={styleSheet.select}
             >
               {groups.map((group) => (
