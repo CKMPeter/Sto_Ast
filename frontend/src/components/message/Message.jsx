@@ -30,10 +30,12 @@ export function Message() {
   // GROUP CALL
   const {
     startGroupCall,
-    listenIncoming: listenGroupIncoming,
-    acceptCall: acceptGroupCall,
+    acceptGroupCall,
+    rejectGroupCall,
+    endGroupCall,
+    listenGroupInvites,
     incomingCall: incomingGroupCall,
-    endCall: endGroupCall,
+    callState: groupCallState,
     localStream: groupLocalStream,
     remoteStreams: groupRemoteStreams,
   } = useCallGroup(currentUser?.uid);
@@ -84,12 +86,11 @@ export function Message() {
   useEffect(() => {
     if (!currentUser?.uid || groups.length === 0) return;
 
-    const allMembers = [...new Set(groups.flatMap((g) => g.members || []))];
-
-    listenGroupIncoming(allMembers);
+    const groupIds = groups.map((g) => g.id);
+    const cleanup = listenGroupInvites(groupIds);
 
     return () => {
-      endGroupCall();
+      cleanup?.();
     };
   }, [currentUser?.uid, groups]);
 
@@ -467,15 +468,18 @@ export function Message() {
       )}
 
       {/* INCOMING GROUP CALL NOTIFICATION */}
-      {incomingGroupCall && (
+      {groupCallState === "incoming" && incomingGroupCall && (
         <IncomingCallNotification
-          incomingCall={{ callerName: "Group Call", callerId: "group" }}
+          incomingCall={{
+            callerName: `${incomingGroupCall.callerName} · ${incomingGroupCall.groupName}`,
+            callerId: incomingGroupCall.callerId,
+          }}
           onAccept={acceptGroupCall}
-          onReject={endGroupCall}
+          onReject={rejectGroupCall}
         />
       )}
 
-      {/* ACTIVE CALL MODAL (full screen) */}
+      {/* ACTIVE 1-1 CALL MODAL */}
       {(callState === "active" || callState === "calling") && (
         <CallModal
           localStream={localStream}
@@ -484,9 +488,9 @@ export function Message() {
           callerName={selectedFriend?.email}
         />
       )}
+
       {/* GROUP CALL MODAL */}
-      {(groupLocalStream ||
-        Object.keys(groupRemoteStreams || {}).length > 0) && (
+      {(groupCallState === "calling" || groupCallState === "active") && (
         <CallModalGroup
           localStream={groupLocalStream}
           remoteStreams={groupRemoteStreams}

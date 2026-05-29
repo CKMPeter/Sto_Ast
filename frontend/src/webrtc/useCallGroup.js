@@ -1,365 +1,393 @@
-import { useState, useRef } from "react";
+/**
+ * useCallGroup.js — WebRTC group call hook
+ *
+ * KIẾN TRÚC: giống useCall.js
+ *  - Mỗi cặp (currentUser ↔ member) có 1 RTCPeerConnection riêng
+ *  - Firebase schema per-pair (roomKey = sort([uid1,uid2]).join("_")):
+ *      groupCalls/{roomKey}/offer          — caller ghi
+ *      groupCalls/{roomKey}/answer         — callee ghi
+ *      groupCalls/{roomKey}/callerIce      — caller ghi
+ *      groupCalls/{roomKey}/calleeIce      — callee ghi
+ *      groupCalls/{roomKey}/signal         — "rejected" | "ended"
+ *  - Notification chung cho cả group:
+ *      groupCallInvite/{groupId}/{callerId} — caller ghi để notify tất cả members
+ *
+ * Flow:
+ *  1. Caller bấm "Call Group"
+ *     → ghi invite vào groupCallInvite/{groupId}
+ *     → tạo peer + offer với từng member
+ *  2. Member nhận thấy invite → hiện popup
+ *  3. Member accept → tạo peer + answer với caller
+ *     (member-member connect sau khi đều đã join)
+ *  4. Ai end → signal "ended" tới tất cả
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getDatabase,
-  ref,
-  set,
-  push,
   onValue,
   off,
+  ref,
   remove,
+  set,
 } from "firebase/database";
+
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
+};
+
+const roomKey = (a, b) => [a, b].sort().join("_");
 
 export default function useCallGroup(currentUserId) {
   const db = getDatabase();
 
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStreams, setRemoteStreams] = useState({});
-  const [incomingCall, setIncomingCall] = useState(null);
+  // ─── STATE ───────────────────────────────────────────────────────────────
+  const [callState, setCallState]       = useState(null); // null | "calling" | "incoming" | "active"
+  const [incomingCall, setIncomingCall] = useState(null); // { groupId, groupName, callerId, callerName }
+  const [localStream, setLocalStream]   = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState({});  // { uid: MediaStream }
 
-  const peersRef = useRef({});
-  const listenersRef = useRef([]);
+  // ─── REFS ────────────────────────────────────────────────────────────────
+  const localRef      = useRef(null);   // MediaStream
+  const peersRef      = useRef({});     // { uid: RTCPeerConnection }
+  const callStateRef  = useRef(null);
+  const incomingRef   = useRef(null);
+  const activeGroupRef = useRef(null);  // { groupId, members: [{uid,name}] }
+  const cleanupRefsRef = useRef([]);    // Firebase refs cần off() khi cleanup
 
-  // =========================
-  // GET MEDIA
-  // =========================
+  useEffect(() => { callStateRef.current  = callState;   }, [callState]);
+  useEffect(() => { incomingRef.current   = incomingCall; }, [incomingCall]);
 
-  const initMedia = async () => {
-    if (localStream) return localStream;
+  // ─── HELPERS ────────────────────────────────────────────────────────────
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-
-    setLocalStream(stream);
-
-    return stream;
+  const stopStream = (stream) => {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
   };
 
-  // =========================
-  // PEER KEY
-  // =========================
-
-  const getRoomKey = (uid1, uid2) => {
-    return [uid1, uid2].sort().join("_");
+  const closePeer = (uid) => {
+    const pc = peersRef.current[uid];
+    if (!pc) return;
+    pc.ontrack        = null;
+    pc.onicecandidate = null;
+    pc.close();
+    delete peersRef.current[uid];
   };
 
-  // =========================
-  // CREATE PEER
-  // =========================
+  const closeAllPeers = () => {
+    Object.keys(peersRef.current).forEach(closePeer);
+  };
 
-  const createPeer = async (
-    remoteUserId,
-    stream,
-    isCaller = false
-  ) => {
-    const roomKey = getRoomKey(
-      currentUserId,
-      remoteUserId
-    );
+  const fullCleanup = useCallback(() => {
+    stopStream(localRef.current);
+    localRef.current = null;
+    closeAllPeers();
+    // Off tất cả listeners tạm thời (ICE/answer per-peer)
+    cleanupRefsRef.current.forEach((r) => off(r));
+    cleanupRefsRef.current = [];
+    setLocalStream(null);
+    setRemoteStreams({});
+  }, []);
 
-    if (peersRef.current[roomKey]) {
-      return peersRef.current[roomKey];
-    }
+  const resetState = useCallback(() => {
+    setCallState(null);
+    setIncomingCall(null);
+    activeGroupRef.current = null;
+  }, []);
 
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: "stun:stun.l.google.com:19302",
-        },
-      ],
-    });
+  // ─── TẠO PEER VỚI 1 MEMBER (caller side) ────────────────────────────────
+  const connectToPeer = useCallback(async (memberUid, stream) => {
+    const rk = roomKey(currentUserId, memberUid);
 
-    peersRef.current[roomKey] = pc;
+    // Tránh tạo trùng
+    if (peersRef.current[memberUid]) return;
 
-    // =========================
-    // ADD TRACKS
-    // =========================
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    peersRef.current[memberUid] = pc;
 
-    stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
-    });
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
-    // =========================
-    // REMOTE STREAM
-    // =========================
-
-    pc.ontrack = (event) => {
-      const stream = event.streams[0];
-
-      if (!stream) return;
-
-      setRemoteStreams((prev) => ({
-        ...prev,
-        [remoteUserId]: stream,
-      }));
+    pc.ontrack = (e) => {
+      if (!e.streams[0]) return;
+      setRemoteStreams((prev) => ({ ...prev, [memberUid]: e.streams[0] }));
     };
 
-    // =========================
-    // ICE
-    // =========================
-
-    pc.onicecandidate = async (event) => {
-      if (!event.candidate) return;
-
-      await push(
-        ref(
-          db,
-          `groupCalls/${roomKey}/candidates/${currentUserId}`
-        ),
-        event.candidate.toJSON()
-      );
+    // Ghi callerIce lên node của member (member sẽ đọc)
+    pc.onicecandidate = async (e) => {
+      if (!e.candidate) return;
+      await set(ref(db, `groupCalls/${rk}/callerIce`), JSON.stringify(e.candidate));
     };
 
-    // =========================
-    // OFFER
-    // =========================
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await set(ref(db, `groupCalls/${rk}/offer`), {
+      callerId:   currentUserId,
+      offer:      JSON.stringify(offer),
+    });
 
-    if (isCaller) {
-      const offer = await pc.createOffer();
-
-      await pc.setLocalDescription(offer);
-
-      await set(
-        ref(
-          db,
-          `groupCalls/${roomKey}/offer`
-        ),
-        {
-          from: currentUserId,
-          to: remoteUserId,
-          offer: offer.toJSON(),
-        }
-      );
-    }
-
-    // =========================
-    // LISTEN ANSWER
-    // =========================
-
-    const answerRef = ref(
-      db,
-      `groupCalls/${roomKey}/answer`
-    );
-
-    const answerCallback = async (snap) => {
+    // Nghe answer từ member
+    const answerRef = ref(db, `groupCalls/${rk}/answer`);
+    cleanupRefsRef.current.push(answerRef);
+    onValue(answerRef, async (snap) => {
       const data = snap.val();
-
-      if (!data) return;
-
-      if (pc.currentRemoteDescription) return;
-
+      if (!data || !peersRef.current[memberUid]) return;
+      if (peersRef.current[memberUid].currentRemoteDescription) return;
       try {
-        await pc.setRemoteDescription(
-          new RTCSessionDescription(data.answer)
+        await peersRef.current[memberUid].setRemoteDescription(
+          new RTCSessionDescription(JSON.parse(data.answer))
+        );
+        setCallState("active");
+      } catch (err) {
+        console.error("[group answer]", err);
+      }
+    });
+
+    // Nghe calleeIce từ member
+    const calleeIceRef = ref(db, `groupCalls/${rk}/calleeIce`);
+    cleanupRefsRef.current.push(calleeIceRef);
+    onValue(calleeIceRef, async (snap) => {
+      const data = snap.val();
+      if (!data || !peersRef.current[memberUid]) return;
+      try {
+        await peersRef.current[memberUid].addIceCandidate(
+          new RTCIceCandidate(JSON.parse(data))
         );
       } catch (err) {
-        console.log("answer error", err);
+        console.error("[group calleeIce]", err);
       }
-    };
-
-    onValue(answerRef, answerCallback);
-
-    listenersRef.current.push({
-      ref: answerRef,
-      callback: answerCallback,
     });
 
-    // =========================
-    // LISTEN ICE
-    // =========================
-
-    const remoteIceRef = ref(
-      db,
-      `groupCalls/${roomKey}/candidates/${remoteUserId}`
-    );
-
-    const iceCallback = async (snap) => {
-      const data = snap.val();
-
-      if (!data) return;
-
-      Object.values(data).forEach(async (candidate) => {
-        try {
-          await pc.addIceCandidate(
-            new RTCIceCandidate(candidate)
-          );
-        } catch {}
-      });
-    };
-
-    onValue(remoteIceRef, iceCallback);
-
-    listenersRef.current.push({
-      ref: remoteIceRef,
-      callback: iceCallback,
+    // Nghe signal từ member
+    const signalRef = ref(db, `groupCalls/${rk}/signal`);
+    cleanupRefsRef.current.push(signalRef);
+    onValue(signalRef, async (snap) => {
+      const signal = snap.val();
+      if (!signal) return;
+      if (signal === "ended" || signal === "rejected") {
+        closePeer(memberUid);
+        setRemoteStreams((prev) => {
+          const next = { ...prev };
+          delete next[memberUid];
+          return next;
+        });
+        await remove(ref(db, `groupCalls/${rk}`));
+      }
     });
 
-    return pc;
-  };
+  }, [currentUserId, db]);
 
-  // =========================
-  // START GROUP CALL
-  // =========================
-
-  const startGroupCall = async (group) => {
+  // ─── START GROUP CALL (caller) ───────────────────────────────────────────
+  const startGroupCall = useCallback(async (group) => {
     try {
-      const stream = await initMedia();
+      fullCleanup();
 
-      const others = group.members.filter(
-        (id) => id !== currentUserId
-      );
+      const members = (group.members || []).filter((m) => {
+        const uid = typeof m === "string" ? m : m.uid;
+        return uid !== currentUserId;
+      });
 
-      for (const uid of others) {
-        await createPeer(uid, stream, true);
+      if (members.length === 0) return;
+
+      activeGroupRef.current = { groupId: group.id, members };
+      setCallState("calling");
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localRef.current = stream;
+      setLocalStream(stream);
+
+      // Ghi invite để tất cả members nhận notification
+      const callerName = group.members.find((m) => {
+        const uid = typeof m === "string" ? m : m.uid;
+        return uid === currentUserId;
+      });
+      await set(ref(db, `groupCallInvite/${group.id}`), {
+        callerId:   currentUserId,
+        callerName: (typeof callerName === "object" ? callerName.name : null) || currentUserId,
+        groupId:    group.id,
+        groupName:  group.name || "Group Call",
+        timestamp:  Date.now(),
+      });
+
+      // Tạo peer connection với từng member
+      for (const m of members) {
+        const uid = typeof m === "string" ? m : m.uid;
+        await connectToPeer(uid, stream);
       }
+
     } catch (err) {
-      console.log("startGroupCall error", err);
+      console.error("[startGroupCall]", err);
+      fullCleanup();
+      resetState();
     }
-  };
+  }, [currentUserId, db, fullCleanup, resetState, connectToPeer]);
 
-  // =========================
-  // LISTEN INCOMING
-  // =========================
+  // ─── ACCEPT GROUP CALL (callee) ──────────────────────────────────────────
+  const acceptGroupCall = useCallback(async () => {
+    const incoming = incomingRef.current;
+    if (!incoming) return;
 
-  const listenIncoming = (groupMembers = []) => {
-    groupMembers.forEach((memberId) => {
-      if (memberId === currentUserId) return;
+    try {
+      setCallState("active");
+      setIncomingCall(null);
 
-      const roomKey = getRoomKey(
-        currentUserId,
-        memberId
-      );
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localRef.current = stream;
+      setLocalStream(stream);
 
-      const offerRef = ref(
-        db,
-        `groupCalls/${roomKey}/offer`
-      );
+      const callerId = incoming.callerId;
+      const rk = roomKey(currentUserId, callerId);
 
-      const callback = (snap) => {
-        const data = snap.val();
+      const pc = new RTCPeerConnection(ICE_SERVERS);
+      peersRef.current[callerId] = pc;
 
-        if (!data) return;
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
-        // chỉ nhận offer gửi cho mình
-        if (data.to !== currentUserId) return;
-
-        setIncomingCall(data);
+      pc.ontrack = (e) => {
+        if (!e.streams[0]) return;
+        setRemoteStreams((prev) => ({ ...prev, [callerId]: e.streams[0] }));
       };
 
-      onValue(offerRef, callback);
-
-      listenersRef.current.push({
-        ref: offerRef,
-        callback,
+      // Đọc offer từ Firebase
+      const offerSnap = await new Promise((resolve) => {
+        const offerRef = ref(db, `groupCalls/${rk}/offer`);
+        onValue(offerRef, (snap) => { resolve(snap); }, { onlyOnce: true });
       });
-    });
-  };
 
-  // =========================
-  // ACCEPT CALL
-  // =========================
-
-  const acceptCall = async () => {
-    try {
-      if (!incomingCall) return;
-
-      const stream = await initMedia();
-
-      const remoteUserId = incomingCall.from;
-
-      const roomKey = getRoomKey(
-        currentUserId,
-        remoteUserId
-      );
-
-      const pc = await createPeer(
-        remoteUserId,
-        stream,
-        false
-      );
+      const offerData = offerSnap.val();
+      if (!offerData) throw new Error("Offer not found");
 
       await pc.setRemoteDescription(
-        new RTCSessionDescription(
-          incomingCall.offer
-        )
+        new RTCSessionDescription(JSON.parse(offerData.offer))
       );
+
+      // Ghi calleeIce lên node của caller
+      pc.onicecandidate = async (e) => {
+        if (!e.candidate) return;
+        await set(ref(db, `groupCalls/${rk}/calleeIce`), JSON.stringify(e.candidate));
+      };
+
+      // Nghe callerIce
+      const callerIceRef = ref(db, `groupCalls/${rk}/callerIce`);
+      cleanupRefsRef.current.push(callerIceRef);
+      onValue(callerIceRef, async (snap) => {
+        const data = snap.val();
+        if (!data || !peersRef.current[callerId]) return;
+        try {
+          await peersRef.current[callerId].addIceCandidate(
+            new RTCIceCandidate(JSON.parse(data))
+          );
+        } catch (err) {
+          console.error("[group callerIce]", err);
+        }
+      });
 
       const answer = await pc.createAnswer();
-
       await pc.setLocalDescription(answer);
+      await set(ref(db, `groupCalls/${rk}/answer`), {
+        answer: JSON.stringify(answer),
+      });
 
-      await set(
-        ref(
-          db,
-          `groupCalls/${roomKey}/answer`
-        ),
-        {
-          from: currentUserId,
-          answer: answer.toJSON(),
+      // Nghe signal từ caller
+      const signalRef = ref(db, `groupCalls/${rk}/signal`);
+      cleanupRefsRef.current.push(signalRef);
+      onValue(signalRef, async (snap) => {
+        const signal = snap.val();
+        if (!signal) return;
+        if (signal === "ended") {
+          fullCleanup();
+          resetState();
+          await remove(ref(db, `groupCalls/${rk}`));
         }
-      );
-
-      setIncomingCall(null);
-    } catch (err) {
-      console.log("acceptCall error", err);
-    }
-  };
-
-  // =========================
-  // END CALL
-  // =========================
-
-  const endCall = async () => {
-    try {
-      // close peers
-      Object.values(peersRef.current).forEach((pc) => {
-        try {
-          pc.ontrack = null;
-          pc.onicecandidate = null;
-          pc.close();
-        } catch {}
       });
 
-      peersRef.current = {};
+    } catch (err) {
+      console.error("[acceptGroupCall]", err);
+      fullCleanup();
+      resetState();
+    }
+  }, [currentUserId, db, fullCleanup, resetState]);
 
-      // stop local camera
-      if (localStream) {
-        localStream.getTracks().forEach((track) => {
-          track.stop();
-        });
+  // ─── REJECT GROUP CALL ───────────────────────────────────────────────────
+  const rejectGroupCall = useCallback(async () => {
+    const incoming = incomingRef.current;
+    if (!incoming) return;
+
+    const rk = roomKey(currentUserId, incoming.callerId);
+    await set(ref(db, `groupCalls/${rk}/signal`), "rejected");
+    await remove(ref(db, `groupCallInvite/${incoming.groupId}`));
+
+    setIncomingCall(null);
+    setCallState(null);
+  }, [currentUserId, db]);
+
+  // ─── END GROUP CALL ──────────────────────────────────────────────────────
+  const endGroupCall = useCallback(async () => {
+    const active = activeGroupRef.current;
+
+    fullCleanup();
+    resetState();
+
+    if (active) {
+      // Ghi signal "ended" cho tất cả peers
+      for (const m of active.members) {
+        const uid = typeof m === "string" ? m : m.uid;
+        const rk = roomKey(currentUserId, uid);
+        await set(ref(db, `groupCalls/${rk}/signal`), "ended");
       }
-
-      // remove listeners
-      listenersRef.current.forEach((item) => {
-        try {
-          off(item.ref, item.callback);
-        } catch {}
-      });
-
-      listenersRef.current = [];
-
-      // cleanup firebase
-      try {
-        await remove(ref(db, `groupCalls`));
-      } catch {}
-
-      // reset
-      setRemoteStreams({});
-      setLocalStream(null);
-      setIncomingCall(null);
-
-    } catch (err) {
-      console.log("endCall error", err);
+      // Xóa invite
+      await remove(ref(db, `groupCallInvite/${active.groupId}`));
     }
-  };
+
+    // Xóa data của mình
+    await remove(ref(db, `groupCalls/${currentUserId}`));
+  }, [currentUserId, db, fullCleanup, resetState]);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // LISTENER — nghe invite từ bất kỳ group nào mình thuộc về
+  // Được gọi từ Message.jsx với danh sách groupIds
+  // ═══════════════════════════════════════════════════════════════════════
+  const listenGroupInvites = useCallback((groupIds = []) => {
+    // Off listeners cũ trước
+    groupIds.forEach((groupId) => {
+      const inviteRef = ref(db, `groupCallInvite/${groupId}`);
+      off(inviteRef);
+
+      onValue(inviteRef, (snap) => {
+        const data = snap.val();
+
+        // Không có invite hoặc đang trong call rồi thì bỏ
+        if (!data) return;
+        if (data.callerId === currentUserId) return; // mình là người gọi
+        if (callStateRef.current !== null) return;
+
+        setIncomingCall({
+          groupId:    data.groupId,
+          groupName:  data.groupName,
+          callerId:   data.callerId,
+          callerName: data.callerName,
+        });
+        setCallState("incoming");
+      });
+    });
+
+    // Trả về cleanup function
+    return () => {
+      groupIds.forEach((groupId) => {
+        off(ref(db, `groupCallInvite/${groupId}`));
+      });
+    };
+  }, [currentUserId, db]);
 
   return {
     startGroupCall,
-    listenIncoming,
-    acceptCall,
+    acceptGroupCall,
+    rejectGroupCall,
+    endGroupCall,
+    listenGroupInvites,
     incomingCall,
-    endCall,
+    callState,
     localStream,
     remoteStreams,
   };
