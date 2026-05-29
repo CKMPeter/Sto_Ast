@@ -89,7 +89,7 @@ export function Message() {
     return () => {
       endGroupCall();
     };
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, groups]);
 
   // SEND TEXT
   const handleSend = async () => {
@@ -478,13 +478,15 @@ export function Message() {
         </ChatArea>
       </Container>
       {/* CALL MODAL */}
-      {((localStream && localStream.current) || remoteStream) && (
-        <CallModal
-          localStream={localStream?.current}
-          remoteStream={remoteStream}
-          endCall={endCall}
-        />
-      )}
+{(incomingCall || localStream || remoteStream) && (
+  <CallModal
+    localStream={localStream}
+    remoteStream={remoteStream}
+    incomingCall={incomingCall}
+    onAccept={acceptCall}
+    onEnd={endCall}
+  />
+)}
       {/* GROUP CALL MODAL */}
       {(groupLocalStream ||
         Object.keys(groupRemoteStreams || {}).length > 0) && (

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+
 import {
   getDatabase,
   ref,
   set,
+  push,
   onValue,
   off,
   remove,
@@ -12,101 +14,92 @@ export default function useCall(currentUserId) {
 
   const db = getDatabase();
 
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [incomingCall, setIncomingCall] =
+    useState(null);
+
+  const [localStream, setLocalStream] =
+    useState(null);
+
+  const [remoteStream, setRemoteStream] =
+    useState(null);
 
   const peerConnection = useRef(null);
-  const localStream = useRef(null);
 
   const listeners = useRef([]);
 
-  // =========================
+  // =====================
   // CLEANUP
-  // =========================
+  // =====================
 
-  const cleanupMedia = () => {
-
-    // local stream
-    if (localStream.current) {
-
-      localStream.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-
-      localStream.current = null;
-    }
-
-    // remote stream
-    if (remoteStream) {
-
-      remoteStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-
-      setRemoteStream(null);
-    }
-
-    // peer
-    if (peerConnection.current) {
-
-      peerConnection.current.ontrack = null;
-      peerConnection.current.onicecandidate = null;
-
-      peerConnection.current.close();
-
-      peerConnection.current = null;
-    }
-  };
-
-  // =========================
-  // END CALL
-  // =========================
-
-  const endCall = async (targetUserId = null) => {
+  const cleanup = async () => {
 
     try {
 
-      cleanupMedia();
+      // LOCAL STREAM
+      if (localStream) {
 
-      setIncomingCall(null);
+        localStream
+          .getTracks()
+          .forEach((track) => {
+            track.stop();
+          });
 
-      // remove listeners
+        setLocalStream(null);
+      }
+
+      // REMOTE STREAM
+      if (remoteStream) {
+
+        remoteStream
+          .getTracks()
+          .forEach((track) => {
+            track.stop();
+          });
+
+        setRemoteStream(null);
+      }
+
+      // PEER
+      if (peerConnection.current) {
+
+        peerConnection.current.ontrack = null;
+
+        peerConnection.current.onicecandidate =
+          null;
+
+        peerConnection.current.close();
+
+        peerConnection.current = null;
+      }
+
+      // REMOVE LISTENERS
       listeners.current.forEach((item) => {
-        off(item.ref, item.callback);
+
+        off(item.ref, "value", item.callback);
       });
 
       listeners.current = [];
 
-      // remove my data
-      await remove(ref(db, `calls/${currentUserId}`));
-      await remove(ref(db, `calls/${currentUserId}/offer`));
-      await remove(ref(db, `calls/${currentUserId}/answer`));
-      await remove(ref(db, `calls/${currentUserId}/candidate`));
-
-      // remove target data
-      if (targetUserId) {
-
-        await remove(ref(db, `calls/${targetUserId}`));
-        await remove(ref(db, `calls/${targetUserId}/offer`));
-        await remove(ref(db, `calls/${targetUserId}/answer`));
-        await remove(ref(db, `calls/${targetUserId}/candidate`));
-      }
-
     } catch (err) {
-      console.error("endCall error:", err);
+
+      console.error(
+        "cleanup error:",
+        err
+      );
     }
   };
 
-  // =========================
+  // =====================
   // CREATE PEER
-  // =========================
+  // =====================
 
   const createPeer = () => {
 
     const pc = new RTCPeerConnection({
       iceServers: [
         {
-          urls: "stun:stun.l.google.com:19302",
+          urls:
+            "stun:stun.l.google.com:19302",
         },
       ],
     });
@@ -116,132 +109,178 @@ export default function useCall(currentUserId) {
     return pc;
   };
 
-  // =========================
+  // =====================
   // START CALL
-  // =========================
+  // =====================
 
-  const startCall = async (targetUserId) => {
+  const startCall = async (
+    targetUserId
+  ) => {
 
     try {
 
-      await endCall();
+      await cleanup();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
 
-      localStream.current = stream;
+      setLocalStream(stream);
 
       const pc = createPeer();
 
-      // add local tracks
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+      // LOCAL TRACKS
+      stream
+        .getTracks()
+        .forEach((track) => {
 
-      // remote stream
+          pc.addTrack(track, stream);
+        });
+
+      // REMOTE TRACK
       pc.ontrack = (event) => {
 
-        const stream = event.streams[0];
+        const remote =
+          event.streams[0];
 
-        if (stream) {
-          setRemoteStream(stream);
+        if (remote) {
+
+          setRemoteStream(remote);
         }
       };
 
       // ICE
-      pc.onicecandidate = async (event) => {
+      pc.onicecandidate = async (
+        event
+      ) => {
 
         if (!event.candidate) return;
 
-        await set(
-          ref(db, `calls/${targetUserId}/candidate`),
+        await push(
+          ref(
+            db,
+            `calls/${targetUserId}/candidate`
+          ),
           JSON.stringify(event.candidate)
         );
       };
 
-      // create offer
-      const offer = await pc.createOffer();
+      // OFFER
+      const offer =
+        await pc.createOffer();
 
-      await pc.setLocalDescription(offer);
+      await pc.setLocalDescription(
+        offer
+      );
 
       await set(
-        ref(db, `calls/${targetUserId}/offer`),
+        ref(
+          db,
+          `calls/${targetUserId}/offer`
+        ),
         {
           callerId: currentUserId,
           offer: JSON.stringify(offer),
+          createdAt: Date.now(),
         }
       );
 
-      // =========================
+      // =====================
       // LISTEN ANSWER
-      // =========================
+      // =====================
 
       const answerRef = ref(
         db,
         `calls/${currentUserId}/answer`
       );
 
-      const answerCallback = async (snapshot) => {
+      const answerCallback =
+        async (snapshot) => {
 
-        const data = snapshot.val();
+          const data =
+            snapshot.val();
 
-        if (!data) return;
+          if (!data) return;
 
-        if (!peerConnection.current) return;
+          if (
+            pc.currentRemoteDescription
+          ) {
+            return;
+          }
 
-        if (pc.remoteDescription) return;
+          try {
 
-        try {
+            await pc.setRemoteDescription(
+              new RTCSessionDescription(
+                JSON.parse(data.answer)
+              )
+            );
 
-          await pc.setRemoteDescription(
-            new RTCSessionDescription(
-              JSON.parse(data.answer)
-            )
-          );
+          } catch (err) {
 
-        } catch (err) {
-          console.error(err);
-        }
-      };
+            console.error(
+              "answer error:",
+              err
+            );
+          }
+        };
 
-      onValue(answerRef, answerCallback);
+      onValue(
+        answerRef,
+        answerCallback
+      );
 
       listeners.current.push({
         ref: answerRef,
         callback: answerCallback,
       });
 
-      // =========================
-      // LISTEN CANDIDATE
-      // =========================
+      // =====================
+      // LISTEN CANDIDATES
+      // =====================
 
       const candidateRef = ref(
         db,
         `calls/${currentUserId}/candidate`
       );
 
-      const candidateCallback = async (snapshot) => {
+      const candidateCallback =
+        async (snapshot) => {
 
-        const data = snapshot.val();
+          const data =
+            snapshot.val();
 
-        if (!data) return;
+          if (!data) return;
 
-        try {
+          const candidates =
+            Object.values(data);
 
-          await pc.addIceCandidate(
-            new RTCIceCandidate(
-              JSON.parse(data)
-            )
-          );
+          for (const candidate of candidates) {
 
-        } catch (err) {
-          console.error(err);
-        }
-      };
+            try {
 
-      onValue(candidateRef, candidateCallback);
+              await pc.addIceCandidate(
+                new RTCIceCandidate(
+                  JSON.parse(candidate)
+                )
+              );
+
+            } catch (err) {
+
+              console.error(
+                "candidate error:",
+                err
+              );
+            }
+          }
+        };
+
+      onValue(
+        candidateRef,
+        candidateCallback
+      );
 
       listeners.current.push({
         ref: candidateRef,
@@ -249,13 +288,17 @@ export default function useCall(currentUserId) {
       });
 
     } catch (err) {
-      console.error("startCall error:", err);
+
+      console.error(
+        "startCall error:",
+        err
+      );
     }
   };
 
-  // =========================
+  // =====================
   // ACCEPT CALL
-  // =========================
+  // =====================
 
   const acceptCall = async () => {
 
@@ -263,43 +306,53 @@ export default function useCall(currentUserId) {
 
       if (!incomingCall) return;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
 
-      localStream.current = stream;
+      setLocalStream(stream);
 
       const pc = createPeer();
 
-      // add local tracks
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+      // LOCAL TRACKS
+      stream
+        .getTracks()
+        .forEach((track) => {
 
-      // remote stream
+          pc.addTrack(track, stream);
+        });
+
+      // REMOTE TRACK
       pc.ontrack = (event) => {
 
-        const stream = event.streams[0];
+        const remote =
+          event.streams[0];
 
-        if (stream) {
-          setRemoteStream(stream);
+        if (remote) {
+
+          setRemoteStream(remote);
         }
       };
 
-      // set remote offer
+      // SET REMOTE OFFER
       await pc.setRemoteDescription(
         new RTCSessionDescription(
-          JSON.parse(incomingCall.offer)
+          JSON.parse(
+            incomingCall.offer
+          )
         )
       );
 
       // ICE
-      pc.onicecandidate = async (event) => {
+      pc.onicecandidate = async (
+        event
+      ) => {
 
         if (!event.candidate) return;
 
-        await set(
+        await push(
           ref(
             db,
             `calls/${incomingCall.callerId}/candidate`
@@ -308,10 +361,13 @@ export default function useCall(currentUserId) {
         );
       };
 
-      // create answer
-      const answer = await pc.createAnswer();
+      // CREATE ANSWER
+      const answer =
+        await pc.createAnswer();
 
-      await pc.setLocalDescription(answer);
+      await pc.setLocalDescription(
+        answer
+      );
 
       await set(
         ref(
@@ -319,60 +375,111 @@ export default function useCall(currentUserId) {
           `calls/${incomingCall.callerId}/answer`
         ),
         {
-          answer: JSON.stringify(answer),
+          answer:
+            JSON.stringify(answer),
         }
       );
 
-      // remove old offer
-      await remove(
-        ref(db, `calls/${currentUserId}/offer`)
-      );
-
-      // =========================
-      // LISTEN CANDIDATE
-      // =========================
+      // =====================
+      // LISTEN CANDIDATES
+      // =====================
 
       const candidateRef = ref(
         db,
         `calls/${currentUserId}/candidate`
       );
 
-      const candidateCallback = async (snapshot) => {
+      const candidateCallback =
+        async (snapshot) => {
 
-        const data = snapshot.val();
+          const data =
+            snapshot.val();
 
-        if (!data) return;
+          if (!data) return;
 
-        try {
+          const candidates =
+            Object.values(data);
 
-          await pc.addIceCandidate(
-            new RTCIceCandidate(
-              JSON.parse(data)
-            )
-          );
+          for (const candidate of candidates) {
 
-        } catch (err) {
-          console.error(err);
-        }
-      };
+            try {
 
-      onValue(candidateRef, candidateCallback);
+              await pc.addIceCandidate(
+                new RTCIceCandidate(
+                  JSON.parse(candidate)
+                )
+              );
+
+            } catch (err) {
+
+              console.error(
+                "candidate error:",
+                err
+              );
+            }
+          }
+        };
+
+      onValue(
+        candidateRef,
+        candidateCallback
+      );
 
       listeners.current.push({
         ref: candidateRef,
         callback: candidateCallback,
       });
 
+      // REMOVE OFFER
+      await remove(
+        ref(
+          db,
+          `calls/${currentUserId}/offer`
+        )
+      );
+
       setIncomingCall(null);
 
     } catch (err) {
-      console.error("acceptCall error:", err);
+
+      console.error(
+        "acceptCall error:",
+        err
+      );
     }
   };
 
-  // =========================
-  // LISTEN INCOMING
-  // =========================
+  // =====================
+  // END CALL
+  // =====================
+
+  const endCall = async () => {
+
+    try {
+
+      await cleanup();
+
+      await remove(
+        ref(
+          db,
+          `calls/${currentUserId}`
+        )
+      );
+
+      setIncomingCall(null);
+
+    } catch (err) {
+
+      console.error(
+        "endCall error:",
+        err
+      );
+    }
+  };
+
+  // =====================
+  // LISTEN OFFER
+  // =====================
 
   useEffect(() => {
 
@@ -383,11 +490,14 @@ export default function useCall(currentUserId) {
       `calls/${currentUserId}/offer`
     );
 
-    const callback = (snapshot) => {
+    const callback = (
+      snapshot
+    ) => {
 
-      const data = snapshot.val();
+      const data =
+        snapshot.val();
 
-      if (!data || !data.offer) {
+      if (!data) {
 
         setIncomingCall(null);
 
@@ -397,7 +507,10 @@ export default function useCall(currentUserId) {
       setIncomingCall(data);
     };
 
-    onValue(offerRef, callback);
+    onValue(
+      offerRef,
+      callback
+    );
 
     listeners.current.push({
       ref: offerRef,
@@ -405,19 +518,26 @@ export default function useCall(currentUserId) {
     });
 
     return () => {
-      off(offerRef, callback);
+
+      off(
+        offerRef,
+        "value",
+        callback
+      );
+
+      cleanup();
     };
 
   }, [currentUserId]);
 
-  // =========================
+  // =====================
 
   return {
     startCall,
-    incomingCall,
     acceptCall,
     endCall,
-    localStream: localStream.current,
+    incomingCall,
+    localStream,
     remoteStream,
   };
 }
