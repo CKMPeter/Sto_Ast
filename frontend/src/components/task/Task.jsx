@@ -15,7 +15,8 @@ import {
   deleteMainTaskService,
   deleteSubTaskService,
   fetchTaskLogsService,
-  createTaskUsingAIService
+  createTaskUsingAIService,
+  fetchGroupTasksService
 } from "./services/taskService";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
@@ -51,13 +52,7 @@ export default function Task() {
   const [aiGeneratedTask, setAiGeneratedTask] = useState("");
   const [aiDescription, setAiDescription] = useState("");
 
-
-
-  const groups = [
-    { id: "group1", name: "Group 1" },
-    { id: "group2", name: "Group 2" },
-    { id: "group3", name: "Group 3" },
-  ];
+  const [groups, setGroups] = useState([]);
 
   // =========================
   // FETCH MAIN TASKS
@@ -287,6 +282,22 @@ export default function Task() {
     }
   }
 
+  const fetchGroupList = async () => {
+    try {
+      const data = await fetchGroupTasksService(getIdToken, currentUser.uid);
+      setGroups([
+        {
+          id: "default",
+          name: "Default",
+          members: [],
+        },
+        ...(data.data.groups || []),
+      ]);
+    } catch (error) {
+      console.error("Fetch group list error:", error);
+    }
+  }
+
   // =========================
   // EFFECTS
   // =========================
@@ -294,6 +305,7 @@ export default function Task() {
   useEffect(() => {
     if (currentUser) {
       fetchMainTasks();
+      fetchGroupList();
     }
   }, [currentUser]);
 
@@ -308,6 +320,7 @@ export default function Task() {
       getTaskLog(selectedTaskId);
     }
   }, [selectedTaskId]);
+
 
   // =========================
   // RENDER COLUMN

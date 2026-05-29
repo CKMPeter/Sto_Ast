@@ -5,7 +5,7 @@ import { RequestBox } from "./RequestBox";
 import FriendsList from "./FriendsList";
 import { useAuth } from "../../contexts/AuthContext";
 import useFriends from "../../hooks/messageHook/useFriends";
-import useChat from "../../hooks/useChat";
+import useChat from "../../hooks/messageHook/useChat";
 import useGroups from "../../hooks/messageHook/useGroups";
 import CallModal from "./CallModal";
 import { styled } from "@mui/material/styles";

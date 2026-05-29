@@ -53,7 +53,12 @@ class GroupController {
 
       return res.status(200).json({
         success: true,
-        groups,
+        data: {
+          groups: groups.map((group) => ({
+            id: group.id,
+            name: group.name,
+          })),
+        },
       });
 
     } catch (error) {

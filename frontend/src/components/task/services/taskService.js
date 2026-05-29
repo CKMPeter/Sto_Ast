@@ -231,3 +231,23 @@ export const createTaskUsingAIService = async (
 
   return await response.json()
 }
+
+export const fetchGroupTasksService = async (
+  getIdToken,
+  userId
+) => {
+  const token = await getIdToken()
+
+  const response = await fetch(
+    `${BACKEND_URL}/api/groups/user/${userId}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  )
+  const data = await response.json()
+  console.log('Group Tasks Response:', data)
+  return data
+}
