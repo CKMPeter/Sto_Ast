@@ -156,7 +156,7 @@ export default function useGroups(userId) {
   };
 
   //  ADD MEMBER
-  const addMember = async (groupId, memberUserId) => {
+  const addMember = async (groupId, memberData) => {
     try {
       const token = await currentUser?.getIdToken();
 
@@ -169,7 +169,8 @@ export default function useGroups(userId) {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            userId: memberUserId,
+            userId: memberData.uid,
+            name: memberData.name,
           }),
         }
       );

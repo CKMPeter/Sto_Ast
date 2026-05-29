@@ -48,7 +48,8 @@ export function Message() {
   // GROUPS
   const { groups = [], createGroup } = useGroups(
     currentUser?.uid,
-    currentUser?.getIdToken
+    currentUser?.getIdToken,
+    currentUser?.name,
   );
 
   // CHAT
@@ -201,14 +202,25 @@ export function Message() {
     if (!groupName.trim()) return;
 
     try {
+      const selectedFriends = friends.filter((friend) =>
+        selectedGroupMembers.includes(friend.uid),
+      );
+
       const members = [
-        ...new Set([currentUser?.uid, ...selectedGroupMembers].filter(Boolean)),
+        {
+          uid: currentUser.uid,
+          name: currentUser.displayName || currentUser.email,
+          email: currentUser.email,
+        },
+
+        ...selectedFriends.map((friend) => ({
+          uid: friend.uid,
+          name: friend.name,
+          email: friend.email,
+        })),
       ];
 
-      await createGroup(
-        groupName.trim(),
-        members
-      );
+      await createGroup(groupName.trim(), members);
 
       setGroupName("");
       setSelectedGroupMembers([]);

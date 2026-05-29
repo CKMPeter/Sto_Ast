@@ -1,273 +1,209 @@
 // src/services/task/taskService.js
 
 const BACKEND_URL =
-  import.meta.env.VITE_APP_BACKEND_URL ||
-  'http://localhost:5000'
+  import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:5000";
 
 // =========================
 // MAIN TASKS
 // =========================
 
-export const fetchMainTasksService = async (
-  getIdToken,
-  userId
-) => {
+export const fetchMainTasksService = async (getIdToken, userId) => {
+  const token = await getIdToken();
 
-  const token = await getIdToken()
+  const response = await fetch(`${BACKEND_URL}/api/tasks?userId=${userId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks?userId=${userId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  )
+  return await response.json();
+};
 
-  return await response.json()
-}
+export const createMainTaskService = async (getIdToken, taskData) => {
+  const token = await getIdToken();
 
-export const createMainTaskService = async (
-  getIdToken,
-  taskData
-) => {
+  const response = await fetch(`${BACKEND_URL}/api/tasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(taskData),
+  });
 
-  const token = await getIdToken()
+  return await response.json();
+};
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(taskData)
-    }
-  )
+export const updateMainTaskService = async (getIdToken, taskId, updateData) => {
+  const token = await getIdToken();
 
-  return await response.json()
-}
+  const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(updateData),
+  });
 
-export const updateMainTaskService = async (
-  getIdToken,
-  taskId,
-  updateData
-) => {
+  return await response.json();
+};
 
-  const token = await getIdToken()
+export const deleteMainTaskService = async (getIdToken, taskId) => {
+  const token = await getIdToken();
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks/${taskId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(updateData)
-    }
-  )
+  const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-  return await response.json()
-}
-
-export const deleteMainTaskService = async (
-  getIdToken,
-  taskId
-) => {
-
-  const token = await getIdToken()
-
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks/${taskId}`,
-    {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  )
-
-  return await response.json()
-}
+  return await response.json();
+};
 
 // =========================
 // SUBTASKS
 // =========================
 
-export const fetchSubTasksService = async (
-  getIdToken,
-  taskId
-) => {
+export const fetchSubTasksService = async (getIdToken, taskId) => {
+  const token = await getIdToken();
 
-  const token = await getIdToken()
+  const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}/subtasks`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks/${taskId}/subtasks`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  )
+  return await response.json();
+};
 
-  return await response.json()
-}
+export const createSubTaskService = async (getIdToken, taskId, subTaskData) => {
+  const token = await getIdToken();
 
-export const createSubTaskService = async (
-  getIdToken,
-  taskId,
-  subTaskData
-) => {
+  const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}/subtasks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(subTaskData),
+  });
 
-  const token = await getIdToken()
-
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks/${taskId}/subtasks`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(subTaskData)
-    }
-  )
-
-  return await response.json()
-}
+  return await response.json();
+};
 
 export const updateSubTaskService = async (
   getIdToken,
   taskId,
   subTaskId,
-  updateData
+  updateData,
 ) => {
-
-  const token = await getIdToken()
+  const token = await getIdToken();
 
   const response = await fetch(
     `${BACKEND_URL}/api/tasks/${taskId}/subtasks/${subTaskId}`,
     {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(updateData)
-    }
-  )
+      body: JSON.stringify(updateData),
+    },
+  );
 
-  return await response.json()
-}
+  return await response.json();
+};
 
-export const deleteSubTaskService = async (
-  getIdToken,
-  taskId,
-  subTaskId
-) => {
-
-  const token = await getIdToken()
+export const deleteSubTaskService = async (getIdToken, taskId, subTaskId) => {
+  const token = await getIdToken();
 
   const response = await fetch(
     `${BACKEND_URL}/api/tasks/${taskId}/subtasks/${subTaskId}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  )
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
 
-  return await response.json()
-}
+  return await response.json();
+};
 
 // =========================
 // TASK LOGS
 // =========================
 
-export const fetchTaskLogsService = async (
-  getIdToken,
-  taskId
-) => {
+export const fetchTaskLogsService = async (getIdToken, taskId) => {
+  const token = await getIdToken();
 
-  const token = await getIdToken()
+  const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}/logs`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/tasks/${taskId}/logs`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  )
-
-  return await response.json()
-}
+  return await response.json();
+};
 
 // =========================
 // OTHER SERVICES (if needed)
 // =========================
 
-export const createTaskUsingAIService = async (
-  getIdToken,
-  taskData
-) => {
+export const createTaskUsingAIService = async (getIdToken, taskData) => {
+  const token = await getIdToken();
 
-  const token = await getIdToken()
+  const response = await fetch(`${BACKEND_URL}/api/create-task`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(taskData),
+  });
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/create-task`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(taskData)
-    }
-  )
+  return await response.json();
+};
 
-  return await response.json()
-}
+export const fetchGroupTasksService = async (getIdToken, userId) => {
+  const token = await getIdToken();
 
-export const fetchGroupTasksService = async (
-  getIdToken,
-  userId
-) => {
-  const token = await getIdToken()
+  const response = await fetch(`${BACKEND_URL}/api/groups/user/${userId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await response.json();
+  console.log("Group Tasks Response:", data);
+  return data;
+};
 
-  const response = await fetch(
-    `${BACKEND_URL}/api/groups/user/${userId}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
-  )
-  const data = await response.json()
-  console.log('Group Tasks Response:', data)
-  return data
-}
-
-export const addTaskToGroupService = async (
-  getIdToken,
-  groupId,
-  taskData
-) => {
-  const token = await getIdToken()
+export const addTaskToGroupService = async (getIdToken, groupId, taskData) => {
+  const token = await getIdToken();
   const response = await fetch(
     `${BACKEND_URL}/api/groups/${groupId}/add-task`,
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(taskData)
-    }
-  )
-  return await response.json()
-}
+      body: JSON.stringify(taskData),
+    },
+  );
+  return await response.json();
+};
+
+export const fetchGroupMembersService = async (getIdToken, groupId) => {
+  const token = await getIdToken();
+  const response = await fetch(`${BACKEND_URL}/api/groups/${groupId}/members`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return await response.json();
+};

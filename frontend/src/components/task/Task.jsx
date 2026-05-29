@@ -18,6 +18,7 @@ import {
   createTaskUsingAIService,
   fetchGroupTasksService,
   addTaskToGroupService,
+  fetchGroupMembersService,
 } from "./services/taskService";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
@@ -31,29 +32,54 @@ export default function Task() {
   const [mainTasks, setMainTasks] = useState([]);
   const [tasks, setTasks] = useState([]);
 
+  // state for selected main task
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+
+  // state for dragging sub task
   const [draggedTask, setDraggedTask] = useState(null);
 
+  // state for checking if main task is selected to show sub task and log
   const [mainTaskSelected, setMainTaskSelected] = useState(false);
 
+  // state for editing main task
   const [editingTask, setEditingTask] = useState(null);
 
+  // state for open the context menu for main task
   const [openedMenuId, setOpenedMenuId] = useState(null);
 
+  // state for open the modal for creating main task and sub task
   const [isCreatingMainTask, setIsCreatingMainTask] = useState(false);
   const [isCreatingSubTask, setIsCreatingSubTask] = useState(false);
 
+  // state use for activating create using AI modal
   const [isCreatingUsingAI, setIsCreatingUsingAI] = useState(false);
 
+  //logging
   const [taskLog, setTaskLog] = useState([]);
 
+  //use for creating main task
   const [mainTaskExpireAt, setMainTaskExpireAt] = useState("");
   const [mainTaskDescription, setMainTaskDescription] = useState("");
 
+  //AI generated task
   const [aiGeneratedTask, setAiGeneratedTask] = useState("");
   const [aiDescription, setAiDescription] = useState("");
 
+  // GROUPS
   const [groups, setGroups] = useState([]);
+
+  //for sub task context menu
+  const [subTaskContextMenu, setSubTaskContextMenu] = useState(null);
+
+  // Sub task editing states
+  const [editingSubTask, setEditingSubTask] = useState(null);
+
+  const [editSubTaskName, setEditSubTaskName] = useState("");
+  const [editSubTaskStatus, setEditSubTaskStatus] = useState("To do");
+  const [editSubTaskAssignedTo, setEditSubTaskAssignedTo] = useState("");
+
+  // List of group members for assigning sub tasks
+  const [groupMembers, setGroupMembers] = useState([]);
 
   // =========================
   // FETCH MAIN TASKS
@@ -148,6 +174,46 @@ export default function Task() {
   };
 
   // =========================
+  // EDIT SUBTASK
+  // =========================
+
+  const updateSubTask = async () => {
+    if (!editingSubTask) return;
+
+    try {
+      const data = await updateSubTaskService(
+        getIdToken,
+        selectedTaskId,
+        editingSubTask.id,
+        {
+          name: editSubTaskName,
+          status: editSubTaskStatus,
+          assignedTo: editSubTaskAssignedTo,
+        },
+      );
+
+      if (data.success) {
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === editingSubTask.id
+              ? {
+                  ...task,
+                  name: editSubTaskName,
+                  status: editSubTaskStatus,
+                  assignedTo: editSubTaskAssignedTo,
+                }
+              : task,
+          ),
+        );
+
+        setEditingSubTask(null);
+      }
+    } catch (error) {
+      console.error("Update subtask error:", error);
+    }
+  };
+
+  // =========================
   // UPDATE MAIN TASK
   // =========================
 
@@ -158,6 +224,10 @@ export default function Task() {
       const data = await updateMainTaskService(getIdToken, editingTask.id, {
         name: editingTask.name,
         group: editingTask.group,
+        expireAt: mainTaskExpireAt
+          ? new Date(mainTaskExpireAt).toISOString()
+          : null,
+        description: mainTaskDescription,
       });
 
       const updatedTask = await addTaskToGroupService(
@@ -315,6 +385,21 @@ export default function Task() {
     }
   };
 
+  const fetchMembers = async (groupId) => {
+    try {
+      const data = await fetchGroupMembersService(getIdToken, groupId);
+      console.log("Fetching members for group:", groupId);
+      if (data.success) {
+        setGroupMembers(data.data.members);
+        console.log("Group members:", data.data.members);
+      } else {
+        console.error("Failed to fetch group members");
+      }
+    } catch (error) {
+      console.error("Fetch group members error:", error);
+    }
+  };
+
   // =========================
   // EFFECTS
   // =========================
@@ -332,11 +417,16 @@ export default function Task() {
     }
   }, [selectedTaskId]);
 
+  // CLOSE CONTEXT MENU ON OUTSIDE CLICK
   useEffect(() => {
-    if (selectedTaskId) {
-      getTaskLog(selectedTaskId);
-    }
-  }, [selectedTaskId]);
+    const closeMenu = () => setSubTaskContextMenu(null);
+
+    window.addEventListener("click", closeMenu);
+
+    return () => {
+      window.removeEventListener("click", closeMenu);
+    };
+  }, []);
 
   // =========================
   // RENDER COLUMN
@@ -353,15 +443,27 @@ export default function Task() {
       {tasks
         .filter((task) => task.status === status)
         .map((task) => (
-          <div key={task.id} style={styleSheet.subTaskItem}>
+          <div
+            key={task.id}
+            style={styleSheet.subTaskItem}
+            onContextMenu={(e) => {
+              e.preventDefault();
+
+              setSubTaskContextMenu({
+                mouseX: e.clientX,
+                mouseY: e.clientY,
+                task,
+              });
+            }}
+          >
             <TaskComponent task={task} onDragStart={setDraggedTask} />
 
-            <button
+            {/* <button
               onClick={() => deleteSubTask(task.id)}
               style={styleSheet.deleteButton}
             >
               Delete
-            </button>
+            </button> */}
           </div>
         ))}
     </div>
@@ -428,6 +530,7 @@ export default function Task() {
                   } else if (mainTaskSelected && selectedTaskId === task.id) {
                     setMainTaskSelected(false);
                   }
+                  fetchMembers(task.group?.id);
                 }}
                 style={{
                   cursor: "pointer",
@@ -526,7 +629,10 @@ export default function Task() {
             {/*Description*/}
             <div style={{ marginTop: "20px" }}>
               <h3>Description</h3>
-              <p>{mainTasks.find((task) => task.id === selectedTaskId)?.description || "No description"}</p>
+              <p>
+                {mainTasks.find((task) => task.id === selectedTaskId)
+                  ?.description || "No description"}
+              </p>
             </div>
           </div>
         ) : (
@@ -647,6 +753,7 @@ export default function Task() {
           </div>
         </div>
       )}
+
       {/* CREATE USING AI MODAL */}
       {isCreatingUsingAI && (
         <div style={styleSheet.modalOverlay}>
@@ -694,7 +801,6 @@ export default function Task() {
       )}
 
       {/* EDIT MODAL */}
-
       {editingTask && (
         <div style={styleSheet.modalOverlay}>
           <div style={styleSheet.modalContainer}>
@@ -725,7 +831,7 @@ export default function Task() {
                   group: selectedGroup,
                 });
               }}
-              style={styleSheet.select}
+              style={{ ...styleSheet.select, marginBottom: "20px" }}
             >
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
@@ -733,6 +839,21 @@ export default function Task() {
                 </option>
               ))}
             </select>
+
+            <input
+              type="date"
+              value={mainTaskExpireAt}
+              onChange={(e) => setMainTaskExpireAt(e.target.value)}
+              style={styleSheet.input}
+            />
+
+            <input
+              type="text"
+              placeholder="description (optional)"
+              value={mainTaskDescription}
+              onChange={(e) => setMainTaskDescription(e.target.value)}
+              style={{ ...styleSheet.input, height: "80px", resize: "none" }}
+            />
 
             <div
               style={{
@@ -753,6 +874,120 @@ export default function Task() {
               </button>
 
               <button onClick={updateMainTask} style={styleSheet.button}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*SUB TASKS CONTEXT MENU*/}
+      {subTaskContextMenu && (
+        <div
+          style={{
+            position: "fixed",
+            top: subTaskContextMenu.mouseY,
+            left: subTaskContextMenu.mouseX,
+            background: "white",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            zIndex: 9999,
+            minWidth: "150px",
+          }}
+        >
+          <button style={styleSheet.subTaskContextMenuItem} onClick={() => alert("Log time feature coming soon!")}>
+            Log Time
+          </button>
+          <button
+            style={styleSheet.subTaskContextMenuItem}
+            onClick={() => {
+              setEditingSubTask(subTaskContextMenu.task);
+
+              setEditSubTaskName(subTaskContextMenu.task.name || "");
+              setEditSubTaskStatus(subTaskContextMenu.task.status || "To do");
+              setEditSubTaskAssignedTo(
+                subTaskContextMenu.task.assignedTo || "",
+              );
+
+              setSubTaskContextMenu(null);
+            }}
+          >
+            Edit
+          </button>
+
+          <button
+            style={{
+              ...styleSheet.subTaskContextMenuItem,
+              color: "red",
+            }}
+            onClick={() => {
+              deleteSubTask(subTaskContextMenu.task.id);
+
+              setSubTaskContextMenu(null);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+
+      {/* EDIT SUB TASK MODAL */}
+      {editingSubTask && (
+        <div style={styleSheet.modalOverlay}>
+          <div style={styleSheet.modalContainer}>
+            <h2>Edit Sub Task</h2>
+
+            <input
+              type="text"
+              placeholder="Sub task name"
+              value={editSubTaskName}
+              onChange={(e) => setEditSubTaskName(e.target.value)}
+              style={styleSheet.input}
+            />
+
+            <select
+              value={editSubTaskStatus}
+              onChange={(e) => setEditSubTaskStatus(e.target.value)}
+              style={styleSheet.select}
+            >
+              <option value="To do">To do</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
+
+            <select
+              value={editSubTaskAssignedTo}
+              onChange={(e) => setEditSubTaskAssignedTo(e.target.value)}
+              style={styleSheet.select}
+            >
+              <option value="">Select Member</option>
+              {groupMembers.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+
+            <div
+              style={{
+                marginTop: "20px",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+              }}
+            >
+              <button
+                onClick={() => setEditingSubTask(null)}
+                style={{
+                  ...styleSheet.button,
+                  backgroundColor: "#6c757d",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button onClick={updateSubTask} style={styleSheet.button}>
                 Save
               </button>
             </div>
@@ -898,5 +1133,14 @@ const styleSheet = {
     borderRadius: "10px",
     minWidth: "350px",
     boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+  },
+  subTaskContextMenuItem: {
+    width: "100%",
+    padding: "10px",
+    border: "none",
+    background: "white",
+    textAlign: "left",
+    cursor: "pointer",
+    borderRadius: "5px",
   },
 };

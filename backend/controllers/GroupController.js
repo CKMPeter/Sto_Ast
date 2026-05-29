@@ -143,16 +143,16 @@ class GroupController {
   async addMember(req, res) {
     try {
       const { groupId } = req.params;
-      const { userId } = req.body;
+      const { userId, name } = req.body;
 
-      if (!userId) {
+      if (!userId || !name) {
         return res.status(400).json({
           success: false,
-          message: "User ID is required",
+          message: "User ID and name are required",
         });
       }
 
-      await GroupDAO.addMember(groupId, userId);
+      await GroupDAO.addMember(groupId, { uid: userId, name });
 
       return res.status(200).json({
         success: true,
@@ -221,6 +221,27 @@ class GroupController {
       return res.status(500).json({
         success: false,
         message: "Failed to add task to group",
+      });
+    }
+  }
+
+  // fetch member list for a group
+  async getGroupMembers(req, res) {
+    try {
+      const { groupId } = req.params;
+      const members = await GroupDAO.getGroupMembers(groupId);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          members,
+        },
+      });
+    } catch (error) {
+      console.error("GET GROUP MEMBERS ERROR:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch group members",
       });
     }
   }

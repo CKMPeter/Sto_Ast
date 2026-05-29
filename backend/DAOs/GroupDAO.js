@@ -1,7 +1,6 @@
 const { realtimeDatabase } = require("../firebase-admin-setup");
 
 class GroupDAO {
-
   // CREATE GROUP
   async createGroup(groupData) {
     const groupRef = realtimeDatabase.ref("groups").push();
@@ -34,9 +33,7 @@ class GroupDAO {
 
   // GET USER GROUPS
   async getUserGroups(userId) {
-    const snapshot = await realtimeDatabase
-      .ref("groups")
-      .once("value");
+    const snapshot = await realtimeDatabase.ref("groups").once("value");
 
     if (!snapshot.exists()) {
       return [];
@@ -46,49 +43,49 @@ class GroupDAO {
 
     return Object.values(groupsData).filter((group) =>
       Array.isArray(group.members) &&
-      group.members.includes(userId)
+      group.members.some(
+        (member) => member.uid === userId
+      )
     );
   }
 
   // UPDATE GROUP
   async updateGroup(groupId, updateData) {
-    await realtimeDatabase
-      .ref(`groups/${groupId}`)
-      .update({
-        ...updateData,
-        updatedAt: Date.now(),
-      });
+    await realtimeDatabase.ref(`groups/${groupId}`).update({
+      ...updateData,
+      updatedAt: Date.now(),
+    });
 
     return true;
   }
 
   // DELETE GROUP
   async deleteGroup(groupId) {
-    await realtimeDatabase
-      .ref(`groups/${groupId}`)
-      .remove();
+    await realtimeDatabase.ref(`groups/${groupId}`).remove();
 
     return true;
   }
 
   // ADD MEMBER
-  async addMember(groupId, userId) {
+  async addMember(groupId, memberData) {
     const snapshot = await realtimeDatabase
       .ref(`groups/${groupId}/members`)
       .once("value");
 
     const members = snapshot.val() || [];
 
-    if (!members.includes(userId)) {
-      members.push(userId);
+    const alreadyExists = members.some(
+      (member) => member.uid === memberData.uid,
+    );
+
+    if (!alreadyExists) {
+      members.push(memberData);
     }
 
-    await realtimeDatabase
-      .ref(`groups/${groupId}`)
-      .update({
-        members,
-        updatedAt: Date.now(),
-      });
+    await realtimeDatabase.ref(`groups/${groupId}`).update({
+      members,
+      updatedAt: Date.now(),
+    });
 
     return true;
   }
@@ -101,14 +98,14 @@ class GroupDAO {
 
     let members = snapshot.val() || [];
 
-    members = members.filter((id) => id !== userId);
+    members = members.filter(
+      (member) => member.uid !== userId
+    );
 
-    await realtimeDatabase
-      .ref(`groups/${groupId}`)
-      .update({
-        members,
-        updatedAt: Date.now(),
-      });
+    await realtimeDatabase.ref(`groups/${groupId}`).update({
+      members,
+      updatedAt: Date.now(),
+    });
 
     return true;
   }
@@ -125,14 +122,20 @@ class GroupDAO {
       tasks.push(taskId);
     }
 
-    await realtimeDatabase
-      .ref(`groups/${groupId}`)
-      .update({
-        tasks,
-        updatedAt: Date.now(),
-      });
+    await realtimeDatabase.ref(`groups/${groupId}`).update({
+      tasks,
+      updatedAt: Date.now(),
+    });
 
     return true;
+  }
+
+  async getGroupMembers(groupId) {
+    const snapshot = await realtimeDatabase
+      .ref(`groups/${groupId}/members`)
+      .once("value");
+
+    return snapshot.val() || [];
   }
 }
 
