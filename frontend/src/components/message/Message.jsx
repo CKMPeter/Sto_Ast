@@ -7,7 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import useFriends from "../../hooks/messageHook/useFriends";
 import useChat from "../../hooks/messageHook/useChat";
 import useGroups from "../../hooks/messageHook/useGroups";
-import CallModal from "./CallModal";
+import CallModal, { IncomingCallNotification } from "./CallModal";
 import { styled } from "@mui/material/styles";
 import useCallGroup from "../../webrtc/useCallGroup";
 import CallModalGroup from "./CallModalGroup";
@@ -18,9 +18,11 @@ export function Message() {
   // CALL
   const {
     startCall,
-    incomingCall,
     acceptCall,
+    rejectCall,
     endCall,
+    incomingCall,
+    callState,
     localStream,
     remoteStream,
   } = useCall(currentUser?.uid);
@@ -356,33 +358,11 @@ export function Message() {
             )}
 
             {selectedUserId && (
-              <CallBtn onClick={() => startCall(selectedUserId)}>
+              <CallBtn onClick={() => startCall(selectedUserId, currentUser?.displayName || currentUser?.email)}>
                 📹 Call
               </CallBtn>
             )}
           </Header>
-
-          {/* INCOMING CALL */}
-          {incomingCall && (
-            <IncomingBox>
-              <p>📞 {incomingCall.callerId}</p>
-
-              <button onClick={acceptCall}>Accept</button>
-
-              <button onClick={endCall}>Reject</button>
-            </IncomingBox>
-          )}
-
-          {/* INCOMING GROUP CALL */}
-          {incomingGroupCall && (
-            <IncomingBox>
-              <p>📞 Group call incoming</p>
-
-              <button onClick={acceptGroupCall}>Accept</button>
-
-              <button onClick={endGroupCall}>Reject</button>
-            </IncomingBox>
-          )}
 
           {/* CHAT BODY */}
           <ChatBody>
@@ -477,16 +457,33 @@ export function Message() {
           </Footer>
         </ChatArea>
       </Container>
-      {/* CALL MODAL */}
-{(incomingCall || localStream || remoteStream) && (
-  <CallModal
-    localStream={localStream}
-    remoteStream={remoteStream}
-    incomingCall={incomingCall}
-    onAccept={acceptCall}
-    onEnd={endCall}
-  />
-)}
+      {/* INCOMING CALL NOTIFICATION (popup góc phải, như Messenger) */}
+      {callState === "incoming" && incomingCall && (
+        <IncomingCallNotification
+          incomingCall={incomingCall}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+        />
+      )}
+
+      {/* INCOMING GROUP CALL NOTIFICATION */}
+      {incomingGroupCall && (
+        <IncomingCallNotification
+          incomingCall={{ callerName: "Group Call", callerId: "group" }}
+          onAccept={acceptGroupCall}
+          onReject={endGroupCall}
+        />
+      )}
+
+      {/* ACTIVE CALL MODAL (full screen) */}
+      {(callState === "active" || callState === "calling") && (
+        <CallModal
+          localStream={localStream}
+          remoteStream={remoteStream}
+          onEnd={endCall}
+          callerName={selectedFriend?.email}
+        />
+      )}
       {/* GROUP CALL MODAL */}
       {(groupLocalStream ||
         Object.keys(groupRemoteStreams || {}).length > 0) && (
