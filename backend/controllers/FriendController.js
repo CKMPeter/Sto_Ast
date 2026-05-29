@@ -24,19 +24,19 @@ async function getUidFromRequest(req, res) {
 }
 
 //
-// ✅ GET FRIENDS
+//  GET FRIENDS
 //
 async function getFriends(req, res) {
   try {
     const { userid } = req.params;
 
     if (!userid) {
-      return res.status(400).json({ error: 'Missing userid' });
+      return res.status(400).json({ error: "Missing userid" });
     }
 
     const snapshot = await realtimeDatabase
       .ref(`users/${userid}/friends`)
-      .once('value');
+      .once("value");
 
     const data = snapshot.val();
 
@@ -50,7 +50,7 @@ async function getFriends(req, res) {
     const promises = friendIds.map(async (uid) => {
       const userSnap = await realtimeDatabase
         .ref(`users/${uid}`)
-        .once('value');
+        .once("value");
 
       const userData = userSnap.val() || {};
 
@@ -64,26 +64,26 @@ async function getFriends(req, res) {
     const friends = await Promise.all(promises);
 
     return res.status(200).json(friends);
-
   } catch (error) {
-    console.error('Error fetching friends:', error);
+    console.error("Error fetching friends:", error);
     return res.status(500).json({ error: error.message });
   }
 }
+
 //
-// ✅ GET FRIEND REQUESTS
+//  GET FRIEND REQUESTS
 //
 async function getFriendRequests(req, res) {
   try {
     const { userid } = req.params;
 
     if (!userid) {
-      return res.status(400).json({ error: 'Missing userid' });
+      return res.status(400).json({ error: "Missing userid" });
     }
 
     const snapshot = await realtimeDatabase
       .ref(`users/${userid}/friendRequests`)
-      .once('value');
+      .once("value");
 
     const data = snapshot.val();
 
@@ -97,7 +97,7 @@ async function getFriendRequests(req, res) {
     const promises = requesterIds.map(async (uid) => {
       const userSnap = await realtimeDatabase
         .ref(`users/${uid}`)
-        .once('value');
+        .once("value");
 
       const userData = userSnap.val() || {};
 
@@ -109,21 +109,36 @@ async function getFriendRequests(req, res) {
     });
 
     const requests = await Promise.all(promises);
+    console.log("Fetched requests:", requests);
 
     return res.status(200).json(requests);
-
   } catch (error) {
-    console.error('Error fetching requests:', error);
+    console.error("Error fetching requests:", error);
     return res.status(500).json({ error: error.message });
   }
 }
+
 //
-// ✅ SEND FRIEND REQUEST
-// body: { to }
+//  SEND FRIEND REQUEST
+// Supports both:
+// - { from, to }
+// - { toUid }
+// Also auto-gets "from" from token if missing.
 //
 async function sendFriendRequest(req, res) {
   try {
-    const { from, to } = req.body;
+    let { from, to, toUid } = req.body || {};
+
+    // support old frontend
+    if (!to && toUid) {
+      to = toUid;
+    }
+
+    // if frontend doesn't send "from", use token UID
+    if (!from) {
+      from = await getUidFromRequest(req, res);
+      if (!from) return;
+    }
 
     if (!from || !to) {
       return res.status(400).json({ error: "Missing from or to" });
@@ -168,14 +183,12 @@ async function sendFriendRequest(req, res) {
 
     const updates = {};
 
-    // ✅ store request for receiver
     updates[`users/${to}/friendRequests/${from}`] = {
       email: fromData.email || "",
       name: fromData.name || "",
       timestamp: Date.now(),
     };
 
-    // ✅ OPTIONAL (recommended): track sent requests
     updates[`users/${from}/sentRequests/${to}`] = {
       email: toData.email || "",
       name: toData.name || "",
@@ -185,14 +198,14 @@ async function sendFriendRequest(req, res) {
     await dbRef.update(updates);
 
     return res.status(200).json({ message: "Request sent" });
-
   } catch (error) {
     console.error("Error sending request:", error);
     return res.status(500).json({ error: error.message });
   }
 }
+
 //
-// ✅ ACCEPT FRIEND REQUEST
+//  ACCEPT FRIEND REQUEST
 // body: { requesterId }
 //
 async function acceptFriendRequest(req, res) {
@@ -203,12 +216,12 @@ async function acceptFriendRequest(req, res) {
     const { requesterId } = req.body;
 
     if (!requesterId) {
-      return res.status(400).json({ error: 'Missing requesterId' });
+      return res.status(400).json({ error: "Missing requesterId" });
     }
 
     const rootRef = realtimeDatabase.ref();
 
-    //  get BOTH user profiles
+    // get BOTH user profiles
     const [currentSnap, requesterSnap] = await Promise.all([
       rootRef.child(`users/${uid}`).once("value"),
       rootRef.child(`users/${requesterId}`).once("value"),
@@ -219,7 +232,7 @@ async function acceptFriendRequest(req, res) {
 
     const updates = {};
 
-    // ✅ store FULL OBJECT instead of true
+    // add both as friends
     updates[`users/${uid}/friends/${requesterId}`] = {
       uid: requesterId,
       email: requesterUser.email || "",
@@ -235,18 +248,25 @@ async function acceptFriendRequest(req, res) {
     // remove request
     updates[`users/${uid}/friendRequests/${requesterId}`] = null;
 
+    // remove sender pending request
+    updates[`users/${requesterId}/sentRequests/${uid}`] = null;
+
     await rootRef.update(updates);
 
-    return res.status(200).json({ message: 'Friend added' });
+    return res.status(200).json({
+      message: "Friend added"
+    });
 
   } catch (error) {
-    console.error('Error accepting request:', error);
-    return res.status(500).json({ error: error.message });
+    console.error("Error accepting request:", error);
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 }
-
 //
-// ✅ REJECT FRIEND REQUEST
+//  REJECT FRIEND REQUEST
 // body: { requesterId }
 //
 async function rejectFriendRequest(req, res) {
@@ -257,30 +277,35 @@ async function rejectFriendRequest(req, res) {
     const { requesterId } = req.body;
 
     if (!requesterId) {
-      return res.status(400).json({ error: 'Missing requesterId' });
+      return res.status(400).json({ error: "Missing requesterId" });
     }
 
-    await realtimeDatabase
-      .ref(`users/${uid}/friendRequests/${requesterId}`)
-      .remove();
+    const updates = {};
 
-    return res.status(200).json({ message: 'Request rejected' });
+    // remove incoming request
+    updates[`users/${uid}/friendRequests/${requesterId}`] = null;
 
+    // remove sender pending request
+    updates[`users/${requesterId}/sentRequests/${uid}`] = null;
+
+    await realtimeDatabase.ref().update(updates);
+
+    return res.status(200).json({ message: "Request rejected" });
   } catch (error) {
-    console.error('Error rejecting request:', error);
+    console.error("Error rejecting request:", error);
     return res.status(500).json({ error: error.message });
   }
 }
 
 //
-// ✅ GET MESSAGES
+//  GET MESSAGES
 //
 async function getMessages(req, res) {
   try {
     const { userid, friendid } = req.params;
 
     if (!userid || !friendid) {
-      return res.status(400).json({ error: 'Missing parameters' });
+      return res.status(400).json({ error: "Missing parameters" });
     }
 
     const chatId = [userid, friendid].sort().join("_");
@@ -298,7 +323,6 @@ async function getMessages(req, res) {
     messages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
     return res.status(200).json(messages);
-
   } catch (error) {
     console.error("Error fetching messages:", error);
     return res.status(500).json({ error: error.message });
@@ -306,7 +330,7 @@ async function getMessages(req, res) {
 }
 
 //
-// ✅ SEARCH USERS (email)
+//  SEARCH USERS (email)
 // GET /api/users/search?query=abc
 //
 async function searchUsers(req, res) {
@@ -335,11 +359,10 @@ async function searchUsers(req, res) {
         }))
       : [];
 
-    res.json(users);
-
+    return res.json(users);
   } catch (err) {
     console.error("Search error:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
 

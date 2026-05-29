@@ -4,9 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 const getBackendUrl = () => {
   return (
     import.meta.env.VITE_APP_BACKEND_URL ||
-    (typeof process !== "undefined" && process.env?.REACT_APP_BACKEND_URL) ||
-    (typeof window !== "undefined" && window.REACT_APP_BACKEND_URL) ||
-    "https://localhost:5000"
+    "http://localhost:5000"
   );
 };
 
@@ -15,6 +13,7 @@ export default function useFriends(userId, { limit = 20 } = {}) {
 
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]); // NEW
 
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
@@ -31,58 +30,66 @@ export default function useFriends(userId, { limit = 20 } = {}) {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        ...(options.headers || {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       }
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status} - ${text}`);
+    }
+
     return res.json();
   }, [currentUser]);
 
-  // ✅ FETCH FRIENDS
+  // FETCH FRIENDS
   const fetchFriends = useCallback(async () => {
     if (!userId) return;
 
     setLoadingFriends(true);
-    setError(null);
-
     try {
       const data = await fetchWithAuth(
-        `${base}/api/users/${encodeURIComponent(userId)}/friends`
+        `${base}/api/users/${userId}/friends`
       );
-
       setFriends(Array.isArray(data) ? data.slice(0, limit) : []);
     } catch (err) {
-      setError(err.message || String(err));
+      setError(err.message);
     } finally {
       setLoadingFriends(false);
     }
   }, [userId, limit, base, fetchWithAuth]);
 
-  // ✅ FETCH REQUESTS
+  // FETCH REQUESTS
   const fetchRequests = useCallback(async () => {
     if (!userId) return;
 
     setLoadingRequests(true);
-    setError(null);
-
     try {
       const data = await fetchWithAuth(
-        `${base}/api/users/${encodeURIComponent(userId)}/requests`
+        `${base}/api/users/${userId}/requests`
       );
-
       setRequests(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || String(err));
+      setError(err.message);
     } finally {
       setLoadingRequests(false);
     }
   }, [userId, base, fetchWithAuth]);
 
-  // ✅ SEND REQUEST
+  // CHECK STATES
+  const isFriend = (uid) => friends.some(f => f.uid === uid);
+  const isRequested = (uid) => requests.some(r => r.uid === uid);
+  const isSent = (uid) => sentRequests.includes(uid);
+
+  // SEND REQUEST (FULL FIX)
   const sendRequest = async (toUserId) => {
     if (!currentUser?.uid || !toUserId) return;
+
+    // PREVENT DUPLICATE CALL
+    if (isFriend(toUserId) || isSent(toUserId)) {
+      console.log("Already friend or request sent");
+      return;
+    }
 
     try {
       await fetchWithAuth(`${base}/api/users/friend-request`, {
@@ -92,50 +99,56 @@ export default function useFriends(userId, { limit = 20 } = {}) {
           to: toUserId
         })
       });
+
+      // mark as sent locally
+      setSentRequests(prev => [...prev, toUserId]);
+
+      console.log("Request sent");
+
     } catch (err) {
-      setError(err.message || String(err));
+      // HANDLE ALREADY SENT
+      if (err.message.includes("Request already sent")) {
+        setSentRequests(prev => [...prev, toUserId]);
+        return;
+      }
+
+      console.error(err);
+      setError(err.message);
     }
   };
 
-  // ✅ ACCEPT REQUEST
+  // ACCEPT
   const acceptRequest = async (requesterId) => {
     try {
       await fetchWithAuth(`${base}/api/users/friend-request/accept`, {
         method: "POST",
-        body: JSON.stringify({
-          currentUserId: currentUser.uid,
-          requesterId
-        })
+        body: JSON.stringify({ requesterId })
       });
 
-      // refresh after action
       fetchFriends();
       fetchRequests();
 
     } catch (err) {
-      setError(err.message || String(err));
+      setError(err.message);
     }
   };
 
-  // ✅ REJECT REQUEST
+  // REJECT
   const rejectRequest = async (requesterId) => {
     try {
       await fetchWithAuth(`${base}/api/users/friend-request/reject`, {
         method: "POST",
-        body: JSON.stringify({
-          currentUserId: currentUser.uid,
-          requesterId
-        })
+        body: JSON.stringify({ requesterId })
       });
 
       fetchRequests();
 
     } catch (err) {
-      setError(err.message || String(err));
+      setError(err.message);
     }
   };
 
-  // 🔄 AUTO LOAD
+  //  LOAD
   useEffect(() => {
     fetchFriends();
     fetchRequests();
@@ -144,16 +157,15 @@ export default function useFriends(userId, { limit = 20 } = {}) {
   return {
     friends,
     requests,
-
+    sentRequests, // expose this
     loadingFriends,
     loadingRequests,
     error,
-
-    refreshFriends: fetchFriends,
-    refreshRequests: fetchRequests,
-
     sendRequest,
     acceptRequest,
-    rejectRequest
+    rejectRequest,
+    isFriend,
+    isRequested,
+    isSent
   };
 }

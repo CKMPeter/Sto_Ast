@@ -141,8 +141,63 @@ const aiPreview = async (req, res) => {
   }
 };
 
+const createMainTaskAI = async (req, res) => {
+  try {
+    const { userId, description } = req.body;
+
+    console.log("Create main task AI request:", req.body);
+
+    if (!description || !userId) {
+      return res.status(400).json({
+        error: "Missing required fields.",
+      });
+    }
+
+    const prompt = `
+      Generate a task structure in JSON format.
+
+      Return ONLY valid JSON.
+
+      Format:
+      {
+        "name": "",
+        "expireAt": "",
+        "description": "",
+        "subTasks": [
+          {
+            "name": "",
+            "status": "To do"
+          }
+        ]
+      }
+
+      Description:
+      ${description}
+    `;
+
+    const messages = [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages,
+      max_tokens: 300,
+    });
+    console.log("AI create task response:", response);
+    res.json({ result: response.choices[0].message.content.trim() });
+  } catch (error) {
+    console.error("Create main task error:", error);
+    res.status(500).json({ error: "Failed to create main task" });
+  }
+};
+
 module.exports = {
   describeImage,
   aiRename,
   aiPreview,
+  createMainTaskAI,
 };

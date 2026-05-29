@@ -1,206 +1,423 @@
-import { useEffect, useRef } from "react";
-import { getDatabase, ref, set, onValue, push, remove } from "firebase/database";
-import { createPeerConnection, closePeer } from "./WebRTCService";
-import { useCallContext } from "../contexts/CallContext";
+import { useEffect, useRef, useState } from "react";
+import {
+  getDatabase,
+  ref,
+  set,
+  onValue,
+  off,
+  remove,
+} from "firebase/database";
 
-export default function useCall(userId) {
+export default function useCall(currentUserId) {
+
   const db = getDatabase();
-  const { incomingCall, setIncomingCall, call, setCall } = useCallContext();
 
-  const localStreamRef = useRef(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
 
-  // CLEAN STREAM FUNCTION (IMPORTANT)
-  const stopLocalStream = () => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
+  const peerConnection = useRef(null);
+  const localStream = useRef(null);
+
+  const listeners = useRef([]);
+
+  // =========================
+  // CLEANUP
+  // =========================
+
+  const cleanupMedia = () => {
+
+    // local stream
+    if (localStream.current) {
+
+      localStream.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+
+      localStream.current = null;
+    }
+
+    // remote stream
+    if (remoteStream) {
+
+      remoteStream.getTracks().forEach((track) => {
+        track.stop();
+      });
+
+      setRemoteStream(null);
+    }
+
+    // peer
+    if (peerConnection.current) {
+
+      peerConnection.current.ontrack = null;
+      peerConnection.current.onicecandidate = null;
+
+      peerConnection.current.close();
+
+      peerConnection.current = null;
     }
   };
 
-  // LISTEN CALLS
-  useEffect(() => {
-    if (!userId) return;
+  // =========================
+  // END CALL
+  // =========================
 
-    const callsRef = ref(db, "calls");
-
-    const unsubscribe = onValue(callsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      Object.entries(data).forEach(([callId, callData]) => {
-
-        // INCOMING CALL
-        if (
-          callData.receiverId === userId &&
-          callData.status === "ringing"
-        ) {
-          console.log("📲 Incoming call:", callData);
-          setIncomingCall({ callId, ...callData });
-        }
-
-        // REMOTE END CALL
-        if (
-          callData.status === "ended" &&
-          (callData.receiverId === userId || callData.callerId === userId)
-        ) {
-          console.log("Call ended remotely");
-
-          stopLocalStream(); // TURN OFF CAMERA
-          closePeer();
-          setCall(null);
-          setIncomingCall(null);
-        }
-
-      });
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
-
-  // START CALL
-  const startCall = async (friendId) => {
-    console.log("START CALL:", userId, friendId);
-
-    const callId = Date.now().toString();
+  const endCall = async (targetUserId = null) => {
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: 640,
-          height: 480,
-          frameRate: 15
-        },
-        audio: true
+
+      cleanupMedia();
+
+      setIncomingCall(null);
+
+      // remove listeners
+      listeners.current.forEach((item) => {
+        off(item.ref, item.callback);
       });
 
-      console.log("GOT STREAM");
+      listeners.current = [];
 
-      localStreamRef.current = stream;
+      // remove my data
+      await remove(ref(db, `calls/${currentUserId}`));
+      await remove(ref(db, `calls/${currentUserId}/offer`));
+      await remove(ref(db, `calls/${currentUserId}/answer`));
+      await remove(ref(db, `calls/${currentUserId}/candidate`));
 
-      const pc = createPeerConnection(
-        (remoteStream) => {
-          setCall((prev) => ({ ...prev, remoteStream }));
+      // remove target data
+      if (targetUserId) {
+
+        await remove(ref(db, `calls/${targetUserId}`));
+        await remove(ref(db, `calls/${targetUserId}/offer`));
+        await remove(ref(db, `calls/${targetUserId}/answer`));
+        await remove(ref(db, `calls/${targetUserId}/candidate`));
+      }
+
+    } catch (err) {
+      console.error("endCall error:", err);
+    }
+  };
+
+  // =========================
+  // CREATE PEER
+  // =========================
+
+  const createPeer = () => {
+
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: "stun:stun.l.google.com:19302",
         },
-        (candidate) => {
-          push(ref(db, `calls/${callId}/candidates`), candidate);
+      ],
+    });
+
+    peerConnection.current = pc;
+
+    return pc;
+  };
+
+  // =========================
+  // START CALL
+  // =========================
+
+  const startCall = async (targetUserId) => {
+
+    try {
+
+      await endCall();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      localStream.current = stream;
+
+      const pc = createPeer();
+
+      // add local tracks
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      // remote stream
+      pc.ontrack = (event) => {
+
+        const stream = event.streams[0];
+
+        if (stream) {
+          setRemoteStream(stream);
+        }
+      };
+
+      // ICE
+      pc.onicecandidate = async (event) => {
+
+        if (!event.candidate) return;
+
+        await set(
+          ref(db, `calls/${targetUserId}/candidate`),
+          JSON.stringify(event.candidate)
+        );
+      };
+
+      // create offer
+      const offer = await pc.createOffer();
+
+      await pc.setLocalDescription(offer);
+
+      await set(
+        ref(db, `calls/${targetUserId}/offer`),
+        {
+          callerId: currentUserId,
+          offer: JSON.stringify(offer),
         }
       );
 
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      // =========================
+      // LISTEN ANSWER
+      // =========================
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      const answerRef = ref(
+        db,
+        `calls/${currentUserId}/answer`
+      );
 
-      await set(ref(db, `calls/${callId}`), {
-        callerId: userId,
-        receiverId: friendId,
-        offer,
-        status: "ringing",
-        createdAt: Date.now()
+      const answerCallback = async (snapshot) => {
+
+        const data = snapshot.val();
+
+        if (!data) return;
+
+        if (!peerConnection.current) return;
+
+        if (pc.remoteDescription) return;
+
+        try {
+
+          await pc.setRemoteDescription(
+            new RTCSessionDescription(
+              JSON.parse(data.answer)
+            )
+          );
+
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      onValue(answerRef, answerCallback);
+
+      listeners.current.push({
+        ref: answerRef,
+        callback: answerCallback,
       });
 
-      setCall({ callId, localStream: stream });
+      // =========================
+      // LISTEN CANDIDATE
+      // =========================
+
+      const candidateRef = ref(
+        db,
+        `calls/${currentUserId}/candidate`
+      );
+
+      const candidateCallback = async (snapshot) => {
+
+        const data = snapshot.val();
+
+        if (!data) return;
+
+        try {
+
+          await pc.addIceCandidate(
+            new RTCIceCandidate(
+              JSON.parse(data)
+            )
+          );
+
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      onValue(candidateRef, candidateCallback);
+
+      listeners.current.push({
+        ref: candidateRef,
+        callback: candidateCallback,
+      });
 
     } catch (err) {
       console.error("startCall error:", err);
     }
   };
 
+  // =========================
   // ACCEPT CALL
-  const acceptCall = async () => {
-    if (!incomingCall) return;
+  // =========================
 
-    const { callId, offer } = incomingCall;
+  const acceptCall = async () => {
 
     try {
+
+      if (!incomingCall) return;
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: 640,
-          height: 480,
-          frameRate: 15
-        },
-        audio: true
+        video: true,
+        audio: true,
       });
 
-      localStreamRef.current = stream;
+      localStream.current = stream;
 
-      const pc = createPeerConnection(
-        (remoteStream) => {
-          setCall((prev) => ({ ...prev, remoteStream }));
-        },
-        (candidate) => {
-          push(ref(db, `calls/${callId}/candidates`), candidate);
+      const pc = createPeer();
+
+      // add local tracks
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      // remote stream
+      pc.ontrack = (event) => {
+
+        const stream = event.streams[0];
+
+        if (stream) {
+          setRemoteStream(stream);
+        }
+      };
+
+      // set remote offer
+      await pc.setRemoteDescription(
+        new RTCSessionDescription(
+          JSON.parse(incomingCall.offer)
+        )
+      );
+
+      // ICE
+      pc.onicecandidate = async (event) => {
+
+        if (!event.candidate) return;
+
+        await set(
+          ref(
+            db,
+            `calls/${incomingCall.callerId}/candidate`
+          ),
+          JSON.stringify(event.candidate)
+        );
+      };
+
+      // create answer
+      const answer = await pc.createAnswer();
+
+      await pc.setLocalDescription(answer);
+
+      await set(
+        ref(
+          db,
+          `calls/${incomingCall.callerId}/answer`
+        ),
+        {
+          answer: JSON.stringify(answer),
         }
       );
 
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      // remove old offer
+      await remove(
+        ref(db, `calls/${currentUserId}/offer`)
+      );
 
-      await pc.setRemoteDescription(offer);
+      // =========================
+      // LISTEN CANDIDATE
+      // =========================
 
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      const candidateRef = ref(
+        db,
+        `calls/${currentUserId}/candidate`
+      );
 
-      // SEND ANSWER
-      await set(ref(db, `calls/${callId}/answer`), answer);
+      const candidateCallback = async (snapshot) => {
 
-      // UPDATE STATUS
-      await set(ref(db, `calls/${callId}/status`), "accepted");
+        const data = snapshot.val();
 
-      setCall({ callId, localStream: stream });
+        if (!data) return;
+
+        try {
+
+          await pc.addIceCandidate(
+            new RTCIceCandidate(
+              JSON.parse(data)
+            )
+          );
+
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      onValue(candidateRef, candidateCallback);
+
+      listeners.current.push({
+        ref: candidateRef,
+        callback: candidateCallback,
+      });
+
       setIncomingCall(null);
 
     } catch (err) {
-      console.error(" acceptCall error:", err);
+      console.error("acceptCall error:", err);
     }
   };
 
-  //  REJECT CALL
-  const rejectCall = async () => {
-    if (!incomingCall) return;
+  // =========================
+  // LISTEN INCOMING
+  // =========================
 
-    const { callId } = incomingCall;
+  useEffect(() => {
 
-    try {
-      await set(ref(db, `calls/${callId}/status`), "ended");
-      await remove(ref(db, `calls/${callId}`));
-    } catch (err) {
-      console.error(" rejectCall error:", err);
-    }
+    if (!currentUserId) return;
 
-    stopLocalStream(); //  TURN OFF CAMERA
-    setIncomingCall(null);
-  };
+    const offerRef = ref(
+      db,
+      `calls/${currentUserId}/offer`
+    );
 
-  //  END CALL (FULL FIX)
-  const endCall = async () => {
-    if (!incomingCall && !call) return;
+    const callback = (snapshot) => {
 
-    const callId = incomingCall?.callId || call?.callId;
+      const data = snapshot.val();
 
-    try {
-      console.log(" Ending call:", callId);
+      if (!data || !data.offer) {
 
-      await set(ref(db, `calls/${callId}/status`), "ended");
+        setIncomingCall(null);
 
-      // 🧹 CLEAN DB
-      await remove(ref(db, `calls/${callId}`));
+        return;
+      }
 
-    } catch (err) {
-      console.error(" endCall error:", err);
-    }
+      setIncomingCall(data);
+    };
 
-    stopLocalStream(); // TURN OFF CAMERA
-    closePeer();
-    setCall(null);
-    setIncomingCall(null);
-  };
+    onValue(offerRef, callback);
+
+    listeners.current.push({
+      ref: offerRef,
+      callback,
+    });
+
+    return () => {
+      off(offerRef, callback);
+    };
+
+  }, [currentUserId]);
+
+  // =========================
 
   return {
     startCall,
-    acceptCall,
-    rejectCall,
-    endCall,
     incomingCall,
-    call
+    acceptCall,
+    endCall,
+    localStream: localStream.current,
+    remoteStream,
   };
 }

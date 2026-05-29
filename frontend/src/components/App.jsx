@@ -11,33 +11,35 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./authentication/PrivateRoutes";
 import ForgotPassword from "./authentication/ForgotPassword";
 import UpdateProfile from "./authentication/UpdateProfile";
-import { useDarkMode } from "../hooks/useDarkMode"; // import your hook
+import { useDarkMode } from "../hooks/useDarkMode";
 import LoadingPage from "./shared/LoadingPage";
 import CallModal from "./CallModal";
 import useCall from "../webrtc/useCall";
 import { useAuth } from "../contexts/AuthContext";
 
 function AppWrapper() {
-  const { darkMode, loading } = useDarkMode();
-  const { currentUser } = useAuth(); 
+  const { darkMode, loading, toggleDarkMode } = useDarkMode();
+  const { currentUser } = useAuth();
 
   const { acceptCall, endCall } = useCall(currentUser?.uid);
 
+  // ✅ FIX: apply theme globally (NO overwrite)
   useEffect(() => {
-    document.body.className = darkMode ? "dark-mode" : "light-mode";
+    document.body.classList.toggle("dark-mode", darkMode);
+    document.body.classList.toggle("light-mode", !darkMode);
   }, [darkMode]);
 
   if (loading) return <LoadingPage />;
 
   return (
-    <div className={darkMode ? "dark-mode" : "light-mode"}>
+    <div className="app">
+      {/* Pass toggle to children if needed */}
       <Routes>
-        {/* Drive */}
         <Route
           path="/"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <Dashboard toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
             </PrivateRoute>
           }
         />
@@ -45,12 +47,11 @@ function AppWrapper() {
           path="/folder/:folderId"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <Dashboard toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
             </PrivateRoute>
           }
         />
 
-        {/* Profile */}
         <Route
           path="/user"
           element={
@@ -68,7 +69,6 @@ function AppWrapper() {
           }
         />
 
-        {/* Message */}
         <Route
           path="/message"
           element={
@@ -78,7 +78,6 @@ function AppWrapper() {
           }
         />
 
-        {/* Schedule */}
         <Route
           path="/schedule"
           element={
@@ -104,7 +103,6 @@ function AppWrapper() {
         <Route path="/loading" element={<LoadingPage />} />
       </Routes>
 
-      {/* Call UI */}
       <CallModal onAccept={acceptCall} onEnd={endCall} />
     </div>
   );

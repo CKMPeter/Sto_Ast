@@ -1,8 +1,15 @@
-require("dotenv").config();
-const express = require("express");
-const https = require("https");
 const fs = require("fs");
 const path = require("path");
+const express = require("express");
+const https = require("https");
+
+// Load .env.local first if it exists, otherwise .env
+const envLocalPath = path.join(__dirname, ".env.local");
+const envPath = fs.existsSync(envLocalPath)
+  ? envLocalPath
+  : path.join(__dirname, ".env");
+
+require("dotenv").config({ path: envPath });
 
 // Import Controllers
 const { aiAnalyse, chatWithBot } = require("./controllers/GeminiAIController");
@@ -29,19 +36,18 @@ const {
   describeImage,
   aiRename,
   aiPreview,
+  createMainTaskAI
 } = require("./controllers/openAIController");
 const {
   getDarkMode,
   setDarkMode,
 } = require("./controllers/DarkModeController");
-
 const {
   addSchedule,
   fetchSchedulesByDate,
   updateSchedule,
-  deleteSchedule
+  deleteSchedule,
 } = require("./controllers/ScheduleController");
-
 const {
   getFriends,
   getMessages,
@@ -49,7 +55,7 @@ const {
   getFriendRequests,
   sendFriendRequest,
   acceptFriendRequest,
-  rejectFriendRequest
+  rejectFriendRequest,
 } = require("./controllers/FriendController");
 
 const {
@@ -63,6 +69,19 @@ const {
   deleteSubTask,
   getTaskLogs
 } = require("./controllers/TaskController");
+
+const {
+  createGroup,
+  getUserGroups,
+  getGroupById,
+  updateGroup,
+  deleteGroup,
+  addMember,
+  removeMember,
+  addTaskToGroup,
+  getGroupMembers
+} = require("./controllers/GroupController");
+
 
 // Express setup
 const app = express();
@@ -79,19 +98,20 @@ app.put("/api/user/theme", setDarkMode);
 app.put("/api/user", updateUser);
 
 // --- AI API ---
-app.post("/api/ai", aiAnalyse); // AI analysis (summary, keywords, object ID)
+app.post("/api/ai", aiAnalyse);
 app.post("/api/aiRename", aiRename);
 app.post("/api/aiPreview", aiPreview);
-app.post("/api/chatbot", chatWithBot); // Chatbot interaction
-app.post("/api/describe-image", describeImage); // Image description
+app.post("/api/chatbot", chatWithBot);
+app.post("/api/describe-image", describeImage);
+app.post("/api/create-task", createMainTaskAI);
 
 // --- Folder API ---
-app.post("/api/folders", createFolder); // Create folder
-app.get("/api/folders/user", fetchAllUserFolders); // Fetch all files by user
-app.put("/api/folders/:folderId", updateFolder); // Update folder
-app.delete("/api/folders/:folderId", deleteFolder); // Delete folder
-app.get("/api/folders/:folderId", fetchFolderById); // Fetch folder by ID
-app.get("/api/folders", fetchFoldersByParentId); // Fetch folders by parentId
+app.post("/api/folders", createFolder);
+app.get("/api/folders/user", fetchAllUserFolders);
+app.put("/api/folders/:folderId", updateFolder);
+app.delete("/api/folders/:folderId", deleteFolder);
+app.get("/api/folders/:folderId", fetchFolderById);
+app.get("/api/folders", fetchFoldersByParentId);
 
 
 // --- File API ---
@@ -105,32 +125,26 @@ app.get("/api/files/:fileId", fetchFileOrFolderById); // Fetch file or folder by
 
 // Fetch files by folderPath (query param)
 app.get("/api/files", fetchFilesByFolderPath);
-
-// Fetch files by folderId (distinct route to avoid conflict)
 app.get("/api/folders/:folderId/files", fetchFilesByFolderId);
   
 
 
-// Scheduling API
+// --- Scheduling API ---
 app.post("/api/schedules", addSchedule);
 app.get("/api/schedules", fetchSchedulesByDate);
 app.put("/api/schedules/:scheduleId", updateSchedule);
 app.delete("/api/schedules/:scheduleId", deleteSchedule);
-//app.post("/api/schedulesQueue");
 
 // --- Friends API ---
-app.get('/api/users/:userid/friends', getFriends);
-app.get('/api/users/:userid/requests', getFriendRequests);
-
-app.post('/api/users/friend-request', sendFriendRequest);
-app.post('/api/users/friend-request/accept', acceptFriendRequest);
-app.post('/api/users/friend-request/reject', rejectFriendRequest);
-
+app.get("/api/users/:userid/friends", getFriends);
+app.get("/api/users/:userid/requests", getFriendRequests);
+app.post("/api/users/friend-request", sendFriendRequest);
+app.post("/api/users/friend-request/accept", acceptFriendRequest);
+app.post("/api/users/friend-request/reject", rejectFriendRequest);
 app.get("/api/users/search", searchUsers);
 
 // --- Messages API ---
-app.get('/api/messages/:userid/:friendid', getMessages);
-
+app.get("/api/messages/:userid/:friendid", getMessages);
 // --- Tasks API ---
 
 // Main Tasks
@@ -146,6 +160,17 @@ app.get("/api/tasks/:taskId/subtasks", getSubTasks);
 app.put("/api/tasks/:taskId/subtasks/:subTaskId",updateSubTask);
 
 app.delete("/api/tasks/:taskId/subtasks/:subTaskId",deleteSubTask);
+
+// Group API
+app.post("/api/groups", createGroup);
+app.get("/api/groups/user/:userId", getUserGroups);
+app.get("/api/groups/:groupId", getGroupById);
+app.put("/api/groups/:groupId", updateGroup);
+app.delete("/api/groups/:groupId", deleteGroup);
+app.post("/api/groups/:groupId/add-member", addMember);
+app.post("/api/groups/:groupId/add-task", addTaskToGroup);
+app.post("/api/groups/:groupId/remove-member", removeMember);
+app.get("/api/groups/:groupId/members", getGroupMembers);
   
 // Task Logs
 app.get("/api/tasks/:taskId/logs", getTaskLogs);
