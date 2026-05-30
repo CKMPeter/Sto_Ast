@@ -83,16 +83,19 @@ export function Message() {
   // }, [messages]);
 
   // GROUP CALL LISTENER
-  useEffect(() => {
-    if (!currentUser?.uid || groups.length === 0) return;
+  // Dùng groupIds string làm dep để tránh re-subscribe mỗi khi groups object thay đổi
+  const groupIdsKey = groups.map((g) => g.id).join(",");
 
-    const groupIds = groups.map((g) => g.id);
+  useEffect(() => {
+    if (!currentUser?.uid || !groupIdsKey) return;
+
+    const groupIds = groupIdsKey.split(",");
     const cleanup = listenGroupInvites(groupIds);
 
     return () => {
       cleanup?.();
     };
-  }, [currentUser?.uid, groups]);
+  }, [currentUser?.uid, groupIdsKey]);
 
   // SEND TEXT
   const handleSend = async () => {

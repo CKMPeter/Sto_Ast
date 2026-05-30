@@ -55,6 +55,7 @@ class GroupController {
           groups: groups.map((group) => ({
             id: group.id,
             name: group.name,
+            members: group.members || [],
           })),
         },
       });

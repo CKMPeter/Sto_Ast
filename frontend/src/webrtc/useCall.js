@@ -135,6 +135,9 @@ export default function useCall(currentUserId) {
       setCallState("active");
       setIncomingCall(null);
 
+      // Set targetIdRef để endCall biết cần signal cho ai (caller)
+      targetIdRef.current = incoming.callerId;
+
       // 1. Lấy camera/mic
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localRef.current = stream;
