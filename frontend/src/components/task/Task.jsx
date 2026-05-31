@@ -29,6 +29,7 @@ import {
   fetchGroupMembersService,
   updateScheduleService,
   createTaskUsingAIService,
+  deleteScheduleService,
 } from "./services/taskService";
 
 import {useTasks}  from "../../hooks/taskHook/useTask";
@@ -472,6 +473,26 @@ export default function Task() {
         currentUser.uid, // owner
         ...(editingTask.group?.members || []).map(member => member.uid)
       ];
+
+      const nExpireAt = mainTaskExpireAt
+        ? new Date(mainTaskExpireAt).toISOString()
+        : null;
+
+      const oldExpireAt = editingTask.expireAt       
+       ? new Date(editingTask.expireAt).toISOString()
+        : null;
+
+        let newScheduleId = editingTask.scheduleId;
+        if (nExpireAt !== oldExpireAt) {
+          console.log("Expire date changed, updating schedule...");
+          deleteScheduleService(getIdToken, editingTask.scheduleId);
+          newScheduleId = await updateSchedule(
+            `Task: ${editingTask.name}`,
+            mainTaskExpireAt || new Date().toISOString().split("T")[0],
+            9 * 60,
+            currentUser.uid,
+          );
+        }
       const data = await updateMainTask(editingTask.id, {
         name: editingTask.name,
         group: editingTask.group,
@@ -480,6 +501,7 @@ export default function Task() {
           : null,
         description: mainTaskDescription,
         visibility: visibility,
+        scheduleId: newScheduleId || editingTask.scheduleId,
       });
 
       if (data.success) {
