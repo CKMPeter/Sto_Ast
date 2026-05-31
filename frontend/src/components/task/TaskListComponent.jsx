@@ -1,9 +1,23 @@
 import React from "react";
 
 export default function TaskListComponent({ tasks }) {
-  const expireAt =
-    new Date(tasks[0]?.expireAt?._seconds * 1000).toLocaleDateString() ||
-    "No Date";
+  const formatDate = (expireAt) => {
+    if (!expireAt) return "No Expiration";
+
+    if (typeof expireAt === "string") {
+      return new Date(expireAt).toLocaleDateString();
+    }
+
+    if (typeof expireAt.toDate === "function") {
+      return expireAt.toDate().toLocaleDateString();
+    }
+
+    if (expireAt._seconds) {
+      return new Date(expireAt._seconds * 1000).toLocaleDateString();
+    }
+
+    return "Invalid Date";
+  };
   return (
     <div>
       {tasks.map((task) => (
@@ -22,9 +36,7 @@ export default function TaskListComponent({ tasks }) {
           <p>Progress: {task.progress}%</p>
           <p>
             Expire At:{" "}
-            {task.expireAt
-              ? new Date(task.expireAt.split("T")[0]).toLocaleDateString()
-              : "No Expiration0"}
+            {formatDate(task.expireAt)}
           </p>
         </div>
       ))}

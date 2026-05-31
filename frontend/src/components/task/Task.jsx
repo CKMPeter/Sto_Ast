@@ -21,7 +21,7 @@ import {
   addTaskToGroupService,
   fetchGroupMembersService,
   addSubTaskTimeLogService,
-  updateScheduleService
+  updateScheduleService,
 } from "./services/taskService";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
@@ -154,9 +154,17 @@ export default function Task() {
 
         const scheduleId = uuidv4();
         const title = `Task: ${mainTaskName}`;
-        const formattedDate = mainTaskExpireAt ? mainTaskExpireAt : new Date().toISOString().split("T")[0];
+        const formattedDate = mainTaskExpireAt
+          ? mainTaskExpireAt
+          : new Date().toISOString().split("T")[0];
         const startMinutes = 9 * 60; // Default to 9:00 AM
-        updateSchedule(scheduleId, title, formattedDate, startMinutes, currentUser.uid);
+        updateSchedule(
+          scheduleId,
+          title,
+          formattedDate,
+          startMinutes,
+          currentUser.uid,
+        );
       }
     } catch (error) {
       console.error("Create main task error:", error);
@@ -258,9 +266,17 @@ export default function Task() {
 
       const scheduleId = uuidv4();
       const title = `Task: ${editingTask.name}`;
-      const formattedDate = mainTaskExpireAt ? mainTaskExpireAt : new Date().toISOString().split("T")[0];
+      const formattedDate = mainTaskExpireAt
+        ? mainTaskExpireAt
+        : new Date().toISOString().split("T")[0];
       const startMinutes = 9 * 60; // Default to 9:00 AM
-      updateSchedule(scheduleId, title, formattedDate, startMinutes, currentUser.uid);
+      updateSchedule(
+        scheduleId,
+        title,
+        formattedDate,
+        startMinutes,
+        currentUser.uid,
+      );
       //console.log("editingTask.group:", editingTask.group);
       if (updatedTask.success) {
         //console.log("Task added to group successfully");
@@ -375,7 +391,7 @@ export default function Task() {
 
       if (data.success) {
         setTaskLog(data.data);
-      } 
+      }
       console.log("Fetched task logs:", data.data);
     } catch (error) {
       //console.log("Fail to fetch log", error);
@@ -383,17 +399,62 @@ export default function Task() {
   };
 
   // =========================
-  // CREATE USING AI
+  // CREATE TASK USING AI
   // =========================
-  const createUsingAI = async (description) => {
+  const createTaskUsingAI = async (description) => {
+    //console.log("Creating task using AI with description:", description);
     try {
       const data = await createTaskUsingAIService(getIdToken, {
         description,
         userId: currentUser.uid,
       });
+      //console.log("before setting AI generated task:", data.result);
       setAiGeneratedTask(data.result);
+
+      //console.log("after setting AI generated task:", data.result);
+      if (data.result) {
+        try {
+          //clean up the response to extract JSON
+          const cleanedJson = data.result
+            .replace(/^```json\s*/i, "")
+            .replace(/```$/i, "")
+            .trim();
+
+          const task = JSON.parse(cleanedJson);
+
+          console.log("AI generated task:", task);
+
+          const subTasks = task.subTasks;
+
+          const { subTasks: _, ...mainTask } = task;
+
+          console.log("AI generated subtasks:", subTasks);
+          console.log("AI generated main task:", mainTask);
+
+          // Create main task
+          const mainTaskData = await createMainTaskService(getIdToken, {
+            name: mainTask.name,
+            userId: currentUser.uid,
+            expireAt: mainTask.expireAt ? new Date(mainTask.expireAt).toISOString() : null,
+            description: mainTask.description,
+          });
+
+          for (let sTask of subTasks) {
+            await createSubTaskService(getIdToken, mainTaskData.data.id, {
+              name: sTask.name,
+              status: sTask.status || "To do",
+              timeLogged: 0,
+              assignedTo: null,
+              description: sTask.description || "",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to parse AI response:", error);
+          console.log("Raw AI response:", data.result);
+        }
+      }
     } catch (error) {
-      console.error("Create using AI error:", error);
+      console.error("Create task using AI error:", error);
     }
   };
 
@@ -472,12 +533,23 @@ export default function Task() {
   // =========================
   // UPDATE SCHEDULE IN REALTIME DB
   // =========================
-  const updateSchedule = async (scheduleId, title, formattedDate, startMinutes, userId) => {
+  const updateSchedule = async (
+    scheduleId,
+    title,
+    formattedDate,
+    startMinutes,
+    userId,
+  ) => {
     try {
-      const data = await updateScheduleService(getIdToken, title, formattedDate, startMinutes, userId);
+      const data = await updateScheduleService(
+        getIdToken,
+        title,
+        formattedDate,
+        startMinutes,
+        userId,
+      );
       if (data.success) {
         // Handle successful update
-
       }
     } catch (error) {
       console.error("Update schedule error:", error);
@@ -885,7 +957,7 @@ export default function Task() {
             </button>
 
             <button
-              onClick={() => createUsingAI(aiDescription)}
+              onClick={() => createTaskUsingAI(aiDescription)}
               style={styleSheet.button}
             >
               Create Using AI
@@ -1152,8 +1224,6 @@ export default function Task() {
           </div>
         </div>
       )}
-
-
     </div>
   );
 }
@@ -1204,6 +1274,8 @@ const styleSheet = {
     borderRadius: "5px",
     backgroundColor: "#fff",
     padding: "10px",
+    maxHeight: "50vh",
+    overflowY: "auto",
   },
 
   leftContainer: {

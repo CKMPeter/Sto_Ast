@@ -153,6 +153,8 @@ const createMainTaskAI = async (req, res) => {
       });
     }
 
+    const today = new Date();
+
     const prompt = `
       Generate a task structure in JSON format.
 
@@ -166,13 +168,14 @@ const createMainTaskAI = async (req, res) => {
         "subTasks": [
           {
             "name": "",
-            "status": "To do"
+            "status": "To do",
+            "description": ""
           }
         ]
       }
 
       Description:
-      ${description}
+      ${description}, today is ${today.toDateString()}.
     `;
 
     const messages = [
@@ -187,7 +190,7 @@ const createMainTaskAI = async (req, res) => {
       messages,
       max_tokens: 300,
     });
-    console.log("AI create task response:", response);
+    console.log("AI create task response:", response.choices[0].message.content.trim());
     res.json({ result: response.choices[0].message.content.trim() });
   } catch (error) {
     console.error("Create main task error:", error);
