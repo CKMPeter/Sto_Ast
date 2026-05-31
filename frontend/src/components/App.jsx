@@ -6,22 +6,18 @@ import { Message } from "./message/Message";
 import Schedule from "./schedule/Schedule";
 import Task from "./task/Task";
 import { AuthProvider } from "../contexts/AuthContext";
-import { CallProvider } from "../contexts/CallContext";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./authentication/PrivateRoutes";
 import ForgotPassword from "./authentication/ForgotPassword";
 import UpdateProfile from "./authentication/UpdateProfile";
 import { useDarkMode } from "../hooks/useDarkMode";
 import LoadingPage from "./shared/LoadingPage";
-import CallModal from "./CallModal";
-import useCall from "../webrtc/useCall";
 import { useAuth } from "../contexts/AuthContext";
 
 function AppWrapper() {
   const { darkMode, loading, toggleDarkMode } = useDarkMode();
   const { currentUser } = useAuth();
 
-  const { acceptCall, endCall } = useCall(currentUser?.uid);
 
   // ✅ FIX: apply theme globally (NO overwrite)
   useEffect(() => {
@@ -103,7 +99,6 @@ function AppWrapper() {
         <Route path="/loading" element={<LoadingPage />} />
       </Routes>
 
-      <CallModal onAccept={acceptCall} onEnd={endCall} />
     </div>
   );
 }
@@ -112,9 +107,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <CallProvider>
           <AppWrapper />
-        </CallProvider>
       </AuthProvider>
     </Router>
   );

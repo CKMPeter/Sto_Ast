@@ -1,65 +1,81 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { styled } from "@mui/material/styles";
 
-export default function CallModalGroup({
-  localStream,
-  remoteStreams,
-  endCall,
-}) {
+// ─── Component riêng để gán srcObject đúng cách ─────────────────────────────
+// Dùng useEffect thay vì ref callback để đảm bảo srcObject được gán/cập nhật
+// mỗi khi stream prop thay đổi (ref callback chỉ chạy lúc mount/unmount).
+function RemoteVideoItem({ stream }) {
+  const videoRef = useRef(null);
 
-  // convert object -> array
-  const remoteStreamList = Object.values(remoteStreams || {});
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !stream) return;
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+  }, [stream]);
+
+  return (
+    <VideoCard>
+      <RemoteVideo
+        ref={videoRef}
+        autoPlay
+        playsInline
+      />
+    </VideoCard>
+  );
+}
+
+// ─── Component riêng cho local video ────────────────────────────────────────
+function LocalVideoItem({ stream }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !stream) return;
+    if (video.srcObject !== stream) {
+      video.srcObject = stream;
+    }
+  }, [stream]);
+
+  return (
+    <LocalVideo
+      ref={videoRef}
+      autoPlay
+      muted
+      playsInline
+    />
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+export default function CallModalGroup({ localStream, remoteStreams, endCall }) {
+  // remoteStreams là object { uid: MediaStream }
+  const remoteEntries = Object.entries(remoteStreams || {});
 
   return (
     <Overlay>
       <CallContainer>
 
         {/* ===== REMOTE VIDEOS ===== */}
-        <Grid>
+        <Grid count={remoteEntries.length}>
 
-          {remoteStreamList.length === 0 && (
-            <WaitingText>
-              Waiting for participants...
-            </WaitingText>
+          {remoteEntries.length === 0 && (
+            <WaitingText>Waiting for participants...</WaitingText>
           )}
 
-          {remoteStreamList.map((stream, index) => (
-            <VideoCard key={index}>
-              <RemoteVideo
-                autoPlay
-                playsInline
-                ref={(video) => {
-                  if (video && stream) {
-                    video.srcObject = stream;
-                  }
-                }}
-              />
-            </VideoCard>
+          {remoteEntries.map(([uid, stream]) => (
+            <RemoteVideoItem key={uid} stream={stream} />
           ))}
 
         </Grid>
 
         {/* ===== LOCAL VIDEO ===== */}
-        {localStream && (
-          <LocalVideo
-            autoPlay
-            muted
-            playsInline
-            ref={(video) => {
-              if (video && localStream) {
-                video.srcObject = localStream;
-              }
-            }}
-          />
-        )}
+        {localStream && <LocalVideoItem stream={localStream} />}
 
         {/* ===== CONTROL ===== */}
         <ControlBar>
-
-          <EndButton onClick={endCall}>
-            ⛔ End
-          </EndButton>
-
+          <EndButton onClick={endCall}>⛔ End</EndButton>
         </ControlBar>
 
       </CallContainer>
@@ -82,9 +98,13 @@ const CallContainer = styled("div")(() => ({
   height: "100%",
 }));
 
-const Grid = styled("div")(() => ({
+const Grid = styled("div")(({ count }) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gridTemplateColumns: count <= 1
+    ? "1fr"
+    : count <= 4
+    ? "repeat(2, 1fr)"
+    : "repeat(3, 1fr)",
   gap: "12px",
   padding: "20px",
   width: "100%",
@@ -106,6 +126,7 @@ const RemoteVideo = styled("video")(() => ({
   height: "100%",
   objectFit: "cover",
   background: "#222",
+  display: "block",
 }));
 
 const LocalVideo = styled("video")(() => ({
@@ -119,6 +140,7 @@ const LocalVideo = styled("video")(() => ({
   objectFit: "cover",
   background: "#111",
   zIndex: 10000,
+  display: "block",
 }));
 
 const ControlBar = styled("div")(() => ({

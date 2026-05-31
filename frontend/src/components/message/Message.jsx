@@ -7,7 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import useFriends from "../../hooks/messageHook/useFriends";
 import useChat from "../../hooks/messageHook/useChat";
 import useGroups from "../../hooks/messageHook/useGroups";
-import CallModal from "./CallModal";
+import CallModal, { IncomingCallNotification } from "./CallModal";
 import { styled } from "@mui/material/styles";
 import useCallGroup from "../../webrtc/useCallGroup";
 import CallModalGroup from "./CallModalGroup";
@@ -18,9 +18,11 @@ export function Message() {
   // CALL
   const {
     startCall,
-    incomingCall,
     acceptCall,
+    rejectCall,
     endCall,
+    incomingCall,
+    callState,
     localStream,
     remoteStream,
   } = useCall(currentUser?.uid);
@@ -28,10 +30,12 @@ export function Message() {
   // GROUP CALL
   const {
     startGroupCall,
-    listenIncoming: listenGroupIncoming,
-    acceptCall: acceptGroupCall,
+    acceptGroupCall,
+    rejectGroupCall,
+    endGroupCall,
+    listenGroupInvites,
     incomingCall: incomingGroupCall,
-    endCall: endGroupCall,
+    callState: groupCallState,
     localStream: groupLocalStream,
     remoteStreams: groupRemoteStreams,
   } = useCallGroup(currentUser?.uid);
@@ -79,17 +83,19 @@ export function Message() {
   // }, [messages]);
 
   // GROUP CALL LISTENER
+  // Dùng groupIds string làm dep để tránh re-subscribe mỗi khi groups object thay đổi
+  const groupIdsKey = groups.map((g) => g.id).join(",");
+
   useEffect(() => {
-    if (!currentUser?.uid || groups.length === 0) return;
+    if (!currentUser?.uid || !groupIdsKey) return;
 
-    const allMembers = [...new Set(groups.flatMap((g) => g.members || []))];
-
-    listenGroupIncoming(allMembers);
+    const groupIds = groupIdsKey.split(",");
+    const cleanup = listenGroupInvites(groupIds);
 
     return () => {
-      endGroupCall();
+      cleanup?.();
     };
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, groupIdsKey]);
 
   // SEND TEXT
   const handleSend = async () => {
@@ -356,33 +362,11 @@ export function Message() {
             )}
 
             {selectedUserId && (
-              <CallBtn onClick={() => startCall(selectedUserId)}>
+              <CallBtn onClick={() => startCall(selectedUserId, currentUser?.displayName || currentUser?.email)}>
                 📹 Call
               </CallBtn>
             )}
           </Header>
-
-          {/* INCOMING CALL */}
-          {incomingCall && (
-            <IncomingBox>
-              <p>📞 {incomingCall.callerId}</p>
-
-              <button onClick={acceptCall}>Accept</button>
-
-              <button onClick={endCall}>Reject</button>
-            </IncomingBox>
-          )}
-
-          {/* INCOMING GROUP CALL */}
-          {incomingGroupCall && (
-            <IncomingBox>
-              <p>📞 Group call incoming</p>
-
-              <button onClick={acceptGroupCall}>Accept</button>
-
-              <button onClick={endGroupCall}>Reject</button>
-            </IncomingBox>
-          )}
 
           {/* CHAT BODY */}
           <ChatBody>
@@ -477,17 +461,39 @@ export function Message() {
           </Footer>
         </ChatArea>
       </Container>
-      {/* CALL MODAL */}
-      {((localStream && localStream.current) || remoteStream) && (
-        <CallModal
-          localStream={localStream?.current}
-          remoteStream={remoteStream}
-          endCall={endCall}
+      {/* INCOMING CALL NOTIFICATION (popup góc phải, như Messenger) */}
+      {callState === "incoming" && incomingCall && (
+        <IncomingCallNotification
+          incomingCall={incomingCall}
+          onAccept={acceptCall}
+          onReject={rejectCall}
         />
       )}
+
+      {/* INCOMING GROUP CALL NOTIFICATION */}
+      {groupCallState === "incoming" && incomingGroupCall && (
+        <IncomingCallNotification
+          incomingCall={{
+            callerName: `${incomingGroupCall.callerName} · ${incomingGroupCall.groupName}`,
+            callerId: incomingGroupCall.callerId,
+          }}
+          onAccept={acceptGroupCall}
+          onReject={rejectGroupCall}
+        />
+      )}
+
+      {/* ACTIVE 1-1 CALL MODAL */}
+      {(callState === "active" || callState === "calling") && (
+        <CallModal
+          localStream={localStream}
+          remoteStream={remoteStream}
+          onEnd={endCall}
+          callerName={selectedFriend?.email}
+        />
+      )}
+
       {/* GROUP CALL MODAL */}
-      {(groupLocalStream ||
-        Object.keys(groupRemoteStreams || {}).length > 0) && (
+      {(groupCallState === "calling" || groupCallState === "active") && (
         <CallModalGroup
           localStream={groupLocalStream}
           remoteStreams={groupRemoteStreams}
