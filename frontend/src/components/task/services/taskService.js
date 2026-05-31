@@ -228,3 +228,25 @@ export const addSubTaskTimeLogService = async (
   );
   return await response.json();
 }
+
+export const updateScheduleService = async (getIdToken, title, formattedDate, startMinutes, userId) => {
+  const token = await getIdToken();
+  const response = await fetch(
+    `${BACKEND_URL}/api/schedules`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title,
+        date: formattedDate,
+        startMinutes,
+        duration: 60, // Default duration in minutes
+        userId,
+      }),
+    },
+  );
+  return await response.json();
+}

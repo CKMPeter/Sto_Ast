@@ -1,6 +1,5 @@
-const { db, realtimeDatabase  } = require("../firebase-admin-setup");
+const { db, realtimeDatabase } = require("../firebase-admin-setup");
 const { v4: uuidv4 } = require("uuid");
-
 
 // ==========================
 // ADD SCHEDULE
@@ -18,41 +17,40 @@ exports.addSchedule = async (req, res) => {
       startMinutes,
       duration,
       title,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
-    // ✅ 1. Save to Firestore (main DB)
+    // 1. Save to Firestore (main DB)
     await db.collection("schedules").doc(scheduleId).set(schedule);
 
-    // ✅ 2. Mirror to Realtime DB
-    const realtimeDatabaseRef = realtimeDatabase.ref(`users/${userId}/scheduleQueue/${date}/${scheduleId}`);
+    //  2. Mirror to Realtime DB
+    const realtimeDatabaseRef = realtimeDatabase.ref(
+      `users/${userId}/scheduleQueue/${date}/${scheduleId}`,
+    );
 
     await realtimeDatabaseRef.set({
       title,
       start: startMinutes,
-      duration
+      duration,
     });
 
     res.status(200).json({
       success: true,
-      schedule
+      schedule,
     });
-
   } catch (error) {
     console.error("Add schedule error:", error);
     res.status(500).json({ error: "Failed to add schedule" });
   }
 };
 
-
 // ==========================
 // FETCH BY DATE (Firestore only)
 // ==========================
 exports.fetchSchedulesByDate = async (req, res) => {
   try {
-
-      console.log("FULL QUERY:", req.query);
-      console.log("DATE VALUE:", req.query.date);
+    console.log("FULL QUERY:", req.query);
+    console.log("DATE VALUE:", req.query.date);
 
     const { date, userId } = req.query;
 
@@ -66,19 +64,17 @@ exports.fetchSchedulesByDate = async (req, res) => {
       .where("userId", "==", userId)
       .get();
 
-    const events = snapshot.docs.map(doc => ({
+    const events = snapshot.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
     }));
 
     res.json({ events });
-
   } catch (error) {
     console.error("Schedule fetch error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
-
 
 // ==========================
 // UPDATE SCHEDULE
@@ -97,28 +93,26 @@ exports.updateSchedule = async (req, res) => {
 
     const oldData = docSnap.data();
 
-    // ✅ 1. Update Firestore
+    //  1. Update Firestore
     await docRef.update(updateData);
 
-    // ✅ 2. Sync to Realtime DB
+    //  2. Sync to Realtime DB
     const realtimeDatabaseRef = realtimeDatabase.ref(
-      `users/${oldData.userId}/scheduleQueue/${oldData.date}/${scheduleId}`
+      `users/${oldData.userId}/scheduleQueue/${oldData.date}/${scheduleId}`,
     );
 
     await realtimeDatabaseRef.update({
       title: updateData.title ?? oldData.title,
       start: updateData.startMinutes ?? oldData.startMinutes,
-      duration: updateData.duration ?? oldData.duration
+      duration: updateData.duration ?? oldData.duration,
     });
 
     res.status(200).json({ success: true });
-
   } catch (error) {
     console.error("Update schedule error:", error);
     res.status(500).json({ error: "Failed to update schedule" });
   }
 };
-
 
 // ==========================
 // DELETE SCHEDULE
@@ -136,20 +130,59 @@ exports.deleteSchedule = async (req, res) => {
 
     const data = docSnap.data();
 
-    // ✅ 1. Delete from Firestore
+    //  1. Delete from Firestore
     await docRef.delete();
 
-    // ✅ 2. Delete from Realtime DB
+    //  2. Delete from Realtime DB
     const realtimeDatabaseRef = realtimeDatabase.ref(
-      `users/${data.userId}/scheduleQueue/${data.date}/${scheduleId}`
+      `users/${data.userId}/scheduleQueue/${data.date}/${scheduleId}`,
     );
 
     await realtimeDatabaseRef.remove();
 
     res.status(200).json({ success: true });
-
   } catch (error) {
     console.error("Delete schedule error:", error);
     res.status(500).json({ error: "Failed to delete schedule" });
   }
 };
+
+// =========================
+// FETCH ADDED SCHEDULES AFTER EXPIRED TIME
+// =========================
+
+// exports.addedSchedulesAfterExpiredTime = async (req, res) => {
+//   try {
+//     const { userId, date } = req.query;
+
+//     if (!userId || !date === undefined) {
+//       return res.status(400).json({
+//         error: "userId, date and expiredTime are required",
+//       });
+//     }
+
+//     const snapshot = await db
+//       .collection("schedules")
+//       .where("userId", "==", userId)
+//       .where("date", "==", date)
+//       .where("startMinutes", ">", Number(expiredTime))
+//       .orderBy("startMinutes")
+//       .get();
+
+//     const schedules = snapshot.docs.map((doc) => ({
+//       id: doc.id,
+//       ...doc.data(),
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       schedules,
+//     });
+//   } catch (error) {
+//     console.error("Fetch added schedules error:", error);
+
+//     res.status(500).json({
+//       error: "Failed to fetch added schedules",
+//     });
+//   }
+// };

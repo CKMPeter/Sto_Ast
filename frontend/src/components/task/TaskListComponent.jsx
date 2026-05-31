@@ -23,8 +23,8 @@ export default function TaskListComponent({ tasks }) {
           <p>
             Expire At:{" "}
             {task.expireAt
-              ? new Date(task.expireAt._seconds * 1000).toLocaleDateString()
-              : "No Date"}
+              ? new Date(task.expireAt.split("T")[0]).toLocaleDateString()
+              : "No Expiration0"}
           </p>
         </div>
       ))}

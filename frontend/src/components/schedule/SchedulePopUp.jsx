@@ -3,7 +3,6 @@ import { useAuth } from "../../contexts/AuthContext";
 // import { useScheduleQueue } from "../../hooks/scheduleHook/useScheduleQueue";
 
 export default function SchedulePopUp({ date, close, userId }) {
-
   //const { addEvent: addToQueue, getEventsByDate, deleteEvent: deleteFromQueue } = useScheduleQueue();
   const { getIdToken, currentUser } = useAuth();
   const timelineRef = useRef(null);
@@ -22,8 +21,15 @@ export default function SchedulePopUp({ date, close, userId }) {
   // New state for linked files
   const [linkedFiles, setLinkedFiles] = useState([]);
 
-  function handleTimelineClick(e) {
+  function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
+    return `${year}-${month}-${day}`;
+  }
+
+  function handleTimelineClick(e) {
     const container = timelineRef.current;
     const rect = container.getBoundingClientRect();
 
@@ -44,238 +50,236 @@ export default function SchedulePopUp({ date, close, userId }) {
     const displayHour = hour % 12 === 0 ? 12 : hour % 12;
     const ampm = hour < 12 ? "AM" : "PM";
 
-    alert(`Selected Time: ${displayHour}:${minute
-      .toString()
-      .padStart(2, "0")} ${ampm}`);
+    alert(
+      `Selected Time: ${displayHour}:${minute
+        .toString()
+        .padStart(2, "0")} ${ampm}`,
+    );
     setIsTimeSelected(true);
     console.log(isTimeSelected);
   }
 
-async function addEvent() {
-  if (!eventTitle.trim()) {
-    alert("Enter event title");
-    return;
-  }
+  async function addEvent() {
+    if (!eventTitle.trim()) {
+      alert("Enter event title");
+      return;
+    }
 
-  if (clickedMinutes === null) {
-    alert("Select time first");
-    return;
-  }
+    if (clickedMinutes === null) {
+      alert("Select time first");
+      return;
+    }
 
-  try {
-    const token = await getIdToken();
-    const formattedDate = date.toISOString().split("T")[0];
+    try {
+      const token = await getIdToken();
+      const formattedDate = formatLocalDate(date);
 
-    const payload = {
-      title: eventTitle.trim(),        // ✅ from input
-      date: formattedDate,
-      startMinutes: clickedMinutes,    // ✅ from time input
-      duration: 60,
-      userId: currentUser.uid
-    };
+      const payload = {
+        title: eventTitle.trim(), // ✅ from input
+        date: formattedDate,
+        startMinutes: clickedMinutes, // ✅ from time input
+        duration: 60, // ✅ default duration
+        userId: currentUser.uid,
+      };
 
-    const res = await fetch(
-      `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+      const res = await fetch(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload)
-      }
-    );
+      );
 
-    
+      if (!res.ok) throw new Error("Failed to create schedule");
 
-    if (!res.ok) throw new Error("Failed to create schedule");
+      const data = await res.json();
 
-    const data = await res.json();
+      setEvents((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          start: payload.startMinutes,
+          duration: payload.duration,
+          title: payload.title,
+        },
+      ]);
 
-    setEvents(prev => [
-      ...prev,
-      {
-        id: data.id,
-        start: payload.startMinutes,
-        duration: payload.duration,
-        title: payload.title
-      }
-    ]);
-
-    // ✅ reset form
-    setEventTitle("");
-    setClickedMinutes(null);
-    setIsTimeSelected(false);
-
-  } catch (err) {
-    console.error("Schedule API error", err);
-  }
-}
-
-async function loadLinkedFiles() {
-  try {
-    const token = await getIdToken();
-    const formattedDate = date.toISOString().split("T")[0];
-
-    const res = await fetch(
-      `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/by-date?date=${formattedDate}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!res.ok) throw new Error("Failed to fetch linked files");
-
-    const data = await res.json();
-
-    setLinkedFiles(data.files || []);
-
-  } catch (err) {
-    console.error("Error loading linked files:", err);
-  }
-}
-
-async function loadEvents() {
-  try {
-    const token = await getIdToken();
-    const formattedDate = date.toISOString().split("T")[0];
-
-    const res = await fetch(
-      `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules?date=${formattedDate}&userId=${currentUser.uid}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!res.ok) throw new Error("Failed to load schedules");
-
-    const data = await res.json();
-
-    const backendEvents = (data.events || []).map(e => ({
-      id: e.id,
-      start: Number(e.startMinutes ?? e.start ?? 0), // ✅ SAFE
-      duration: Number(e.duration ?? 60),
-      title: e.title || "Untitled"
-    }));
-
-    setEvents(backendEvents);
-
-  } catch (err) {
-    console.error("Load schedules error:", err);
-  }
-}
-
-async function deleteEvent() {
-  if (!selectedEvent) {
-    alert("Select event first");
-    return;
+      // reset form
+      setEventTitle("");
+      setClickedMinutes(null);
+      setIsTimeSelected(false);
+    } catch (err) {
+      console.error("Schedule API error", err);
+    }
   }
 
-  try {
-    const token = await getIdToken();
+  async function loadLinkedFiles() {
+    try {
+      const token = await getIdToken();
+      const formattedDate = formatLocalDate(date);
 
-    const res = await fetch(
-      `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules/${selectedEvent.id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
+      const res = await fetch(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/by-date?date=${formattedDate}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
-    if (!res.ok) throw new Error("Delete failed");
+      if (!res.ok) throw new Error("Failed to fetch linked files");
 
-    setEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
-    setSelectedEvent(null);
+      const data = await res.json();
 
-  } catch (err) {
-    console.error("Delete error:", err);
+      setLinkedFiles(data.files || []);
+    } catch (err) {
+      console.error("Error loading linked files:", err);
+    }
   }
-}
-  function updateEvent() {
 
+  async function loadEvents() {
+    try {
+      const token = await getIdToken();
+      const formattedDate = formatLocalDate(date);
+
+      const res = await fetch(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules?date=${formattedDate}&userId=${currentUser.uid}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to load schedules");
+
+      const data = await res.json();
+
+      const backendEvents = (data.events || []).map((e) => ({
+        id: e.id,
+        start: Number(e.startMinutes ?? e.start ?? 0), // ✅ SAFE
+        duration: Number(e.duration ?? 60),
+        title: e.title || "Untitled",
+      }));
+
+      setEvents(backendEvents);
+    } catch (err) {
+      console.error("Load schedules error:", err);
+    }
+  }
+
+  async function deleteEvent() {
     if (!selectedEvent) {
       alert("Select event first");
       return;
     }
 
-    if (!eventTitle) {
-      alert("Enter new title");
+    try {
+      const token = await getIdToken();
+
+      const res = await fetch(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules/${selectedEvent.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!res.ok) throw new Error("Delete failed");
+
+      setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+      setSelectedEvent(null);
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
+  }
+
+  async function updateEvent() {
+    if (!selectedEvent) {
+      alert("Select event first");
       return;
     }
 
-    const updated = events.map(e => {
+    try {
+      const token = await getIdToken();
 
-      if (e.id === selectedEvent.id) {
+      const res = await fetch(
+        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules/${selectedEvent.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: eventTitle,
+          }),
+        },
+      );
 
-        return {
-          ...e,
-          title: eventTitle
-        };
-
+      if (!res.ok) {
+        throw new Error("Update failed");
       }
 
-      return e;
+      await loadEvents();
 
-    });
-
-    setEvents(updated);
-    setEventTitle("");
+      setSelectedEvent(null);
+      setEventTitle("");
+    } catch (err) {
+      console.error(err);
+    }
   }
 
-    useEffect(() => {
-        if (currentUser) {
-            loadEvents();
-            loadLinkedFiles();
-        }
-    }, [date, currentUser]);
-
-function renderEvents() {
-
-  const containerHeight = timelineRef.current?.scrollHeight || 960;
-
-  return events.map(event => {
-
-    if (!Number.isFinite(event.start) || !Number.isFinite(event.duration)) {
-      return null;
+  useEffect(() => {
+    if (currentUser) {
+      loadEvents();
+      loadLinkedFiles();
     }
+  }, [date, currentUser]);
 
-    const top = (event.start / 1440) * containerHeight;
-    const height = (event.duration / 1440) * containerHeight;
+  function renderEvents() {
+    const containerHeight = timelineRef.current?.scrollHeight || 960;
 
-    return (
-      <>
-        <div
-          key={event.id ?? `${event.start}-${event.title}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedEvent(event);
-            setEventTitle(event.title);
-          }}
-          style={{
-            ...styleSheet.eventBlock,
-            top: `${top}px`,
-            height: `${height}px`,
-            backgroundColor:
-              selectedEvent?.id === event.id
-                ? "#ff9800"
-                : "#2196F3"
-          }}
-        >
-          {event.title}
-        </div>
-      </>
-    );
-  });
-}
+    return events.map((event) => {
+      if (!Number.isFinite(event.start) || !Number.isFinite(event.duration)) {
+        return null;
+      }
+
+      const top = (event.start / 1440) * containerHeight;
+      const height = (event.duration / 1440) * containerHeight;
+
+      return (
+        <>
+          <div
+            key={event.id ?? `${event.start}-${event.title}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedEvent(event);
+              setEventTitle(event.title);
+            }}
+            style={{
+              ...styleSheet.eventBlock,
+              top: `${top}px`,
+              height: `${height}px`,
+              backgroundColor:
+                selectedEvent?.id === event.id ? "#ff9800" : "#2196F3",
+            }}
+          >
+            {event.title}
+          </div>
+        </>
+      );
+    });
+  }
 
   //HELPER FOR FORMATING TIME
-function formatTime(minutes) {
+  function formatTime(minutes) {
     if (minutes === null) return "";
 
     const h = Math.floor(minutes / 60);
@@ -284,31 +288,36 @@ function formatTime(minutes) {
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
       <div style={styleSheet.overlay} onClick={close}>
-        <div
-          style={styleSheet.root}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h3 style={styleSheet.title}>
-            Schedule for {date?.toDateString()}
-          </h3>
+        <div style={styleSheet.root} onClick={(e) => e.stopPropagation()}>
+          <h3 style={styleSheet.title}>Schedule for {date?.toDateString()}</h3>
 
-          <div style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "1rem",
-            width: "100%",
-          }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "1rem",
+              width: "100%",
+            }}
+          >
             {/*Main Form for time selection */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+                flex: 1,
+              }}
+            >
               <div
                 ref={timelineRef}
                 style={styleSheet.timeLineContainter}
                 onClick={handleTimelineClick}
               >
                 {hours.map((hour) => {
-
                   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
                   const ampm = hour < 12 ? "AM" : "PM";
 
@@ -327,7 +336,6 @@ function formatTime(minutes) {
               </div>
 
               <div style={styleSheet.buttonContainer}>
-
                 <button style={styleSheet.addButton} onClick={addEvent}>
                   Add
                 </button>
@@ -339,7 +347,6 @@ function formatTime(minutes) {
                 <button style={styleSheet.deleteButton} onClick={deleteEvent}>
                   Delete
                 </button>
-
               </div>
 
               <button style={styleSheet.closeButton} onClick={close}>
@@ -348,18 +355,23 @@ function formatTime(minutes) {
             </div>
 
             {/*Secondary Form for Event Details */}
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              flex: 1,
-            }}>
-            <div style={{width: "100%" }}>
-              {/*FILE LINKED*/}
-              <div style={{ marginTop: "1rem",
+            <div
+              style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.5rem"
-               }}>
+                flex: 1,
+              }}
+            >
+              <div style={{ width: "100%" }}>
+                {/*FILE LINKED*/}
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
                   <h4>Linked Files</h4>
 
                   <div
@@ -407,31 +419,35 @@ function formatTime(minutes) {
                     )}
                   </div>
                 </div>
-            </div>
-            <div style={{ display: isTimeSelected ? "flex" : "none", marginTop: "1rem", flexDirection: "column", gap: "0.5rem", width: "100%" }}>
-              <input
-                style={styleSheet.input}
-                placeholder="Event title..."
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
-              />
-              <input
-                type="time"
-                value={formatTime(clickedMinutes)}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(":").map(Number);
-                  setClickedMinutes(h * 60 + m);
-                }}
-              />
-              <div>
-                <button >
-                  Save Details
-                </button>
-                < button >
-                  Close Details
-                </button>
               </div>
-            </div>
+              <div
+                style={{
+                  display: isTimeSelected ? "flex" : "none",
+                  marginTop: "1rem",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                  width: "100%",
+                }}
+              >
+                <input
+                  style={styleSheet.input}
+                  placeholder="Event title..."
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                />
+                <input
+                  type="time"
+                  value={formatTime(clickedMinutes)}
+                  onChange={(e) => {
+                    const [h, m] = e.target.value.split(":").map(Number);
+                    setClickedMinutes(h * 60 + m);
+                  }}
+                />
+                <div>
+                  <button>Save Details</button>
+                  <button>Close Details</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -441,7 +457,6 @@ function formatTime(minutes) {
 }
 
 const styleSheet = {
-
   overlay: {
     position: "fixed",
     top: 0,
@@ -462,7 +477,7 @@ const styleSheet = {
 
     width: "60vw",
 
-    height: "80vh",          // 🔥 limit height
+    height: "80vh", // 🔥 limit height
     maxHeight: "80vh",
 
     display: "flex",
@@ -477,7 +492,7 @@ const styleSheet = {
   input: {
     padding: "0.5rem",
     border: "1px solid #ccc",
-    borderRadius: "6px"
+    borderRadius: "6px",
   },
 
   timeLineContainter: {
@@ -486,7 +501,7 @@ const styleSheet = {
     height: "360px",
     padding: "0.5rem",
     overflowY: "scroll",
-    position: "relative"
+    position: "relative",
   },
 
   timeRow: {
@@ -516,7 +531,7 @@ const styleSheet = {
     color: "white",
     padding: "4px",
     fontSize: "0.8rem",
-    cursor: "pointer"
+    cursor: "pointer",
   },
 
   buttonContainer: {
@@ -563,4 +578,3 @@ const styleSheet = {
     width: "100%",
   },
 };
-

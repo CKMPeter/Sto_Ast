@@ -4,6 +4,7 @@ import NavbarComponent from "../shared/Navbar";
 import TaskListComponent from "./TaskListComponent";
 import { useAuth } from "../../contexts/AuthContext";
 import { TaskLog } from "./TaskLog";
+import { v4 as uuidv4 } from "uuid";
 
 import {
   fetchMainTasksService,
@@ -20,6 +21,7 @@ import {
   addTaskToGroupService,
   fetchGroupMembersService,
   addSubTaskTimeLogService,
+  updateScheduleService
 } from "./services/taskService";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
@@ -149,6 +151,12 @@ export default function Task() {
         setIsCreatingMainTask(false);
 
         fetchMainTasks();
+
+        const scheduleId = uuidv4();
+        const title = `Task: ${mainTaskName}`;
+        const formattedDate = mainTaskExpireAt ? mainTaskExpireAt : new Date().toISOString().split("T")[0];
+        const startMinutes = 9 * 60; // Default to 9:00 AM
+        updateSchedule(scheduleId, title, formattedDate, startMinutes, currentUser.uid);
       }
     } catch (error) {
       console.error("Create main task error:", error);
@@ -244,9 +252,15 @@ export default function Task() {
 
       const updatedTask = await addTaskToGroupService(
         getIdToken,
-        editingTask.group,
+        editingTask.group?.id,
         { taskId: editingTask.id },
       );
+
+      const scheduleId = uuidv4();
+      const title = `Task: ${editingTask.name}`;
+      const formattedDate = mainTaskExpireAt ? mainTaskExpireAt : new Date().toISOString().split("T")[0];
+      const startMinutes = 9 * 60; // Default to 9:00 AM
+      updateSchedule(scheduleId, title, formattedDate, startMinutes, currentUser.uid);
       //console.log("editingTask.group:", editingTask.group);
       if (updatedTask.success) {
         //console.log("Task added to group successfully");
@@ -453,6 +467,20 @@ export default function Task() {
       }
     } catch (error) {
       console.error("Log time error:", error);
+    }
+  };
+  // =========================
+  // UPDATE SCHEDULE IN REALTIME DB
+  // =========================
+  const updateSchedule = async (scheduleId, title, formattedDate, startMinutes, userId) => {
+    try {
+      const data = await updateScheduleService(getIdToken, title, formattedDate, startMinutes, userId);
+      if (data.success) {
+        // Handle successful update
+
+      }
+    } catch (error) {
+      console.error("Update schedule error:", error);
     }
   };
 
