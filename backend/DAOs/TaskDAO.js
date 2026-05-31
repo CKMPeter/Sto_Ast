@@ -16,6 +16,7 @@ class TaskDAO {
         ? admin.firestore.Timestamp.fromDate(new Date(taskData.expireAt))
         : null,
       description: taskData.description || "",
+      visibility: [taskData.userId],
     });
 
     // create logs subcollection starter log
@@ -31,7 +32,7 @@ class TaskDAO {
   }
 
   async getMainTasks(userId, group = null) {
-    let query = db.collection("mainTasks").where("userId", "==", userId);
+    let query = db.collection("mainTasks").where("visibility", "array-contains", userId);
 
     if (group) {
       query = query.where("group", "==", group);

@@ -468,6 +468,10 @@ export default function Task() {
     if (!editingTask) return;
 
     try {
+      const visibility = [
+        currentUser.uid, // owner
+        ...(editingTask.group?.members || []).map(member => member.uid)
+      ];
       const data = await updateMainTask(editingTask.id, {
         name: editingTask.name,
         group: editingTask.group,
@@ -475,6 +479,7 @@ export default function Task() {
           ? new Date(mainTaskExpireAt).toISOString()
           : null,
         description: mainTaskDescription,
+        visibility: visibility,
       });
 
       if (data.success) {

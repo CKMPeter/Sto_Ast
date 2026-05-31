@@ -188,7 +188,7 @@ const createMainTaskAI = async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages,
-      max_tokens: 500,
+      max_tokens: 300,
     });
     console.log("AI create task response:", response.choices[0].message.content.trim());
     res.json({ result: response.choices[0].message.content.trim() });
