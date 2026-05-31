@@ -128,8 +128,6 @@ app.get("/api/files/:fileId", fetchFileOrFolderById); // Fetch file or folder by
 app.get("/api/files", fetchFilesByFolderPath);
 app.get("/api/folders/:folderId/files", fetchFilesByFolderId);
   
-
-
 // --- Scheduling API ---
 app.post("/api/schedules", addSchedule);
 app.get("/api/schedules", fetchSchedulesByDate);

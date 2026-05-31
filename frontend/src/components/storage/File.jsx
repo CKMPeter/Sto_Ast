@@ -26,7 +26,7 @@ export default function File({ file, onChange }) {
   const { currentUser, getIdToken } = useAuth();
   const fileObj = useMemo(
     () => new FileClass({ ...file, user: currentUser }),
-    [file, currentUser]
+    [file, currentUser],
   );
 
   const [showMainModal, setShowMainModal] = useState(false);
@@ -44,7 +44,6 @@ export default function File({ file, onChange }) {
   const [reName, setReName] = useState("");
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
   const isContentEdited = useRef(false);
-
 
   //DateTime State for Date Linked Files
   const [linkedDates, setLinkedDates] = useState([]);
@@ -74,7 +73,7 @@ export default function File({ file, onChange }) {
               mimeType: isImage ? "image/jpeg" : "text/plain",
               fileName: fileObj.name,
             }),
-          }
+          },
         );
 
         const data = await response.json();
@@ -84,7 +83,7 @@ export default function File({ file, onChange }) {
         return null;
       }
     },
-    [getIdToken, fileObj.name]
+    [getIdToken, fileObj.name],
   );
 
   // Fetch AI rename when editing starts
@@ -103,7 +102,7 @@ export default function File({ file, onChange }) {
         const aiRenameResult = await fetchAIWithTask(
           base64Content,
           "rename",
-          fileObj.isImage
+          fileObj.isImage,
         );
         if (aiRenameResult && typeof aiRenameResult === "string") {
           let newName = aiRenameResult.trim();
@@ -145,7 +144,7 @@ export default function File({ file, onChange }) {
             body: JSON.stringify({
               filePath: fileObj.path,
             }),
-          }
+          },
         );
         if (response.ok) {
           alert("File deleted successfully.");
@@ -190,7 +189,7 @@ export default function File({ file, onChange }) {
         const newPreview = await fetchAIWithTask(
           fileObj.content,
           "preview",
-          fileObj.isImage
+          fileObj.isImage,
         );
         if (newPreview && typeof newPreview === "string") {
           aiPreviewResult = newPreview;
@@ -212,7 +211,7 @@ export default function File({ file, onChange }) {
             filePath: fileObj.path,
             linkedDates, // include linked dates in update
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -262,7 +261,7 @@ export default function File({ file, onChange }) {
             isImage,
             mimeType: fileObj.mimeType,
           }),
-        }
+        },
       );
       const data = await response.json();
       result = data.result || "No result returned.";
@@ -297,7 +296,7 @@ export default function File({ file, onChange }) {
             isImage,
             mimeType: fileObj.mimeType,
           }),
-        }
+        },
       );
       const data = await response.json();
       result = data.result || "No result returned.";
@@ -477,7 +476,9 @@ export default function File({ file, onChange }) {
                           <span
                             key={date}
                             className={`badge ${
-                              darkMode ? "bg-light text-dark" : "bg-dark text-light"
+                              darkMode
+                                ? "bg-light text-dark"
+                                : "bg-dark text-light"
                             }`}
                             style={{ cursor: "pointer" }}
                             onClick={() => handleRemoveDate(date)}

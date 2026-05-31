@@ -175,7 +175,7 @@ const createMainTaskAI = async (req, res) => {
       }
 
       Description:
-      ${description}, today is ${today.toDateString()}.
+      ${description}, today is ${today.toDateString()} make the expire date at least one day from now.
     `;
 
     const messages = [
@@ -188,7 +188,7 @@ const createMainTaskAI = async (req, res) => {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages,
-      max_tokens: 300,
+      max_tokens: 500,
     });
     console.log("AI create task response:", response.choices[0].message.content.trim());
     res.json({ result: response.choices[0].message.content.trim() });

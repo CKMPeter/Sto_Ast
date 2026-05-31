@@ -6,38 +6,64 @@ import { useAuth } from "../../contexts/AuthContext";
 import { TaskLog } from "./TaskLog";
 import { v4 as uuidv4 } from "uuid";
 
+// import {
+//   fetchMainTasksService,
+//   fetchSubTasksService,
+//   createMainTaskService,
+//   createSubTaskService,
+//   updateMainTaskService,
+//   updateSubTaskService,
+//   deleteMainTaskService,
+//   deleteSubTaskService,
+//   fetchTaskLogsService,
+//   createTaskUsingAIService,
+//   fetchGroupTasksService,
+//   addTaskToGroupService,
+//   fetchGroupMembersService,
+//   addSubTaskTimeLogService,
+//   updateScheduleService,
+// } from "./services/taskService"
+
 import {
-  fetchMainTasksService,
-  fetchSubTasksService,
-  createMainTaskService,
-  createSubTaskService,
-  updateMainTaskService,
-  updateSubTaskService,
-  deleteMainTaskService,
-  deleteSubTaskService,
-  fetchTaskLogsService,
-  createTaskUsingAIService,
   fetchGroupTasksService,
-  addTaskToGroupService,
   fetchGroupMembersService,
-  addSubTaskTimeLogService,
   updateScheduleService,
+  createTaskUsingAIService,
 } from "./services/taskService";
+
+import {useTasks}  from "../../hooks/taskHook/useTask";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
 
 export default function Task() {
   const { currentUser, getIdToken } = useAuth();
 
+  const {
+    mainTasks,
+    tasks,
+    selectedTaskId,
+
+    setSelectedTaskId,
+
+    createMainTask,
+    createSubTask,
+    updateMainTask,
+    updateSubTask,
+    deleteMainTask,
+    deleteSubTask,
+
+    fetchSubTasks,
+  } = useTasks(getIdToken, currentUser);
+
   const [mainTaskName, setMainTaskName] = useState("");
   const [subTaskName, setSubTaskName] = useState("");
   const [subTaskDescription, setSubTaskDescription] = useState("");
 
-  const [mainTasks, setMainTasks] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  // const [mainTasks, setMainTasks] = useState([]);
+  // const [tasks, setTasks] = useState([]);
 
   // state for selected main task
-  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  // const [selectedTaskId, setSelectedTaskId] = useState(null);
 
   // state for dragging sub task
   const [draggedTask, setDraggedTask] = useState(null);
@@ -95,228 +121,228 @@ export default function Task() {
   // FETCH MAIN TASKS
   // =========================
 
-  const fetchMainTasks = async () => {
-    try {
-      const data = await fetchMainTasksService(getIdToken, currentUser.uid);
+  // const fetchMainTasks = async () => {
+  //   try {
+  //     const data = await fetchMainTasksService(getIdToken, currentUser.uid);
 
-      if (data.success) {
-        setMainTasks(data.data);
+  //     if (data.success) {
+  //       setMainTasks(data.data);
 
-        //for (let task of data.data) //console.log("Fetched main task:", task);
+  //       //for (let task of data.data) //console.log("Fetched main task:", task);
 
-        if (data.data.length > 0 && !selectedTaskId) {
-          setSelectedTaskId(data.data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error("Fetch main tasks error:", error);
-    }
-  };
+  //       if (data.data.length > 0 && !selectedTaskId) {
+  //         setSelectedTaskId(data.data[0].id);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Fetch main tasks error:", error);
+  //   }
+  // };
 
   // =========================
   // FETCH SUBTASKS
   // =========================
 
-  const fetchSubTasks = async (taskId) => {
-    try {
-      const data = await fetchSubTasksService(getIdToken, taskId);
+  // const fetchSubTasks = async (taskId) => {
+  //   try {
+  //     const data = await fetchSubTasksService(getIdToken, taskId);
 
-      if (data.success) {
-        setTasks(data.data);
-      }
-    } catch (error) {
-      console.error("Fetch subtasks error:", error);
-    }
-  };
+  //     if (data.success) {
+  //       setTasks(data.data);
+  //     }
+  //   } catch (error) {
+  //     console.error("Fetch subtasks error:", error);
+  //   }
+  // };
 
   // =========================
   // CREATE MAIN TASK
   // =========================
 
-  const createMainTask = async () => {
-    if (!mainTaskName.trim()) return;
+  // const createMainTask = async () => {
+  //   if (!mainTaskName.trim()) return;
 
-    try {
-      const data = await createMainTaskService(getIdToken, {
-        name: mainTaskName,
-        userId: currentUser.uid,
-        expireAt: mainTaskExpireAt
-          ? new Date(mainTaskExpireAt).toISOString()
-          : null,
-        description: mainTaskDescription,
-      });
+  //   try {
+  //     const data = await createMainTaskService(getIdToken, {
+  //       name: mainTaskName,
+  //       userId: currentUser.uid,
+  //       expireAt: mainTaskExpireAt
+  //         ? new Date(mainTaskExpireAt).toISOString()
+  //         : null,
+  //       description: mainTaskDescription,
+  //     });
 
-      if (data.success) {
-        setMainTaskName("");
-        setIsCreatingMainTask(false);
+  //     if (data.success) {
+  //       setMainTaskName("");
+  //       setIsCreatingMainTask(false);
 
-        fetchMainTasks();
+  //       fetchMainTasks();
 
-        const scheduleId = uuidv4();
-        const title = `Task: ${mainTaskName}`;
-        const formattedDate = mainTaskExpireAt
-          ? mainTaskExpireAt
-          : new Date().toISOString().split("T")[0];
-        const startMinutes = 9 * 60; // Default to 9:00 AM
-        updateSchedule(
-          scheduleId,
-          title,
-          formattedDate,
-          startMinutes,
-          currentUser.uid,
-        );
-      }
-    } catch (error) {
-      console.error("Create main task error:", error);
-    }
-  };
+  //       const scheduleId = uuidv4();
+  //       const title = `Task: ${mainTaskName}`;
+  //       const formattedDate = mainTaskExpireAt
+  //         ? mainTaskExpireAt
+  //         : new Date().toISOString().split("T")[0];
+  //       const startMinutes = 9 * 60; // Default to 9:00 AM
+  //       updateSchedule(
+  //         scheduleId,
+  //         title,
+  //         formattedDate,
+  //         startMinutes,
+  //         currentUser.uid,
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Create main task error:", error);
+  //   }
+  // };
 
-  // =========================
-  // CREATE SUBTASK
-  // =========================
+  // // =========================
+  // // CREATE SUBTASK
+  // // =========================
 
-  const createSubTask = async () => {
-    if (!subTaskName.trim() || !selectedTaskId) return;
+  // const createSubTask = async () => {
+  //   if (!subTaskName.trim() || !selectedTaskId) return;
 
-    try {
-      const data = await createSubTaskService(getIdToken, selectedTaskId, {
-        name: subTaskName,
-        status: "To do",
-        timeLogged: 0,
-        assignedTo: null,
-        description: subTaskDescription,
-      });
+  //   try {
+  //     const data = await createSubTaskService(getIdToken, selectedTaskId, {
+  //       name: subTaskName,
+  //       status: "To do",
+  //       timeLogged: 0,
+  //       assignedTo: null,
+  //       description: subTaskDescription,
+  //     });
 
-      if (data.success) {
-        setSubTaskName("");
-        setSubTaskDescription("");
-        setIsCreatingSubTask(false);
+  //     if (data.success) {
+  //       setSubTaskName("");
+  //       setSubTaskDescription("");
+  //       setIsCreatingSubTask(false);
 
-        fetchSubTasks(selectedTaskId);
-      }
-    } catch (error) {
-      console.error("Create subtask error:", error);
-    }
-  };
+  //       fetchSubTasks(selectedTaskId);
+  //     }
+  //   } catch (error) {
+  //     console.error("Create subtask error:", error);
+  //   }
+  // };
 
-  // =========================
-  // EDIT SUBTASK
-  // =========================
+  // // =========================
+  // // EDIT SUBTASK
+  // // =========================
 
-  const updateSubTask = async () => {
-    if (!editingSubTask) return;
+  // const updateSubTask = async () => {
+  //   if (!editingSubTask) return;
 
-    try {
-      const data = await updateSubTaskService(
-        getIdToken,
-        selectedTaskId,
-        editingSubTask.id,
-        {
-          name: editSubTaskName,
-          status: editSubTaskStatus,
-          assignedTo: editSubTaskAssignedTo,
-          description: editSubTaskDescription,
-        },
-      );
+  //   try {
+  //     const data = await updateSubTaskService(
+  //       getIdToken,
+  //       selectedTaskId,
+  //       editingSubTask.id,
+  //       {
+  //         name: editSubTaskName,
+  //         status: editSubTaskStatus,
+  //         assignedTo: editSubTaskAssignedTo,
+  //         description: editSubTaskDescription,
+  //       },
+  //     );
 
-      if (data.success) {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === editingSubTask.id
-              ? {
-                  ...task,
-                  name: editSubTaskName,
-                  status: editSubTaskStatus,
-                  assignedTo: editSubTaskAssignedTo,
-                  description: editSubTaskDescription,
-                }
-              : task,
-          ),
-        );
+  //     if (data.success) {
+  //       setTasks((prev) =>
+  //         prev.map((task) =>
+  //           task.id === editingSubTask.id
+  //             ? {
+  //                 ...task,
+  //                 name: editSubTaskName,
+  //                 status: editSubTaskStatus,
+  //                 assignedTo: editSubTaskAssignedTo,
+  //                 description: editSubTaskDescription,
+  //               }
+  //             : task,
+  //         ),
+  //       );
 
-        setEditingSubTask(null);
-      }
-    } catch (error) {
-      console.error("Update subtask error:", error);
-    }
-  };
+  //       setEditingSubTask(null);
+  //     }
+  //   } catch (error) {
+  //     console.error("Update subtask error:", error);
+  //   }
+  // };
 
   // =========================
   // UPDATE MAIN TASK
   // =========================
 
-  const updateMainTask = async () => {
-    if (!editingTask) return;
+  // const updateMainTask = async () => {
+  //   if (!editingTask) return;
 
-    try {
-      const data = await updateMainTaskService(getIdToken, editingTask.id, {
-        name: editingTask.name,
-        group: editingTask.group,
-        expireAt: mainTaskExpireAt
-          ? new Date(mainTaskExpireAt).toISOString()
-          : null,
-        description: mainTaskDescription,
-      });
+  //   try {
+  //     const data = await updateMainTaskService(getIdToken, editingTask.id, {
+  //       name: editingTask.name,
+  //       group: editingTask.group,
+  //       expireAt: mainTaskExpireAt
+  //         ? new Date(mainTaskExpireAt).toISOString()
+  //         : null,
+  //       description: mainTaskDescription,
+  //     });
 
-      const updatedTask = await addTaskToGroupService(
-        getIdToken,
-        editingTask.group?.id,
-        { taskId: editingTask.id },
-      );
+  //     const updatedTask = await addTaskToGroupService(
+  //       getIdToken,
+  //       editingTask.group?.id,
+  //       { taskId: editingTask.id },
+  //     );
 
-      const scheduleId = uuidv4();
-      const title = `Task: ${editingTask.name}`;
-      const formattedDate = mainTaskExpireAt
-        ? mainTaskExpireAt
-        : new Date().toISOString().split("T")[0];
-      const startMinutes = 9 * 60; // Default to 9:00 AM
-      updateSchedule(
-        scheduleId,
-        title,
-        formattedDate,
-        startMinutes,
-        currentUser.uid,
-      );
-      //console.log("editingTask.group:", editingTask.group);
-      if (updatedTask.success) {
-        //console.log("Task added to group successfully");
-      } else {
-        console.error("Failed to add task to group");
-      }
+  //     const scheduleId = uuidv4();
+  //     const title = `Task: ${editingTask.name}`;
+  //     const formattedDate = mainTaskExpireAt
+  //       ? mainTaskExpireAt
+  //       : new Date().toISOString().split("T")[0];
+  //     const startMinutes = 9 * 60; // Default to 9:00 AM
+  //     updateSchedule(
+  //       scheduleId,
+  //       title,
+  //       formattedDate,
+  //       startMinutes,
+  //       currentUser.uid,
+  //     );
+  //     //console.log("editingTask.group:", editingTask.group);
+  //     if (updatedTask.success) {
+  //       //console.log("Task added to group successfully");
+  //     } else {
+  //       console.error("Failed to add task to group");
+  //     }
 
-      if (data.success) {
-        setMainTasks((prev) =>
-          prev.map((task) =>
-            task.id === editingTask.id
-              ? {
-                  ...task,
-                  name: editingTask.name,
-                  group: editingTask.group,
-                }
-              : task,
-          ),
-        );
+  //     if (data.success) {
+  //       setMainTasks((prev) =>
+  //         prev.map((task) =>
+  //           task.id === editingTask.id
+  //             ? {
+  //                 ...task,
+  //                 name: editingTask.name,
+  //                 group: editingTask.group,
+  //               }
+  //             : task,
+  //         ),
+  //       );
 
-        setEditingTask(null);
-      }
-    } catch (error) {
-      console.error("Update main task error:", error);
-    }
-  };
+  //       setEditingTask(null);
+  //     }
+  //   } catch (error) {
+  //     console.error("Update main task error:", error);
+  //   }
+  // };
 
   // =========================
   // UPDATE SUBTASK STATUS
   // =========================
 
-  const updateSubTaskStatus = async (taskId, subTaskId, status) => {
-    try {
-      await updateSubTaskService(getIdToken, taskId, subTaskId, {
-        status,
-      });
-    } catch (error) {
-      console.error("Update subtask error:", error);
-    }
-  };
+  // const updateSubTaskStatus = async (taskId, subTaskId, status) => {
+  //   try {
+  //     await updateSubTaskService(getIdToken, taskId, subTaskId, {
+  //       status,
+  //     });
+  //   } catch (error) {
+  //     console.error("Update subtask error:", error);
+  //   }
+  // };
 
   // =========================
   // HANDLE DROP
@@ -340,45 +366,143 @@ export default function Task() {
   // DELETE MAIN TASK
   // =========================
 
-  const deleteMainTask = async (taskId) => {
-    try {
-      const data = await deleteMainTaskService(getIdToken, taskId);
+  // const deleteMainTask = async (taskId) => {
+  //   try {
+  //     const data = await deleteMainTaskService(getIdToken, taskId);
 
-      if (data.success) {
-        const updatedTasks = mainTasks.filter((task) => task.id !== taskId);
+  //     if (data.success) {
+  //       const updatedTasks = mainTasks.filter((task) => task.id !== taskId);
 
-        setMainTasks(updatedTasks);
+  //       setMainTasks(updatedTasks);
 
-        if (selectedTaskId === taskId) {
-          setSelectedTaskId(null);
-          setMainTaskSelected(false);
-          setTasks([]);
-        }
-      }
-    } catch (error) {
-      console.error("Delete main task error:", error);
-    }
-  };
+  //       if (selectedTaskId === taskId) {
+  //         setSelectedTaskId(null);
+  //         setMainTaskSelected(false);
+  //         setTasks([]);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Delete main task error:", error);
+  //   }
+  // };
 
   // =========================
   // DELETE SUBTASK
   // =========================
 
-  const deleteSubTask = async (subTaskId) => {
+  // const deleteSubTask = async (subTaskId) => {
+  //   try {
+  //     const data = await deleteSubTaskService(
+  //       getIdToken,
+  //       selectedTaskId,
+  //       subTaskId,
+  //     );
+
+  //     if (data.success) {
+  //       setTasks((prev) => prev.filter((task) => task.id !== subTaskId));
+  //     }
+  //   } catch (error) {
+  //     console.error("Delete subtask error:", error);
+  //   }
+  // };
+
+  const handleCreateMainTask = async () => {
+    if (!mainTaskName.trim()) return;
+
     try {
-      const data = await deleteSubTaskService(
-        getIdToken,
-        selectedTaskId,
-        subTaskId,
-      );
+        const scheduleId = await updateSchedule(
+          `Task: ${mainTaskName}`,
+          mainTaskExpireAt || new Date().toISOString().split("T")[0],
+          9 * 60,
+          currentUser.uid,
+        );
+        
+        console.log("Schedule created with ID:", scheduleId);
+      const data = await createMainTask({
+        name: mainTaskName,
+        userId: currentUser.uid,
+        expireAt: mainTaskExpireAt
+          ? new Date(mainTaskExpireAt).toISOString()
+          : null,
+        description: mainTaskDescription,
+        scheduleId: scheduleId,
+      });
 
       if (data.success) {
-        setTasks((prev) => prev.filter((task) => task.id !== subTaskId));
+        setMainTaskName("");
+        setMainTaskExpireAt("");
+        setMainTaskDescription("");
+
+        setIsCreatingMainTask(false);
+
+        
       }
     } catch (error) {
-      console.error("Delete subtask error:", error);
+      console.error(error);
     }
   };
+
+  const handleCreateSubTask = async () => {
+    if (!subTaskName.trim() || !selectedTaskId) return;
+
+    try {
+      const data = await createSubTask(selectedTaskId, {
+        name: subTaskName,
+        status: "To do",
+        timeLogged: 0,
+        assignedTo: null,
+        description: subTaskDescription,
+      });
+
+      if (data.success) {
+        setSubTaskName("");
+        setSubTaskDescription("");
+
+        setIsCreatingSubTask(false);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const handleUpdateMainTask = async () => {
+    if (!editingTask) return;
+
+    try {
+      const data = await updateMainTask(editingTask.id, {
+        name: editingTask.name,
+        group: editingTask.group,
+        expireAt: mainTaskExpireAt
+          ? new Date(mainTaskExpireAt).toISOString()
+          : null,
+        description: mainTaskDescription,
+      });
+
+      if (data.success) {
+        setEditingTask(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const handleUpdateSubTask = async () => {
+    if (!editingSubTask) return;
+
+    try {
+      const data = await updateSubTask(selectedTaskId, editingSubTask.id, {
+        name: editSubTaskName,
+        status: editSubTaskStatus,
+        assignedTo: editSubTaskAssignedTo,
+        description: editSubTaskDescription,
+      });
+
+      if (data.success) {
+        setEditingSubTask(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
 
   // =========================
   // TASK LOG
@@ -422,25 +546,42 @@ export default function Task() {
 
           const task = JSON.parse(cleanedJson);
 
-          console.log("AI generated task:", task);
+          //console.log("AI generated task:", task);
 
           const subTasks = task.subTasks;
 
           const { subTasks: _, ...mainTask } = task;
 
-          console.log("AI generated subtasks:", subTasks);
-          console.log("AI generated main task:", mainTask);
+          // console.log("AI generated subtasks:", subTasks);
+          // console.log("AI generated main task:", mainTask);
+          const title = `Task: ${mainTask.name}`;
+          const formattedDate = mainTask.expireAt
+            ? mainTask.expireAt
+            : new Date().toISOString().split("T")[0];
+          const startMinutes = 9 * 60; // Default to 9:00 AM
+          const scheduleId = await updateSchedule(
+            title,
+            formattedDate,
+            startMinutes,
+            currentUser.uid,
+          );
+
 
           // Create main task
-          const mainTaskData = await createMainTaskService(getIdToken, {
+          const mainTaskData = await createMainTask({ 
             name: mainTask.name,
             userId: currentUser.uid,
-            expireAt: mainTask.expireAt ? new Date(mainTask.expireAt).toISOString() : null,
+            expireAt: mainTask.expireAt
+              ? new Date(mainTask.expireAt).toISOString()
+              : null,
             description: mainTask.description,
+            scheduleId: scheduleId,
           });
-
+          // Update schedule in realtime database
+          
+          //add indivinual task to group if group exist
           for (let sTask of subTasks) {
-            await createSubTaskService(getIdToken, mainTaskData.data.id, {
+            await createSubTask( mainTaskData.data.id, {
               name: sTask.name,
               status: sTask.status || "To do",
               timeLogged: 0,
@@ -534,7 +675,6 @@ export default function Task() {
   // UPDATE SCHEDULE IN REALTIME DB
   // =========================
   const updateSchedule = async (
-    scheduleId,
     title,
     formattedDate,
     startMinutes,
@@ -549,7 +689,7 @@ export default function Task() {
         userId,
       );
       if (data.success) {
-        // Handle successful update
+        return data.schedule?.scheduleId;
       }
     } catch (error) {
       console.error("Update schedule error:", error);
@@ -562,14 +702,14 @@ export default function Task() {
 
   useEffect(() => {
     if (currentUser) {
-      fetchMainTasks();
+      //fetchMainTasks();
       fetchGroupList();
     }
   }, [currentUser]);
 
   useEffect(() => {
     if (selectedTaskId) {
-      fetchSubTasks(selectedTaskId);
+      //fetchSubTasks(selectedTaskId);
       getTaskLog(selectedTaskId);
     }
   }, [selectedTaskId]);
@@ -740,7 +880,7 @@ export default function Task() {
                             color: "red",
                           }}
                           onClick={() => {
-                            deleteMainTask(task.id);
+                            deleteMainTask(task.id, task.scheduleId);
 
                             setOpenedMenuId(null);
                           }}
@@ -860,7 +1000,7 @@ export default function Task() {
                 Cancel
               </button>
 
-              <button onClick={createMainTask} style={styleSheet.button}>
+              <button onClick={handleCreateMainTask} style={styleSheet.button}>
                 Create
               </button>
             </div>
@@ -912,7 +1052,7 @@ export default function Task() {
                 Cancel
               </button>
 
-              <button onClick={createSubTask} style={styleSheet.button}>
+              <button onClick={handleCreateSubTask} style={styleSheet.button}>
                 Create
               </button>
             </div>
@@ -1039,7 +1179,7 @@ export default function Task() {
                 Close
               </button>
 
-              <button onClick={updateMainTask} style={styleSheet.button}>
+              <button onClick={handleUpdateMainTask} style={styleSheet.button}>
                 Save
               </button>
             </div>
@@ -1164,7 +1304,7 @@ export default function Task() {
                 Cancel
               </button>
 
-              <button onClick={updateSubTask} style={styleSheet.button}>
+              <button onClick={handleUpdateSubTask} style={styleSheet.button}>
                 Save
               </button>
             </div>
@@ -1230,8 +1370,10 @@ export default function Task() {
 
 const styleSheet = {
   taskListContainer: {
-    width: "80%",
+    width: "100%",
     marginBottom: "20px",
+    maxHeight: "75vh",
+    overflowY: "auto",
   },
 
   taskContainer: {

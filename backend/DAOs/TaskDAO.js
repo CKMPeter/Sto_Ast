@@ -113,6 +113,7 @@ class TaskDAO {
         timeLogged: 0,
         assignedTo: subTaskData.assignedTo || null,
         description: subTaskData.description || "",
+        scheduleId: subTaskData.scheduleId || null,
       });
 
     // log create

@@ -3,6 +3,16 @@ import Navbar from "../shared/Navbar";
 import SchedulePopUp from "./SchedulePopUp";
 import { useScheduleRealtime } from "../../hooks/scheduleHook/useScheduleRealtime";
 
+import {
+  MONTHS,
+  getDaysInMonth,
+  getStartOfMonth,
+  getNextMonth,
+  getPreviousMonth,
+  hasEventOnDay,
+  getEventCount,
+} from "./services/scheduleService";
+
 const styleSheet = {
   table: {
     width: "100%",
@@ -134,55 +144,24 @@ export default function Schedule() {
 
   const today = todayDate.getDate();
 
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+  const selectedMonthName = MONTHS[month];
 
-  const selectedMonthName = months[month];
-
-  const startOfMonth = new Date(year, month, 1).getDay();
-
-  function getDaysInMonth(month, year) {
-    return new Date(year, month + 1, 0).getDate();
-  }
+  const startOfMonth = getStartOfMonth(month, year);
 
   const daysInMonth = getDaysInMonth(month, year);
 
-  function formatLocalDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
-
   function nextMonth() {
-    if (month === 11) {
-      setMonth(0);
-      setYear(year + 1);
-    } else {
-      setMonth(month + 1);
-    }
+    const result = getNextMonth(month, year);
+
+    setMonth(result.month);
+    setYear(result.year);
   }
 
   function prevMonth() {
-    if (month === 0) {
-      setMonth(11);
-      setYear(year - 1);
-    } else {
-      setMonth(month - 1);
-    }
+    const result = getPreviousMonth(month, year);
+
+    setMonth(result.month);
+    setYear(result.year);
   }
 
   function dropDownMonthSelection() {
@@ -201,49 +180,6 @@ export default function Schedule() {
   useEffect(() => {
     console.log("Days in month:", daysInMonth);
   }, [month, year]);
-
-  function hasEventOnDay(day) {
-    if (!eventList || !day) return false;
-
-    const cellDate = formatLocalDate(new Date(year, month, day));
-
-    return eventList.some((event) => {
-      if (!event.date) return false;
-
-      let eventDate;
-
-      // If already stored as YYYY-MM-DD
-      if (typeof event.date === "string" && event.date.length === 10) {
-        eventDate = event.date;
-      }
-      // If stored as ISO string
-      else {
-        eventDate = formatLocalDate(new Date(event.date));
-      }
-
-      return eventDate === cellDate;
-    });
-  }
-
-  function getEventCount(day) {
-    if (!eventList || !day) return 0;
-
-    const cellDate = formatLocalDate(new Date(year, month, day));
-
-    return eventList.filter((event) => {
-      if (!event.date) return false;
-
-      let eventDate;
-
-      if (typeof event.date === "string" && event.date.length === 10) {
-        eventDate = event.date;
-      } else {
-        eventDate = formatLocalDate(new Date(event.date));
-      }
-
-      return eventDate === cellDate;
-    }).length;
-  }
 
   return (
     <div>
@@ -306,7 +242,7 @@ export default function Schedule() {
                         ...styleSheet.dateContainer,
                         backgroundColor: isToday
                           ? "#00b4d8"
-                          : hasEventOnDay(day)
+                          : hasEventOnDay(eventList, day, month, year)
                             ? "#e3f2fd" //  light highlight if has event
                             : "transparent",
                         color: isToday ? "white" : "black",
@@ -322,7 +258,7 @@ export default function Schedule() {
                       onMouseLeave={(e) => {
                         e.target.style.backgroundColor = isToday
                           ? "#00b4d8"
-                          : hasEventOnDay(day)
+                          : hasEventOnDay(eventList, day, month, year)
                             ? "#e3f2fd"
                             : "transparent";
                       }}
@@ -330,14 +266,14 @@ export default function Schedule() {
                       {isCurrentMonth ? day : ""}
 
                       {/* ✅ DOT indicator */}
-                      {isCurrentMonth && hasEventOnDay(day) && (
+                      {isCurrentMonth && hasEventOnDay(eventList, day, month, year) && (
                         <div style={styleSheet.eventDot}></div>
                       )}
 
                       {/* ✅ COUNT badge (optional) */}
-                      {isCurrentMonth && getEventCount(day) > 1 && (
+                      {isCurrentMonth && getEventCount(eventList, day, month, year) > 1 && (
                         <div style={styleSheet.eventCount}>
-                          {getEventCount(day)}
+                          {getEventCount(eventList, day, month, year)}
                         </div>
                       )}
                     </td>
@@ -359,7 +295,7 @@ export default function Schedule() {
                 onChange={(e) => setTempMonth(Number(e.target.value))}
                 style={styleSheet.select}
               >
-                {months.map((m, i) => (
+                {MONTHS.map((m, i) => (
                   <option key={i} value={i}>
                     {m}
                   </option>

@@ -49,7 +49,7 @@ export const updateMainTaskService = async (getIdToken, taskId, updateData) => {
   return await response.json();
 };
 
-export const deleteMainTaskService = async (getIdToken, taskId) => {
+export const deleteMainTaskService = async (getIdToken, taskId, formattedDate, uid) => {
   const token = await getIdToken();
 
   const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}`, {
@@ -250,3 +250,22 @@ export const updateScheduleService = async (getIdToken, title, formattedDate, st
   );
   return await response.json();
 }
+
+export const deleteScheduleService = async (
+  getIdToken,
+  scheduleId,
+) => {
+  const token = await getIdToken();
+
+  const response = await fetch(
+    `${BACKEND_URL}/api/schedules/${scheduleId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return await response.json();
+};
