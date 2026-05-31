@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 
 export default function Notification({ eventList = [] }) {
   return (
@@ -11,31 +11,35 @@ export default function Notification({ eventList = [] }) {
         eventList.map((event) => (
           <div key={event.id} style={styleSheet.item}>
             <strong>{event.title}</strong>
-            <div style={{display: "flex", direction: "collumn", gap: "1rem"}}>
+            <div style={{ display: "flex", direction: "collumn", gap: "1rem" }}>
               <p>{formatTime(event.start)}</p>
-              <p>{event.date}</p>
+              <p>
+                {event.date
+                  ? new Date(event.date).toLocaleDateString("en-CA")
+                  : "No date specified"}
+              </p>
             </div>
           </div>
         ))
       )}
     </div>
-  )
+  );
 }
 
 // helper function
 function formatTime(minutes) {
-  const hour = Math.floor(minutes / 60)
-  const minute = minutes % 60
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
 
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12
-  const ampm = hour < 12 ? "AM" : "PM"
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  const ampm = hour < 12 ? "AM" : "PM";
 
-  return `${displayHour}:${minute.toString().padStart(2, "0")} ${ampm}`
+  return `${displayHour}:${minute.toString().padStart(2, "0")} ${ampm}`;
 }
 
 const styleSheet = {
   item: {
     padding: "0.5rem",
-    borderBottom: "1px solid #eee"
-  }
-}
+    borderBottom: "1px solid #eee",
+  },
+};
