@@ -207,3 +207,24 @@ export const fetchGroupMembersService = async (getIdToken, groupId) => {
   });
   return await response.json();
 };
+
+export const addSubTaskTimeLogService = async (
+  getIdToken,
+  taskId,
+  subTaskId,
+  timeLogData,
+) => {
+  const token = await getIdToken();
+  const response = await fetch(
+    `${BACKEND_URL}/api/tasks/${taskId}/subtasks/${subTaskId}/log-time`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(timeLogData),
+    },
+  );
+  return await response.json();
+}

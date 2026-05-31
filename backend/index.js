@@ -67,7 +67,8 @@ const {
   getSubTasks,
   updateSubTask,
   deleteSubTask,
-  getTaskLogs
+  getTaskLogs,
+  addSubTaskTimeLog
 } = require("./controllers/TaskController");
 
 const {
@@ -153,6 +154,9 @@ app.get("/api/tasks", getMainTasks);
 app.put("/api/tasks/:taskId", updateMainTask);
 app.delete("/api/tasks/:taskId", deleteMainTask);
 
+// Task Logs
+app.get("/api/tasks/:taskId/logs", getTaskLogs);
+
 // Sub Tasks
 app.post("/api/tasks/:taskId/subtasks", createSubTask);
 app.get("/api/tasks/:taskId/subtasks", getSubTasks);
@@ -160,6 +164,8 @@ app.get("/api/tasks/:taskId/subtasks", getSubTasks);
 app.put("/api/tasks/:taskId/subtasks/:subTaskId",updateSubTask);
 
 app.delete("/api/tasks/:taskId/subtasks/:subTaskId",deleteSubTask);
+
+app.post("/api/tasks/:taskId/subtasks/:subTaskId/log-time", addSubTaskTimeLog);
 
 // Group API
 app.post("/api/groups", createGroup);
@@ -172,8 +178,7 @@ app.post("/api/groups/:groupId/add-task", addTaskToGroup);
 app.post("/api/groups/:groupId/remove-member", removeMember);
 app.get("/api/groups/:groupId/members", getGroupMembers);
   
-// Task Logs
-app.get("/api/tasks/:taskId/logs", getTaskLogs);
+
 // --- HTTPS Server Setup ---
 if (process.env.HTTPS === "true") {
   const options = {

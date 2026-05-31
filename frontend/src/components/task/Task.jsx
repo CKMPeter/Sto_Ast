@@ -19,6 +19,7 @@ import {
   fetchGroupTasksService,
   addTaskToGroupService,
   fetchGroupMembersService,
+  addSubTaskTimeLogService,
 } from "./services/taskService";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
@@ -28,6 +29,7 @@ export default function Task() {
 
   const [mainTaskName, setMainTaskName] = useState("");
   const [subTaskName, setSubTaskName] = useState("");
+  const [subTaskDescription, setSubTaskDescription] = useState("");
 
   const [mainTasks, setMainTasks] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -77,9 +79,15 @@ export default function Task() {
   const [editSubTaskName, setEditSubTaskName] = useState("");
   const [editSubTaskStatus, setEditSubTaskStatus] = useState("To do");
   const [editSubTaskAssignedTo, setEditSubTaskAssignedTo] = useState("");
+  const [editSubTaskDescription, setEditSubTaskDescription] = useState("");
 
   // List of group members for assigning sub tasks
   const [groupMembers, setGroupMembers] = useState([]);
+
+  // Time Log Modal
+  const [isLoggingTime, setIsLoggingTime] = useState(false);
+  const [selectedSubTask, setSelectedSubTask] = useState(null);
+  const [timeToLog, setTimeToLog] = useState("");
 
   // =========================
   // FETCH MAIN TASKS
@@ -92,7 +100,7 @@ export default function Task() {
       if (data.success) {
         setMainTasks(data.data);
 
-        for (let task of data.data) console.log("Fetched main task:", task);
+        //for (let task of data.data) //console.log("Fetched main task:", task);
 
         if (data.data.length > 0 && !selectedTaskId) {
           setSelectedTaskId(data.data[0].id);
@@ -160,10 +168,12 @@ export default function Task() {
         status: "To do",
         timeLogged: 0,
         assignedTo: null,
+        description: subTaskDescription,
       });
 
       if (data.success) {
         setSubTaskName("");
+        setSubTaskDescription("");
         setIsCreatingSubTask(false);
 
         fetchSubTasks(selectedTaskId);
@@ -189,6 +199,7 @@ export default function Task() {
           name: editSubTaskName,
           status: editSubTaskStatus,
           assignedTo: editSubTaskAssignedTo,
+          description: editSubTaskDescription,
         },
       );
 
@@ -201,6 +212,7 @@ export default function Task() {
                   name: editSubTaskName,
                   status: editSubTaskStatus,
                   assignedTo: editSubTaskAssignedTo,
+                  description: editSubTaskDescription,
                 }
               : task,
           ),
@@ -235,9 +247,9 @@ export default function Task() {
         editingTask.group,
         { taskId: editingTask.id },
       );
-      console.log("editingTask.group:", editingTask.group);
+      //console.log("editingTask.group:", editingTask.group);
       if (updatedTask.success) {
-        console.log("Task added to group successfully");
+        //console.log("Task added to group successfully");
       } else {
         console.error("Failed to add task to group");
       }
@@ -344,13 +356,15 @@ export default function Task() {
 
   const getTaskLog = async (taskId) => {
     try {
+      console.log("Fetching task logs for taskId:", taskId);
       const data = await fetchTaskLogsService(getIdToken, taskId);
 
       if (data.success) {
         setTaskLog(data.data);
-      }
+      } 
+      console.log("Fetched task logs:", data.data);
     } catch (error) {
-      console.log("Fail to fetch log", error);
+      //console.log("Fail to fetch log", error);
     }
   };
 
@@ -388,15 +402,57 @@ export default function Task() {
   const fetchMembers = async (groupId) => {
     try {
       const data = await fetchGroupMembersService(getIdToken, groupId);
-      console.log("Fetching members for group:", groupId);
+      //console.log("Fetching members for group:", groupId);
       if (data.success) {
         setGroupMembers(data.data.members);
-        console.log("Group members:", data.data.members);
+        //console.log("Group members:", data.data.members);
       } else {
         console.error("Failed to fetch group members");
       }
     } catch (error) {
       console.error("Fetch group members error:", error);
+    }
+  };
+
+  // =========================
+  // LOG TIME
+  // =========================
+  const logTime = async () => {
+    if (!selectedSubTask || !timeToLog) return;
+
+    try {
+      const newTime = (selectedSubTask.timeLogged || 0) + Number(timeToLog);
+
+      const data = await updateSubTaskService(
+        getIdToken,
+        selectedTaskId,
+        selectedSubTask.id,
+        {
+          timeLogged: newTime,
+        },
+      );
+
+      if (data.success) {
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id === selectedSubTask.id
+              ? {
+                  ...task,
+                  timeLogged: newTime,
+                }
+              : task,
+          ),
+        );
+
+        setIsLoggingTime(false);
+        setSelectedSubTask(null);
+        setTimeToLog("");
+
+        fetchSubTasks(selectedTaskId);
+        getTaskLog(selectedTaskId);
+      }
+    } catch (error) {
+      console.error("Log time error:", error);
     }
   };
 
@@ -414,6 +470,7 @@ export default function Task() {
   useEffect(() => {
     if (selectedTaskId) {
       fetchSubTasks(selectedTaskId);
+      getTaskLog(selectedTaskId);
     }
   }, [selectedTaskId]);
 
@@ -725,6 +782,14 @@ export default function Task() {
               style={styleSheet.input}
             />
 
+            <input
+              type="text"
+              placeholder="Description (optional)"
+              value={editSubTaskDescription}
+              onChange={(e) => setEditSubTaskDescription(e.target.value)}
+              style={{ ...styleSheet.input, height: "80px", resize: "none" }}
+            />
+
             <div
               style={{
                 marginTop: "20px",
@@ -737,6 +802,7 @@ export default function Task() {
                 onClick={() => {
                   setIsCreatingSubTask(false);
                   setSubTaskName("");
+                  setEditSubTaskDescription("");
                 }}
                 style={{
                   ...styleSheet.button,
@@ -896,9 +962,19 @@ export default function Task() {
             minWidth: "150px",
           }}
         >
-          <button style={styleSheet.subTaskContextMenuItem} onClick={() => alert("Log time feature coming soon!")}>
+          {/* time log button */}
+          <button
+            style={styleSheet.subTaskContextMenuItem}
+            onClick={() => {
+              setSelectedSubTask(subTaskContextMenu.task);
+              setIsLoggingTime(true);
+              setSubTaskContextMenu(null);
+            }}
+          >
             Log Time
           </button>
+
+          {/* edit button */}
           <button
             style={styleSheet.subTaskContextMenuItem}
             onClick={() => {
@@ -916,6 +992,7 @@ export default function Task() {
             Edit
           </button>
 
+          {/* delete button */}
           <button
             style={{
               ...styleSheet.subTaskContextMenuItem,
@@ -994,6 +1071,61 @@ export default function Task() {
           </div>
         </div>
       )}
+
+      {/* LOG TIME MODAL */}
+      {/* TIME LOG MODAL */}
+      {isLoggingTime && selectedSubTask && (
+        <div style={styleSheet.modalOverlay}>
+          <div style={styleSheet.modalContainer}>
+            <h2>Log Time</h2>
+
+            <p>
+              <strong>Task:</strong> {selectedSubTask.name}
+            </p>
+
+            <p>Current Time Logged: {selectedSubTask.timeLogged || 0} hours</p>
+
+            <input
+              type="number"
+              min="0"
+              step="0.25"
+              placeholder="Hours to add"
+              value={timeToLog}
+              onChange={(e) => setTimeToLog(e.target.value)}
+              style={styleSheet.input}
+            />
+
+            <div
+              style={{
+                marginTop: "20px",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+              }}
+            >
+              <button
+                onClick={() => {
+                  setIsLoggingTime(false);
+                  setSelectedSubTask(null);
+                  setTimeToLog("");
+                }}
+                style={{
+                  ...styleSheet.button,
+                  backgroundColor: "#6c757d",
+                }}
+              >
+                Cancel
+              </button>
+
+              <button onClick={logTime} style={styleSheet.button}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 }

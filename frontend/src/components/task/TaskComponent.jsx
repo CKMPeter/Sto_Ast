@@ -3,6 +3,7 @@
 import React from 'react'
 
 export default function TaskComponent({ task, onDragStart }) {
+  console.log('Rendering TaskComponent for task:', task)
   return (
     <div
       style={styleSheet.taskComponent}
@@ -10,7 +11,7 @@ export default function TaskComponent({ task, onDragStart }) {
       onDragStart={() => onDragStart(task)}
     >
       <h3>{task.name}</h3>
-      <p>Asignee: {task.asignee}</p>
+      <p>Asignee: {task.assignedTo}</p>
     </div>
   )
 }
