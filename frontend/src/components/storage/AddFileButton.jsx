@@ -2,9 +2,16 @@ import React, { useCallback, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
-import { ROOT_FOLDER } from "../../hooks/storageHook/useFolder";
+// import { ROOT_FOLDER } from "../../hooks/storageHook/useFolder";
 import { Button, Modal, Form, Alert, Col, Row } from "react-bootstrap";
 import { useDarkMode } from "../../hooks/useDarkMode";
+
+import {
+  fileToBase64,
+  sanitizeFileName,
+  fetchAIFileService,
+  uploadFileService,
+} from "../../services/storageService/fileService";
 
 export default function AddFileButton({ currentFolder, onAdd }) {
   const { currentUser, getIdToken } = useAuth();
@@ -24,37 +31,20 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
   const fetchAI = useCallback(
     async (base64Input, task, isImage = true) => {
-      const token = await getIdToken();
-      if (!token) throw new Error("User not authenticated");
-
-      const api = task === "rename" ? "/api/aiRename" : "/api/aiPreview";
-
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_BACKEND_URL + api}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              input: base64Input,
-              isImage,
-              mimeType: isImage ? "image/jpeg" : "text/plain",
-              fileName: file.name,
-            }),
-          }
-        );
-
-        const data = await response.json();
-        return data.result || null;
+        return await fetchAIFileService({
+          getIdToken,
+          file,
+          base64Input,
+          task,
+          isImage,
+        });
       } catch (error) {
         console.error("Error fetching AI response:", error);
         return null;
       }
     },
-    [getIdToken, file]
+    [getIdToken, file],
   );
 
   useEffect(() => {
@@ -70,7 +60,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
         const aiRenameResult = await fetchAI(
           base64Content,
           "rename",
-          file.type.startsWith("image/")
+          file.type.startsWith("image/"),
         );
         if (aiRenameResult && typeof aiRenameResult === "string") {
           let newName = sanitizeFileName(aiRenameResult.trim());
@@ -82,7 +72,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
         const aiPreviewResult = await fetchAI(
           base64Content,
           "preview",
-          file.type.startsWith("image/")
+          file.type.startsWith("image/"),
         );
         if (aiPreviewResult && typeof aiPreviewResult === "string") {
           setPreview(aiPreviewResult.trim());
@@ -182,52 +172,29 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     if (!file || !currentFolder || !currentUser) return;
 
     setIsUploading(true);
     setUploadProgress(0);
-    for (let i = 1; i <= 80; i++) {
-      setUploadProgress(i);
-      await new Promise((resolve) => setTimeout(resolve, 8));
-    }
 
     try {
-      const base64Content = await fileToBase64(file);
-      const pathSegments = getFilePathSegments(currentFolder);
-      const sanitizedFileName = sanitizeFileName(currentName || file.name);
-      const filePath = [...pathSegments, sanitizedFileName].join("/");
-      const token = await getIdToken();
-      if (!token) throw new Error("User not authenticated");
-
-      const body = JSON.stringify({
-        name: sanitizedFileName,
-        content: base64Content || "none",
-        preview,
-        path: filePath,
-        folderId: currentFolder?.id || null,
-      });
-
-      setUploadProgress(85);
-      const response = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/files`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body,
-        }
-      );
-
-      for (let i = 86; i <= 100; i++) {
+      for (let i = 1; i <= 80; i++) {
         setUploadProgress(i);
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 8));
       }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || response.statusText);
+      await uploadFileService({
+        getIdToken,
+        file,
+        currentName,
+        currentFolder,
+        preview,
+      });
+
+      for (let i = 81; i <= 100; i++) {
+        setUploadProgress(i);
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
 
       setOpen(false);
@@ -245,7 +212,6 @@ export default function AddFileButton({ currentFolder, onAdd }) {
       setPreview("");
       setIsFetchingAIRename(false);
       setIsFetchingAIPreview(false);
-      e.target.value = null;
     }
   }
 

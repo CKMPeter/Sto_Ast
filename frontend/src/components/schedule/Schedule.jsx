@@ -11,7 +11,7 @@ import {
   getPreviousMonth,
   hasEventOnDay,
   getEventCount,
-} from "./services/scheduleService";
+} from "../../services/scheduleService";
 
 const styleSheet = {
   table: {

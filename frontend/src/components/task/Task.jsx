@@ -30,9 +30,11 @@ import {
   updateScheduleService,
   createTaskUsingAIService,
   deleteScheduleService,
-} from "./services/taskService";
+} from "../../services/taskService";
 
 import { useTasks } from "../../hooks/taskHook/useTask";
+import { useAITask } from "../../hooks/taskHook/useAITask";
+import { useSchedule } from "../../hooks/taskHook/useSchedule";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
 
@@ -55,6 +57,16 @@ export default function Task() {
 
     fetchSubTasks,
   } = useTasks(getIdToken, currentUser);
+
+  const { updateSchedule } = useSchedule(getIdToken);
+
+  const { aiSteps, isGeneratingTask, createTaskUsingAI } = useAITask({
+    getIdToken,
+    currentUser,
+    createMainTask,
+    createSubTask,
+    updateSchedule,
+  });
 
   const [mainTaskName, setMainTaskName] = useState("");
   const [subTaskName, setSubTaskName] = useState("");
@@ -96,14 +108,14 @@ export default function Task() {
   const [aiGeneratedTask, setAiGeneratedTask] = useState("");
   const [aiDescription, setAiDescription] = useState("");
 
-  const [isGeneratingTask, setIsGeneratingTask] = useState(false);
+  //const [isGeneratingTask, setIsGeneratingTask] = useState(false);
 
-  const [aiSteps, setAiSteps] = useState([
-    { id: 1, name: "Generate task plan", done: false },
-    { id: 2, name: "Create schedule", done: false },
-    { id: 3, name: "Create main task", done: false },
-    { id: 4, name: "Create subtasks", done: false },
-  ]);
+  // const [aiSteps, setAiSteps] = useState([
+  //   { id: 1, name: "Generate task plan", done: false },
+  //   { id: 2, name: "Create schedule", done: false },
+  //   { id: 3, name: "Create main task", done: false },
+  //   { id: 4, name: "Create subtasks", done: false },
+  // ]);
 
   // GROUPS
   const [groups, setGroups] = useState([]);
@@ -558,97 +570,97 @@ export default function Task() {
   // =========================
   // CREATE TASK USING AI
   // =========================
-  const createTaskUsingAI = async (description) => {
-    //console.log("Creating task using AI with description:", description);
-    try {
-      setIsGeneratingTask(true);
+  // const createTaskUsingAI = async (description) => {
+  //   //console.log("Creating task using AI with description:", description);
+  //   try {
+  //     setIsGeneratingTask(true);
 
-      setAiSteps([
-        { id: 1, name: "Generate task plan", done: false },
-        { id: 2, name: "Create schedule", done: false },
-        { id: 3, name: "Create main task", done: false },
-        { id: 4, name: "Create subtasks", done: false },
-      ]);
+  //     setAiSteps([
+  //       { id: 1, name: "Generate task plan", done: false },
+  //       { id: 2, name: "Create schedule", done: false },
+  //       { id: 3, name: "Create main task", done: false },
+  //       { id: 4, name: "Create subtasks", done: false },
+  //     ]);
 
-      const data = await createTaskUsingAIService(getIdToken, {
-        description,
-        userId: currentUser.uid,
-      });
-      //console.log("before setting AI generated task:", data.result);
-      // setAiGeneratedTask(data.result);
+  //     const data = await createTaskUsingAIService(getIdToken, {
+  //       description,
+  //       userId: currentUser.uid,
+  //     });
+  //     //console.log("before setting AI generated task:", data.result);
+  //     // setAiGeneratedTask(data.result);
 
-      markStepDone(1);
-      //console.log("after setting AI generated task:", data.result);
-      if (data.result) {
-        try {
-          //clean up the response to extract JSON
-          const cleanedJson = data.result
-            .replace(/^```json\s*/i, "")
-            .replace(/```$/i, "")
-            .trim();
+  //     markStepDone(1);
+  //     //console.log("after setting AI generated task:", data.result);
+  //     if (data.result) {
+  //       try {
+  //         //clean up the response to extract JSON
+  //         const cleanedJson = data.result
+  //           .replace(/^```json\s*/i, "")
+  //           .replace(/```$/i, "")
+  //           .trim();
 
-          const task = JSON.parse(cleanedJson);
+  //         const task = JSON.parse(cleanedJson);
 
-          //console.log("AI generated task:", task);
+  //         //console.log("AI generated task:", task);
 
-          const subTasks = task.subTasks;
+  //         const subTasks = task.subTasks;
 
-          const { subTasks: _, ...mainTask } = task;
+  //         const { subTasks: _, ...mainTask } = task;
 
-          // console.log("AI generated subtasks:", subTasks);
-          // console.log("AI generated main task:", mainTask);
-          const title = `Task: ${mainTask.name}`;
-          const formattedDate = mainTask.expireAt
-            ? mainTask.expireAt
-            : new Date().toISOString().split("T")[0];
-          const startMinutes = 9 * 60; // Default to 9:00 AM
-          const scheduleId = await updateSchedule(
-            title,
-            formattedDate,
-            startMinutes,
-            currentUser.uid,
-          );
+  //         // console.log("AI generated subtasks:", subTasks);
+  //         // console.log("AI generated main task:", mainTask);
+  //         const title = `Task: ${mainTask.name}`;
+  //         const formattedDate = mainTask.expireAt
+  //           ? mainTask.expireAt
+  //           : new Date().toISOString().split("T")[0];
+  //         const startMinutes = 9 * 60; // Default to 9:00 AM
+  //         const scheduleId = await updateSchedule(
+  //           title,
+  //           formattedDate,
+  //           startMinutes,
+  //           currentUser.uid,
+  //         );
 
-          markStepDone(2);
+  //         markStepDone(2);
 
-          // Create main task
-          const mainTaskData = await createMainTask({
-            name: mainTask.name,
-            userId: currentUser.uid,
-            expireAt: mainTask.expireAt
-              ? new Date(mainTask.expireAt).toISOString()
-              : null,
-            description: mainTask.description,
-            scheduleId: scheduleId,
-          });
-          // Update schedule in realtime database
+  //         // Create main task
+  //         const mainTaskData = await createMainTask({
+  //           name: mainTask.name,
+  //           userId: currentUser.uid,
+  //           expireAt: mainTask.expireAt
+  //             ? new Date(mainTask.expireAt).toISOString()
+  //             : null,
+  //           description: mainTask.description,
+  //           scheduleId: scheduleId,
+  //         });
+  //         // Update schedule in realtime database
 
-          markStepDone(3);
+  //         markStepDone(3);
 
-          //add indivinual task to group if group exist
-          for (let sTask of subTasks) {
-            await createSubTask(mainTaskData.data.id, {
-              name: sTask.name,
-              status: sTask.status || "To do",
-              timeLogged: 0,
-              assignedTo: null,
-              description: sTask.description || "",
-            });
-          }
-          markStepDone(4);
-          setTimeout(() => {
-            setIsGeneratingTask(false);
-            setIsCreatingUsingAI(false);
-          }, 1000);
-        } catch (error) {
-          console.error("Failed to parse AI response:", error);
-          console.log("Raw AI response:", data.result);
-        }
-      }
-    } catch (error) {
-      console.error("Create task using AI error:", error);
-    }
-  };
+  //         //add indivinual task to group if group exist
+  //         for (let sTask of subTasks) {
+  //           await createSubTask(mainTaskData.data.id, {
+  //             name: sTask.name,
+  //             status: sTask.status || "To do",
+  //             timeLogged: 0,
+  //             assignedTo: null,
+  //             description: sTask.description || "",
+  //           });
+  //         }
+  //         markStepDone(4);
+  //         setTimeout(() => {
+  //           setIsGeneratingTask(false);
+  //           setIsCreatingUsingAI(false);
+  //         }, 1000);
+  //       } catch (error) {
+  //         console.error("Failed to parse AI response:", error);
+  //         console.log("Raw AI response:", data.result);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Create task using AI error:", error);
+  //   }
+  // };
 
   const fetchGroupList = async () => {
     try {
@@ -725,22 +737,22 @@ export default function Task() {
   // =========================
   // UPDATE SCHEDULE IN REALTIME DB
   // =========================
-  const updateSchedule = async (title, formattedDate, startMinutes, userId) => {
-    try {
-      const data = await updateScheduleService(
-        getIdToken,
-        title,
-        formattedDate,
-        startMinutes,
-        userId,
-      );
-      if (data.success) {
-        return data.schedule?.scheduleId;
-      }
-    } catch (error) {
-      console.error("Update schedule error:", error);
-    }
-  };
+  // const updateSchedule = async (title, formattedDate, startMinutes, userId) => {
+  //   try {
+  //     const data = await updateScheduleService(
+  //       getIdToken,
+  //       title,
+  //       formattedDate,
+  //       startMinutes,
+  //       userId,
+  //     );
+  //     if (data.success) {
+  //       return data.schedule?.scheduleId;
+  //     }
+  //   } catch (error) {
+  //     console.error("Update schedule error:", error);
+  //   }
+  // };
 
   // =========================
   // EFFECTS
@@ -772,15 +784,15 @@ export default function Task() {
   }, []);
 
   // Mark AI step as done
-  const markStepDone = (stepId) => {
-    setAiSteps((prev) =>
-      prev.map((step) =>
-        step.id === stepId
-          ? { ...step, done: true }
-          : step
-      )
-    );
-  };
+  // const markStepDone = (stepId) => {
+  //   setAiSteps((prev) =>
+  //     prev.map((step) =>
+  //       step.id === stepId
+  //         ? { ...step, done: true }
+  //         : step
+  //     )
+  //   );
+  // };
 
   // =========================
   // RENDER COLUMN
@@ -1134,7 +1146,18 @@ export default function Task() {
                 />
 
                 <button
-                  onClick={() => createTaskUsingAI(aiDescription)}
+                  onClick={() =>
+                    createTaskUsingAI(
+                      aiDescription,
+                      () => {
+                        setIsCreatingUsingAI(false);
+                        setAiDescription("");
+                      },
+                      (error) => {
+                        console.error(error);
+                      },
+                    )
+                  }
                   style={styleSheet.button}
                 >
                   Create Using AI

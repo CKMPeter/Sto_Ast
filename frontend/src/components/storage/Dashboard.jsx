@@ -3,7 +3,7 @@ import { Container, Form } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { useFolder } from "../../hooks/storageHook/useFolder";
 import { useDarkMode } from "../../hooks/useDarkMode"; // Import the dark mode hook
-import CreateFolderButton from "./CreateFolderButton";
+import AddFolderButton from "./AddFolderButton";
 import Folder from "./Folder";
 import Navbar from "../shared/Navbar";
 import FolderBreadcrumbs from "./FolderBreadcrumbs";
@@ -147,7 +147,7 @@ export default function Dashboard() {
         <div className="d-flex align-items-center justify-content-between flex-wrap">
           <div className="d-flex align-items-center flex-grow-1">
             <FolderBreadcrumbs currentFolder={folder} style={{ marginLeft: "10px" }} />
-            <CreateFolderButton currentFolder={folder} />
+            <AddFolderButton currentFolder={folder} />
             <AddFileButton currentFolder={folder} onAdd={triggerRefresh} />
             <Form.Control
               type="text"

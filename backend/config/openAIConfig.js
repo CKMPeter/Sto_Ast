@@ -2,7 +2,7 @@ require('dotenv').config();
 const { OpenAI } = require('openai');
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY_N,
 });
 async function listAvailableModels() {
   try {
@@ -14,7 +14,25 @@ async function listAvailableModels() {
     console.error("❌ Error listing models:", error.message);
   }
 }
+// async function test() {
+//   try {
+//     const response = await openai.chat.completions.create({
+//       model: "gpt-4.1-mini",
+//       messages: [
+//         {
+//           role: "user",
+//           content: "hello",
+//         },
+//       ],
+//     });
 
-//listAvailableModels();
+//     console.log(response.choices[0].message.content.trim());
+//   } catch (err) {
+//     console.dir(err, { depth: null });
+//   }
+// }
+
+// test();
+listAvailableModels();
 //export default openai;
 module.exports = openai;

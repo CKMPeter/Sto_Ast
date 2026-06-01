@@ -190,11 +190,26 @@ const createMainTaskAI = async (req, res) => {
       messages,
       max_tokens: 300,
     });
-    console.log("AI create task response:", response.choices[0].message.content.trim());
+    console.log(
+      "AI create task response:",
+      response.choices[0].message.content.trim(),
+    );
     res.json({ result: response.choices[0].message.content.trim() });
   } catch (error) {
-    console.error("Create main task error:", error);
-    res.status(500).json({ error: "Failed to create main task" });
+    console.error("STATUS:", error.status);
+    console.error("TYPE:", error.type);
+    console.error("CODE:", error.code);
+    console.error("MESSAGE:", error.message);
+
+    if (error.error) {
+      console.error("ERROR OBJECT:", error.error);
+    }
+
+    res.status(500).json({
+      error: error.message,
+      type: error.type,
+      code: error.code,
+    });
   }
 };
 
