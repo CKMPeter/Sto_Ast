@@ -30,11 +30,12 @@ import {
   updateScheduleService,
   createTaskUsingAIService,
   deleteScheduleService,
-} from "../../services/taskService";
+} from "../../services/taskService/taskService";
 
 import { useTasks } from "../../hooks/taskHook/useTask";
 import { useAITask } from "../../hooks/taskHook/useAITask";
 import { useSchedule } from "../../hooks/taskHook/useSchedule";
+import TaskChartModal from "./TaskChartModal";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
 
@@ -73,7 +74,7 @@ export default function Task() {
   const [subTaskDescription, setSubTaskDescription] = useState("");
 
   // const [mainTasks, setMainTasks] = useState([]);
-  // const [tasks, setTasks] = useState([]);
+  //const [tasks, setTasks] = useState([]);
 
   // state for selected main task
   // const [selectedTaskId, setSelectedTaskId] = useState(null);
@@ -138,6 +139,9 @@ export default function Task() {
   const [isLoggingTime, setIsLoggingTime] = useState(false);
   const [selectedSubTask, setSelectedSubTask] = useState(null);
   const [timeToLog, setTimeToLog] = useState("");
+
+  // Task Chart Modal
+  const [isShowingChart, setIsShowingChart] = useState(false);
 
   // =========================
   // FETCH MAIN TASKS
@@ -371,19 +375,14 @@ export default function Task() {
   // =========================
 
   const handleDrop = async (status) => {
-    if (!draggedTask || !selectedTaskId) return;
+    if (!draggedTask) return;
 
-    const updatedTasks = tasks.map((task) =>
-      task.id === draggedTask.id ? { ...task, status } : task,
-    );
+    await updateSubTask(selectedTaskId, draggedTask.id, {
+      status,
+    });
 
-    setTasks(updatedTasks);
-
-    await updateSubTaskStatus(selectedTaskId, draggedTask.id, status);
-
-    setDraggedTask(null);
+    await fetchSubTasks(selectedTaskId);
   };
-
   // =========================
   // DELETE MAIN TASK
   // =========================
@@ -696,44 +695,30 @@ export default function Task() {
   // =========================
   // LOG TIME
   // =========================
-  const logTime = async () => {
-    if (!selectedSubTask || !timeToLog) return;
+  async function logTime() {
+    if (!selectedTaskId || !selectedSubTask) {
+      alert("Select a subtask first");
+      return;
+    }
+
+    if (!timeToLog || Number(timeToLog) <= 0) {
+      alert("Enter valid time");
+      return;
+    }
 
     try {
-      const newTime = (selectedSubTask.timeLogged || 0) + Number(timeToLog);
+      await updateSubTask(selectedTaskId, selectedSubTask.id, {
+        timeLogged: Number(selectedSubTask.timeLogged || 0) + Number(timeToLog),
+      });
 
-      const data = await updateSubTaskService(
-        getIdToken,
-        selectedTaskId,
-        selectedSubTask.id,
-        {
-          timeLogged: newTime,
-        },
-      );
+      await fetchSubTasks(selectedTaskId);
 
-      if (data.success) {
-        setTasks((prev) =>
-          prev.map((task) =>
-            task.id === selectedSubTask.id
-              ? {
-                  ...task,
-                  timeLogged: newTime,
-                }
-              : task,
-          ),
-        );
-
-        setIsLoggingTime(false);
-        setSelectedSubTask(null);
-        setTimeToLog("");
-
-        fetchSubTasks(selectedTaskId);
-        getTaskLog(selectedTaskId);
-      }
+      setTimeToLog("");
+      setSelectedSubTask(null);
     } catch (error) {
       console.error("Log time error:", error);
     }
-  };
+  }
   // =========================
   // UPDATE SCHEDULE IN REALTIME DB
   // =========================
@@ -969,22 +954,35 @@ export default function Task() {
 
         {mainTaskSelected ? (
           <div style={styleSheet.rightContainer}>
-            <button
-              onClick={() => setIsCreatingSubTask(true)}
-              style={{
-                ...styleSheet.button,
-                backgroundColor: "#0077b6",
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 12px",
-              }}
-            >
-              <FaPlus
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <button
+                onClick={() => setIsCreatingSubTask(true)}
                 style={{
-                  fontSize: "25px",
+                  ...styleSheet.button,
+                  backgroundColor: "#0077b6",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "6px 12px",
                 }}
-              />
-            </button>
+              >
+                <FaPlus
+                  style={{
+                    fontSize: "25px",
+                  }}
+                />
+              </button>
+
+              <button
+                variant="info"
+                onClick={() => setIsShowingChart(true)}
+                style={{
+                  ...styleSheet.button,
+                  backgroundColor: "#0077b6",
+                }}
+              >
+                View Charts
+              </button>
+            </div>
 
             <div style={styleSheet.taskContainer}>
               {renderColumn("To do")}
@@ -1413,7 +1411,6 @@ export default function Task() {
         </div>
       )}
 
-      {/* LOG TIME MODAL */}
       {/* TIME LOG MODAL */}
       {isLoggingTime && selectedSubTask && (
         <div style={styleSheet.modalOverlay}>
@@ -1465,6 +1462,12 @@ export default function Task() {
           </div>
         </div>
       )}
+
+      <TaskChartModal
+        show={isShowingChart}
+        onClose={() => setIsShowingChart(false)}
+        subtasks={tasks}
+      />
     </div>
   );
 }

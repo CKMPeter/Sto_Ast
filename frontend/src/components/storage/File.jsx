@@ -36,30 +36,28 @@ export default function File({ file, onChange }) {
 
   const fileObj = useMemo(
     () => new FileClass({ ...file, user: currentUser }),
-    [file, currentUser]
+    [file, currentUser],
   );
 
   const [showMainModal, setShowMainModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-
   const [fileContent, setFileContent] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [isEditing, setIsEditing] = useState(false);
   const [updatedFileName, setUpdatedFileName] = useState(fileObj.name);
-
   const [aiReName, setAiReName] = useState("");
   const [reName, setReName] = useState("");
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
-
   const [linkedDates, setLinkedDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
 
   const isContentEdited = useRef(false);
 
-  const modalClass = darkMode ? "bg-dark text-light" : "";
+  const modalClass = darkMode ? "bg-dark text-light" : "bg-white text-dark";
   const inputClass = darkMode ? "bg-dark text-light border-light" : "";
+  const neutralButton = darkMode ? "outline-light" : "outline-dark";
+  const mainButton = darkMode ? "light" : "dark";
 
   const fetchAIWithTask = useCallback(
     async (input, task, isImage = true) => {
@@ -76,7 +74,7 @@ export default function File({ file, onChange }) {
         return null;
       }
     },
-    [getIdToken, fileObj]
+    [getIdToken, fileObj],
   );
 
   useEffect(() => {
@@ -142,7 +140,6 @@ export default function File({ file, onChange }) {
 
     try {
       await deleteFileService({ getIdToken, fileObj });
-
       alert("File deleted successfully.");
       setShowMainModal(false);
       onChange();
@@ -167,12 +164,14 @@ export default function File({ file, onChange }) {
       let preview = fileObj.preview;
 
       if (isContentEdited.current) {
-        const previewInput = fileObj.isImage ? fileObj.content : btoa(fileContent);
+        const previewInput = fileObj.isImage
+          ? fileObj.content
+          : btoa(fileContent);
 
         const newPreview = await fetchAIWithTask(
           previewInput,
           "preview",
-          fileObj.isImage
+          fileObj.isImage,
         );
 
         if (newPreview && typeof newPreview === "string") {
@@ -283,14 +282,9 @@ export default function File({ file, onChange }) {
           e.preventDefault();
           setShowPreviewModal(true);
         }}
-        variant={darkMode ? "outline-light" : "outline-dark"}
+        variant={neutralButton}
         className="text-truncate w-100 invert-hover"
-        style={{
-          cursor: "pointer",
-          fontWeight: "bold",
-          borderRadius: "10px",
-          padding: "10px",
-        }}
+        style={styleSheet.fileButton}
       >
         <FontAwesomeIcon icon={faFile} className="me-2" />
         <span
@@ -305,26 +299,21 @@ export default function File({ file, onChange }) {
 
       <Modal show={showMainModal} onHide={closeMainModal} size="lg" centered>
         <Modal.Header closeButton className={modalClass}>
-          <Modal.Title style={{ width: "100%" }}>
+          <Modal.Title style={styleSheet.modalTitle}>
             <div className="d-flex flex-column gap-1">
               <span>{isEditing ? "Edit File" : "File Details"}</span>
-              <small
-                style={{
-                  wordBreak: "break-all",
-                  whiteSpace: "pre-wrap",
-                  fontSize: "0.85rem",
-                  opacity: 0.8,
-                }}
-              >
-                {updatedFileName}
-              </small>
+              <small style={styleSheet.fileNameText}>{updatedFileName}</small>
             </div>
           </Modal.Title>
         </Modal.Header>
 
         <Modal.Body className={modalClass}>
           {isEditing && (
-            <div className="p-3 mb-3 rounded border">
+            <div
+              className={`p-3 mb-3 rounded border ${
+                darkMode ? "border-light" : ""
+              }`}
+            >
               <h6>Rename File</h6>
 
               <Row className="g-3">
@@ -342,7 +331,7 @@ export default function File({ file, onChange }) {
                   />
 
                   <Button
-                    variant="outline-primary"
+                    variant={neutralButton}
                     className="mt-2"
                     onClick={() => handleRename(true)}
                     disabled={!aiReName || isFetchingAIRename}
@@ -361,7 +350,7 @@ export default function File({ file, onChange }) {
                   />
 
                   <Button
-                    variant="outline-primary"
+                    variant={neutralButton}
                     className="mt-2"
                     onClick={() => handleRename(false)}
                     disabled={!reName}
@@ -383,7 +372,7 @@ export default function File({ file, onChange }) {
                   onChange={(e) => setSelectedDate(e.target.value)}
                 />
 
-                <Button variant="primary" onClick={handleAddDate}>
+                <Button variant={neutralButton} onClick={handleAddDate}>
                   Add
                 </Button>
               </div>
@@ -394,7 +383,7 @@ export default function File({ file, onChange }) {
                     key={date}
                     bg={darkMode ? "light" : "dark"}
                     text={darkMode ? "dark" : "light"}
-                    style={{ cursor: "pointer" }}
+                    style={styleSheet.badge}
                     onClick={() => handleRemoveDate(date)}
                   >
                     {date} ✕
@@ -405,7 +394,7 @@ export default function File({ file, onChange }) {
           )}
 
           {loading ? (
-            <div className="text-center p-4">
+            <div style={styleSheet.loadingBox}>
               <Spinner animation="border" />
               <p className="mt-2">Processing...</p>
             </div>
@@ -417,17 +406,13 @@ export default function File({ file, onChange }) {
                     <img
                       src={`data:${fileObj.mimeType};base64,${fileObj.content}`}
                       alt={fileObj.name}
-                      style={{
-                        maxWidth: "100%",
-                        maxHeight: "420px",
-                        borderRadius: "10px",
-                      }}
+                      style={styleSheet.imagePreview}
                     />
                   </div>
 
                   <div className="mt-3 d-flex flex-wrap gap-2">
                     <Button
-                      variant="primary"
+                      variant={neutralButton}
                       disabled={isEditing}
                       onClick={() =>
                         handleRunAI("describe", true, "/api/describe-image")
@@ -438,7 +423,7 @@ export default function File({ file, onChange }) {
                     </Button>
 
                     <Button
-                      variant="secondary"
+                      variant={neutralButton}
                       disabled={isEditing}
                       onClick={() =>
                         handleRunAI("main_objects", true, "/api/describe-image")
@@ -457,14 +442,12 @@ export default function File({ file, onChange }) {
 
                   {!isEditing ? (
                     <pre
-                      className={`p-3 rounded ${
-                        darkMode ? "bg-secondary text-light" : "bg-light"
+                      className={`p-3 rounded border ${
+                        darkMode
+                          ? "bg-dark text-light border-light"
+                          : "bg-white text-dark"
                       }`}
-                      style={{
-                        maxHeight: "300px",
-                        overflowY: "auto",
-                        whiteSpace: "pre-wrap",
-                      }}
+                      style={styleSheet.contentPreview}
                     >
                       {fileObj.decodeContent()}
                     </pre>
@@ -477,13 +460,13 @@ export default function File({ file, onChange }) {
                         setFileContent(e.target.value);
                         isContentEdited.current = true;
                       }}
-                      style={{ resize: "none" }}
+                      style={styleSheet.textArea}
                     />
                   )}
 
                   <div className="mt-3 d-flex flex-wrap gap-2">
                     <Button
-                      variant="primary"
+                      variant={neutralButton}
                       disabled={isEditing}
                       onClick={() => handleRunAI("summarize")}
                     >
@@ -492,7 +475,7 @@ export default function File({ file, onChange }) {
                     </Button>
 
                     <Button
-                      variant="secondary"
+                      variant={neutralButton}
                       disabled={isEditing}
                       onClick={() => handleRunAI("keywords")}
                     >
@@ -509,12 +492,14 @@ export default function File({ file, onChange }) {
 
               {aiResponse && (
                 <div
-                  className={`mt-3 p-3 rounded ${
-                    darkMode ? "bg-secondary text-light" : "bg-light"
+                  className={`mt-3 p-3 rounded border ${
+                    darkMode
+                      ? "bg-dark text-light border-light"
+                      : "bg-white text-dark"
                   }`}
                 >
                   <h6>AI Response</h6>
-                  <p style={{ whiteSpace: "pre-wrap" }}>{aiResponse}</p>
+                  <p style={styleSheet.aiResponse}>{aiResponse}</p>
                 </div>
               )}
             </>
@@ -524,37 +509,34 @@ export default function File({ file, onChange }) {
         <Modal.Footer className={modalClass}>
           {isEditing ? (
             <>
-              <Button variant="success" onClick={handleSaveUpdate}>
+              <Button variant={mainButton} onClick={handleSaveUpdate}>
                 <FontAwesomeIcon icon={faSave} className="me-2" />
                 Save Changes
               </Button>
 
-              <Button variant="secondary" onClick={handleCancelEdit}>
+              <Button variant={neutralButton} onClick={handleCancelEdit}>
                 <FontAwesomeIcon icon={faTimes} className="me-2" />
                 Cancel
               </Button>
             </>
           ) : (
             <>
-              <Button variant="warning" onClick={() => setIsEditing(true)}>
+              <Button variant={neutralButton} onClick={() => setIsEditing(true)}>
                 <FontAwesomeIcon icon={faEdit} className="me-2" />
                 Edit
               </Button>
 
-              <Button variant="info" onClick={handleDownload}>
+              <Button variant={neutralButton} onClick={handleDownload}>
                 <FontAwesomeIcon icon={faDownload} className="me-2" />
                 Download
               </Button>
 
-              <Button variant="danger" onClick={handleDelete}>
+              <Button variant={neutralButton} onClick={handleDelete}>
                 <FontAwesomeIcon icon={faTrash} className="me-2" />
                 Delete
               </Button>
 
-              <Button
-                variant={darkMode ? "light" : "secondary"}
-                onClick={closeMainModal}
-              >
+              <Button variant={mainButton} onClick={closeMainModal}>
                 Close
               </Button>
             </>
@@ -572,31 +554,20 @@ export default function File({ file, onChange }) {
         </Modal.Header>
 
         <Modal.Body className={modalClass}>
-          <p
-            style={{
-              wordBreak: "break-all",
-              fontWeight: "bold",
-            }}
-          >
-            {fileObj.name}
-          </p>
+          <p style={styleSheet.previewFileName}>{fileObj.name}</p>
 
           <textarea
             className={`form-control ${inputClass}`}
             value={fileObj.preview || ""}
             readOnly
             placeholder="No preview available"
-            style={{
-              width: "100%",
-              height: "120px",
-              resize: "none",
-            }}
+            style={styleSheet.previewTextArea}
           />
         </Modal.Body>
 
         <Modal.Footer className={modalClass}>
           <Button
-            variant={darkMode ? "light" : "secondary"}
+            variant={mainButton}
             onClick={() => setShowPreviewModal(false)}
           >
             Close
@@ -606,3 +577,63 @@ export default function File({ file, onChange }) {
     </>
   );
 }
+
+const styleSheet = {
+  fileButton: {
+    cursor: "pointer",
+    fontWeight: "bold",
+    borderRadius: "10px",
+    padding: "10px",
+  },
+
+  modalTitle: {
+    width: "100%",
+  },
+
+  fileNameText: {
+    wordBreak: "break-all",
+    whiteSpace: "pre-wrap",
+    fontSize: "0.85rem",
+    opacity: 0.8,
+  },
+
+  badge: {
+    cursor: "pointer",
+  },
+
+  loadingBox: {
+    textAlign: "center",
+    padding: "1.5rem",
+  },
+
+  imagePreview: {
+    maxWidth: "100%",
+    maxHeight: "420px",
+    borderRadius: "10px",
+  },
+
+  contentPreview: {
+    maxHeight: "300px",
+    overflowY: "auto",
+    whiteSpace: "pre-wrap",
+  },
+
+  textArea: {
+    resize: "none",
+  },
+
+  aiResponse: {
+    whiteSpace: "pre-wrap",
+  },
+
+  previewFileName: {
+    wordBreak: "break-all",
+    fontWeight: "bold",
+  },
+
+  previewTextArea: {
+    width: "100%",
+    height: "120px",
+    resize: "none",
+  },
+};

@@ -1,6 +1,6 @@
 // hooks/taskHook/useSchedule.js
 
-import { updateScheduleService } from "../../services/taskService";
+import { updateScheduleService } from "../../services/taskService/taskService";
 
 export const useSchedule = (getIdToken) => {
   const updateSchedule = async (

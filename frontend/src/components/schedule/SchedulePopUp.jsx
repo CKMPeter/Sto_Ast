@@ -1,33 +1,28 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-// import { useScheduleQueue } from "../../hooks/scheduleHook/useScheduleQueue";
 
-export default function SchedulePopUp({ date, close, userId }) {
-  //const { addEvent: addToQueue, getEventsByDate, deleteEvent: deleteFromQueue } = useScheduleQueue();
+import {
+  formatLocalDate,
+  formatTime,
+  createScheduleService,
+  getSchedulesByDateService,
+  updateScheduleService,
+  deleteScheduleService,
+  getLinkedFilesByDateService,
+} from "../../services/scheduleService/scheduleService";
+
+export default function SchedulePopUp({ date, close }) {
   const { getIdToken, currentUser } = useAuth();
   const timelineRef = useRef(null);
 
-  // Local state for events and form
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [clickedMinutes, setClickedMinutes] = useState(null);
   const [eventTitle, setEventTitle] = useState("");
-
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
-  // New state to track if a time slot has been selected
   const [isTimeSelected, setIsTimeSelected] = useState(false);
-
-  // New state for linked files
   const [linkedFiles, setLinkedFiles] = useState([]);
 
-  function formatLocalDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
   function handleTimelineClick(e) {
     const container = timelineRef.current;
@@ -35,28 +30,13 @@ export default function SchedulePopUp({ date, close, userId }) {
 
     const clickY = e.clientY - rect.top;
     const scrollOffset = container.scrollTop;
-
     const realY = clickY + scrollOffset;
     const fullHeight = container.scrollHeight;
 
-    const percent = realY / fullHeight;
-    const totalMinutes = Math.floor(percent * 1440);
+    const totalMinutes = Math.floor((realY / fullHeight) * 1440);
 
     setClickedMinutes(totalMinutes);
-
-    const hour = Math.floor(totalMinutes / 60);
-    const minute = totalMinutes % 60;
-
-    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-    const ampm = hour < 12 ? "AM" : "PM";
-
-    alert(
-      `Selected Time: ${displayHour}:${minute
-        .toString()
-        .padStart(2, "0")} ${ampm}`,
-    );
     setIsTimeSelected(true);
-    console.log(isTimeSelected);
   }
 
   async function addEvent() {
@@ -71,71 +51,45 @@ export default function SchedulePopUp({ date, close, userId }) {
     }
 
     try {
-      const token = await getIdToken();
       const formattedDate = formatLocalDate(date);
 
-      const payload = {
-        title: eventTitle.trim(), // ✅ from input
+      const data = await createScheduleService({
+        getIdToken,
+        title: eventTitle.trim(),
         date: formattedDate,
-        startMinutes: clickedMinutes, // ✅ from time input
-        duration: 60, // ✅ default duration
+        startMinutes: clickedMinutes,
+        duration: 60,
         userId: currentUser.uid,
-      };
-
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      if (!res.ok) throw new Error("Failed to create schedule");
-
-      const data = await res.json();
+      });
 
       setEvents((prev) => [
         ...prev,
         {
           id: data.id,
-          start: payload.startMinutes,
-          duration: payload.duration,
-          title: payload.title,
+          start: clickedMinutes,
+          duration: 60,
+          title: eventTitle.trim(),
         },
       ]);
 
-      // reset form
       setEventTitle("");
       setClickedMinutes(null);
       setIsTimeSelected(false);
     } catch (err) {
-      console.error("Schedule API error", err);
+      console.error("Schedule API error:", err);
     }
   }
 
   async function loadLinkedFiles() {
     try {
-      const token = await getIdToken();
       const formattedDate = formatLocalDate(date);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/by-date?date=${formattedDate}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const files = await getLinkedFilesByDateService({
+        getIdToken,
+        date: formattedDate,
+      });
 
-      if (!res.ok) throw new Error("Failed to fetch linked files");
-
-      const data = await res.json();
-
-      setLinkedFiles(data.files || []);
+      setLinkedFiles(files);
     } catch (err) {
       console.error("Error loading linked files:", err);
     }
@@ -143,30 +97,22 @@ export default function SchedulePopUp({ date, close, userId }) {
 
   async function loadEvents() {
     try {
-      const token = await getIdToken();
       const formattedDate = formatLocalDate(date);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules?date=${formattedDate}&userId=${currentUser.uid}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const backendEvents = await getSchedulesByDateService({
+        getIdToken,
+        date: formattedDate,
+        userId: currentUser.uid,
+      });
 
-      if (!res.ok) throw new Error("Failed to load schedules");
-
-      const data = await res.json();
-
-      const backendEvents = (data.events || []).map((e) => ({
-        id: e.id,
-        start: Number(e.startMinutes ?? e.start ?? 0), // ✅ SAFE
-        duration: Number(e.duration ?? 60),
-        title: e.title || "Untitled",
+      const mappedEvents = backendEvents.map((event) => ({
+        id: event.id,
+        start: Number(event.startMinutes ?? event.start ?? 0),
+        duration: Number(event.duration ?? 60),
+        title: event.title || "Untitled",
       }));
 
-      setEvents(backendEvents);
+      setEvents(mappedEvents);
     } catch (err) {
       console.error("Load schedules error:", err);
     }
@@ -179,22 +125,14 @@ export default function SchedulePopUp({ date, close, userId }) {
     }
 
     try {
-      const token = await getIdToken();
+      await deleteScheduleService({
+        getIdToken,
+        scheduleId: selectedEvent.id,
+      });
 
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules/${selectedEvent.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!res.ok) throw new Error("Delete failed");
-
-      setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id));
       setSelectedEvent(null);
+      setEventTitle("");
     } catch (err) {
       console.error("Delete error:", err);
     }
@@ -207,32 +145,18 @@ export default function SchedulePopUp({ date, close, userId }) {
     }
 
     try {
-      const token = await getIdToken();
-
-      const res = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/schedules/${selectedEvent.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: eventTitle,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        throw new Error("Update failed");
-      }
+      await updateScheduleService({
+        getIdToken,
+        scheduleId: selectedEvent.id,
+        title: eventTitle,
+      });
 
       await loadEvents();
 
       setSelectedEvent(null);
       setEventTitle("");
     } catch (err) {
-      console.error(err);
+      console.error("Update error:", err);
     }
   }
 
@@ -255,63 +179,37 @@ export default function SchedulePopUp({ date, close, userId }) {
       const height = (event.duration / 1440) * containerHeight;
 
       return (
-        <>
-          <div
-            key={event.id ?? `${event.start}-${event.title}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedEvent(event);
-              setEventTitle(event.title);
-            }}
-            style={{
-              ...styleSheet.eventBlock,
-              top: `${top}px`,
-              height: `${height}px`,
-              backgroundColor:
-                selectedEvent?.id === event.id ? "#ff9800" : "#2196F3",
-            }}
-          >
-            {event.title}
-          </div>
-        </>
+        <div
+          key={event.id ?? `${event.start}-${event.title}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedEvent(event);
+            setEventTitle(event.title);
+            setClickedMinutes(event.start);
+            setIsTimeSelected(true);
+          }}
+          style={{
+            ...styleSheet.eventBlock,
+            top: `${top}px`,
+            height: `${height}px`,
+            backgroundColor:
+              selectedEvent?.id === event.id ? "#ff9800" : "#2196F3",
+          }}
+        >
+          {event.title}
+        </div>
       );
     });
   }
 
-  //HELPER FOR FORMATING TIME
-  function formatTime(minutes) {
-    if (minutes === null) return "";
-
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-  }
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
-    >
+    <div style={styleSheet.wrapper}>
       <div style={styleSheet.overlay} onClick={close}>
         <div style={styleSheet.root} onClick={(e) => e.stopPropagation()}>
           <h3 style={styleSheet.title}>Schedule for {date?.toDateString()}</h3>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "1rem",
-              width: "100%",
-            }}
-          >
-            {/*Main Form for time selection */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-                flex: 1,
-              }}
-            >
+          <div style={styleSheet.mainContent}>
+            <div style={styleSheet.leftPanel}>
               <div
                 ref={timelineRef}
                 style={styleSheet.timeLineContainter}
@@ -354,100 +252,65 @@ export default function SchedulePopUp({ date, close, userId }) {
               </button>
             </div>
 
-            {/*Secondary Form for Event Details */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                flex: 1,
-              }}
-            >
-              <div style={{ width: "100%" }}>
-                {/*FILE LINKED*/}
-                <div
-                  style={{
-                    marginTop: "1rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <h4>Linked Files</h4>
+            <div style={styleSheet.rightPanel}>
+              <div style={styleSheet.linkedFilesSection}>
+                <h4>Linked Files</h4>
 
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "6px",
-                      padding: "0.5rem",
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                    }}
-                  >
-                    {linkedFiles.length === 0 ? (
+                <div style={styleSheet.linkedFilesBox}>
+                  {linkedFiles.length === 0 ? (
+                    <div style={styleSheet.emptyFiles}>No linked files</div>
+                  ) : (
+                    linkedFiles.map((file) => (
                       <div
-                        style={{
-                          fontSize: "0.8rem",
-                          color: "#888",
-                          width: "100%",
-                          textAlign: "center",
-                          padding: "6px 0",
-                        }}
+                        key={file.id}
+                        style={styleSheet.fileChip}
+                        title={file.name}
                       >
-                        No linked files
+                        📄 {file.name}
                       </div>
-                    ) : (
-                      linkedFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          style={{
-                            padding: "4px 8px",
-                            borderRadius: "12px",
-                            background: "#f1f1f1",
-                            fontSize: "0.8rem",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            fontWeight: "500",
-                            cursor: "pointer",
-                          }}
-                          title={file.name}
-                        >
-                          📄 {file.name}
-                        </div>
-                      ))
-                    )}
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {isTimeSelected && (
+                <div style={styleSheet.detailsPanel}>
+                  <input
+                    style={styleSheet.input}
+                    placeholder="Event title..."
+                    value={eventTitle}
+                    onChange={(e) => setEventTitle(e.target.value)}
+                  />
+
+                  <input
+                    style={styleSheet.input}
+                    type="time"
+                    value={formatTime(clickedMinutes)}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(":").map(Number);
+                      setClickedMinutes(h * 60 + m);
+                    }}
+                  />
+
+                  <div style={styleSheet.detailButtons}>
+                    <button style={styleSheet.updateButton} onClick={updateEvent}>
+                      Save Details
+                    </button>
+
+                    <button
+                      style={styleSheet.closeButton}
+                      onClick={() => {
+                        setIsTimeSelected(false);
+                        setSelectedEvent(null);
+                        setEventTitle("");
+                        setClickedMinutes(null);
+                      }}
+                    >
+                      Close Details
+                    </button>
                   </div>
                 </div>
-              </div>
-              <div
-                style={{
-                  display: isTimeSelected ? "flex" : "none",
-                  marginTop: "1rem",
-                  flexDirection: "column",
-                  gap: "0.5rem",
-                  width: "100%",
-                }}
-              >
-                <input
-                  style={styleSheet.input}
-                  placeholder="Event title..."
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                />
-                <input
-                  type="time"
-                  value={formatTime(clickedMinutes)}
-                  onChange={(e) => {
-                    const [h, m] = e.target.value.split(":").map(Number);
-                    setClickedMinutes(h * 60 + m);
-                  }}
-                />
-                <div>
-                  <button>Save Details</button>
-                  <button>Close Details</button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -457,6 +320,12 @@ export default function SchedulePopUp({ date, close, userId }) {
 }
 
 const styleSheet = {
+  wrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+
   overlay: {
     position: "fixed",
     top: 0,
@@ -474,12 +343,9 @@ const styleSheet = {
     background: "#fff",
     padding: "1.5rem",
     borderRadius: "10px",
-
     width: "60vw",
-
-    height: "80vh", // 🔥 limit height
+    height: "80vh",
     maxHeight: "80vh",
-
     display: "flex",
     flexDirection: "column",
     gap: "1rem",
@@ -487,6 +353,27 @@ const styleSheet = {
 
   title: {
     textAlign: "center",
+  },
+
+  mainContent: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "1rem",
+    width: "100%",
+    overflow: "hidden",
+  },
+
+  leftPanel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+    flex: 1,
+  },
+
+  rightPanel: {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
   },
 
   input: {
@@ -532,6 +419,7 @@ const styleSheet = {
     padding: "4px",
     fontSize: "0.8rem",
     cursor: "pointer",
+    overflow: "hidden",
   },
 
   buttonContainer: {
@@ -570,11 +458,60 @@ const styleSheet = {
   },
 
   closeButton: {
+    flex: 1,
     padding: "0.5rem",
     backgroundColor: "#ddd",
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
+  },
+
+  linkedFilesSection: {
+    marginTop: "1rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+  },
+
+  linkedFilesBox: {
+    border: "1px solid #ddd",
+    borderRadius: "6px",
+    padding: "0.5rem",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+  },
+
+  emptyFiles: {
+    fontSize: "0.8rem",
+    color: "#888",
     width: "100%",
+    textAlign: "center",
+    padding: "6px 0",
+  },
+
+  fileChip: {
+    padding: "4px 8px",
+    borderRadius: "12px",
+    background: "#f1f1f1",
+    fontSize: "0.8rem",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontWeight: "500",
+    cursor: "pointer",
+  },
+
+  detailsPanel: {
+    display: "flex",
+    marginTop: "1rem",
+    flexDirection: "column",
+    gap: "0.5rem",
+    width: "100%",
+  },
+
+  detailButtons: {
+    display: "flex",
+    gap: "0.5rem",
   },
 };

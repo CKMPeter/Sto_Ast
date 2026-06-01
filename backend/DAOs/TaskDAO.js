@@ -193,6 +193,7 @@ class TaskDAO {
       .add({
         ...logData,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        // assignedTo: logData.assignedTo || null,
       });
 
     return {

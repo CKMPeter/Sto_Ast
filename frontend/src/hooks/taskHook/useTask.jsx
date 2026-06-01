@@ -11,7 +11,7 @@ import {
   deleteSubTaskService,
   updateScheduleService,
   deleteScheduleService,
-} from "../../services/taskService";
+} from "../../services/taskService/taskService";
 
 export function useTasks(getIdToken, currentUser) {
   const [mainTasks, setMainTasks] = useState([]);
