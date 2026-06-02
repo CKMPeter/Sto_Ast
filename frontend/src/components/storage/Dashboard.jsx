@@ -92,32 +92,41 @@ export default function Dashboard() {
   //  CHANGE: reconstruct readable path using allUserFolders
   //  WHY: Firestore path may contain folder IDs, but users search folder names
   const filesWithFullPath = useMemo(() => {
+
+    // safety check: if allUserFiles is not an array, return empty list to avoid crashes
     if (!Array.isArray(allUserFiles)) return [];
 
     const folderNameMap = {};
 
+    // take allUserFolders and create a map of folderId to folderName for easy lookup
     if (Array.isArray(allUserFolders)) {
       allUserFolders.forEach((folder) => {
         folderNameMap[folder.id] = folder.name;
       });
     }
 
+    // for each file, reconstruct a readable path by replacing folder IDs with names
     return allUserFiles.map((file) => {
+
+      // if file.path is a string, split it by "/", otherwise use empty array
       const pathSegments =
         typeof file.path === "string" && file.path.length > 0
           ? file.path.split("/")
           : [];
 
+        // replace each segment with folder name if it's an ID, or keep as is
       const readablePath = pathSegments.map((segment) => {
         if (segment === "null" || segment === null) return "root";
 
         return folderNameMap[segment] || segment;
       });
 
+      // ensure path starts with "root" and ends with file name for better searchability
       if (readablePath[0] !== "root") {
         readablePath.unshift("root");
       }
 
+      // if file has a name and it's not already the last segment, add it to the end of the path
       if (file.name && readablePath[readablePath.length - 1] !== file.name) {
         readablePath.push(file.name);
       }
