@@ -139,21 +139,14 @@ export default function useCallGroup(currentUserId) {
 
     // Tạo MediaStream chung cho peer này, add tracks vào đó
     const remoteStream = new MediaStream();
-    setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
 
     pc.ontrack = (e) => {
-      // Add track vào stream đã tạo sẵn (không tạo stream mới mỗi lần)
-      e.track.onunmute = () => {
-        if (!remoteStream.getTracks().includes(e.track)) {
-          remoteStream.addTrack(e.track);
-          // Trigger re-render để video component nhận stream mới
-          setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
-        }
-      };
+      // Add track vào stream, trigger re-render
       if (!remoteStream.getTracks().includes(e.track)) {
         remoteStream.addTrack(e.track);
-        setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
       }
+      // Chỉ set vào state khi đã có track thực sự (tránh tab đen)
+      setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
     };
 
     // ── ICE: push nhiều candidates, không ghi đè ──────────────────────────
@@ -348,16 +341,15 @@ export default function useCallGroup(currentUserId) {
       localRef.current = stream;
       setLocalStream(stream);
 
-      // members trong invite = danh sách các member KHÁC (không có caller, không có mình)
-      // vì startGroupCall đã filter bỏ currentUserId (caller) trước khi ghi
-      // Callee cần connect với: caller + tất cả member khác (trừ mình)
+      // incoming.members = danh sách member (đã bỏ caller ở startGroupCall)
+      // Cần loại bỏ chính mình ra trước khi connect
       const otherMembers = (incoming.members || []).filter(
-        (m) => m.uid !== currentUserId && m.uid !== incoming.callerId
+        (m) => m.uid !== currentUserId
       );
 
       const allPeers = [
-        { uid: incoming.callerId, name: incoming.callerName }, // caller luôn đứng đầu
-        ...otherMembers,
+        { uid: incoming.callerId, name: incoming.callerName }, // caller
+        ...otherMembers, // các member khác (không phải mình, không phải caller)
       ];
 
       // FIX: set activeGroupRef cho callee để endGroupCall hoạt động đúng
