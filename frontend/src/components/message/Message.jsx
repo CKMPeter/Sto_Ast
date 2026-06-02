@@ -650,6 +650,7 @@ const styleSheet = {
     display: "flex",
     gap: "10px",
     marginBottom: "12px",
+    flexWrap: "wrap",
   },
 
   flexButton: {
@@ -680,16 +681,19 @@ const styleSheet = {
   }),
 
   audio: {
-    width: "220px",
+    width: "100%",
+    maxWidth: "220px",
   },
 
   imageMessage: {
-    maxWidth: "220px",
+    maxWidth: "100%",
+    width: "220px",
     borderRadius: "12px",
   },
 
   previewImage: {
-    width: "90px",
+    width: "100%",
+    maxWidth: "120px",
     borderRadius: "12px",
   },
 
@@ -708,6 +712,12 @@ const Container = styled("div")(() => ({
   display: "flex",
   height: "calc(100vh - 64px)",
   background: "linear-gradient(135deg, #f8fdff 0%, #e6f7fc 100%)",
+
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    height: "auto",
+    minHeight: "calc(100vh - 64px)",
+  },
 }));
 
 const Sidebar = styled("div")(() => ({
@@ -717,6 +727,13 @@ const Sidebar = styled("div")(() => ({
   borderRight: "1px solid #caf0f8",
   boxShadow: "2px 0 10px rgba(0,119,182,0.08)",
   overflowY: "auto",
+
+  "@media (max-width: 768px)": {
+    width: "100%",
+    maxHeight: "250px",
+    borderRight: "none",
+    borderBottom: "1px solid #caf0f8",
+  },
 }));
 
 const ChatArea = styled("div")(() => ({
@@ -725,19 +742,28 @@ const ChatArea = styled("div")(() => ({
   flexDirection: "column",
   background: "#f8fdff",
   height: "88vh",
+
+  "@media (max-width: 768px)": {
+    height: "calc(100vh - 314px)",
+  },
 }));
 
 const Header = styled("div")(() => ({
-  height: "65px",
-  padding: "0 20px",
+  minHeight: "65px",
+  padding: "12px 20px",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
+  gap: "10px",
+  flexWrap: "wrap",
   background: "#ffffff",
   borderBottom: "1px solid #caf0f8",
-  color: "#023047",
-  fontWeight: "600",
-  boxShadow: "0 2px 8px rgba(0,119,182,0.05)",
+
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    alignItems: "stretch",
+    textAlign: "center",
+  },
 }));
 
 const ChatBody = styled("div")(() => ({
@@ -760,9 +786,10 @@ const Bubble = styled("div")(({ isMe }) => ({
   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
   maxWidth: "65%",
   wordBreak: "break-word",
-  boxShadow: isMe
-    ? "0 6px 18px rgba(0,119,182,0.25)"
-    : "0 4px 14px rgba(0,0,0,0.06)",
+
+  "@media (max-width: 768px)": {
+    maxWidth: "90%",
+  },
 }));
 
 const Footer = styled("div")(() => ({
@@ -772,17 +799,22 @@ const Footer = styled("div")(() => ({
   padding: "14px",
   background: "#ffffff",
   borderTop: "1px solid #caf0f8",
+
+  "@media (max-width: 768px)": {
+    flexWrap: "wrap",
+  },
 }));
 
 const Input = styled("input")(() => ({
   flex: 1,
+  minWidth: 0,
   padding: "12px 16px",
   borderRadius: "25px",
-  border: "1px solid #caf0f8",
-  background: "#f8fdff",
-  outline: "none",
-  color: "#023047",
-  fontSize: "14px",
+
+  "@media (max-width: 768px)": {
+    width: "100%",
+    order: 1,
+  },
 }));
 
 const SendBtn = styled("button")(() => ({
@@ -833,12 +865,14 @@ const Empty = styled("p")(() => ({
 
 const CallBtn = styled("button")(() => ({
   background: "#005f91",
-  color: "#ffffff",
+  color: "#fff",
   border: "none",
   borderRadius: "12px",
   padding: "10px 16px",
-  fontWeight: "600",
-  cursor: "pointer",
+
+  "@media (max-width: 768px)": {
+    width: "100%",
+  },
 }));
 
 const modalStyles = {
@@ -853,7 +887,8 @@ const modalStyles = {
   },
 
   modal: {
-    width: "400px",
+    width: "90%",
+    maxWidth: "450px",
     maxHeight: "80vh",
     overflowY: "auto",
     background: "#fff",
