@@ -139,21 +139,14 @@ export default function useCallGroup(currentUserId) {
 
     // Tạo MediaStream chung cho peer này, add tracks vào đó
     const remoteStream = new MediaStream();
-    setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
 
     pc.ontrack = (e) => {
-      // Add track vào stream đã tạo sẵn (không tạo stream mới mỗi lần)
-      e.track.onunmute = () => {
-        if (!remoteStream.getTracks().includes(e.track)) {
-          remoteStream.addTrack(e.track);
-          // Trigger re-render để video component nhận stream mới
-          setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
-        }
-      };
+      // Add track vào stream, trigger re-render
       if (!remoteStream.getTracks().includes(e.track)) {
         remoteStream.addTrack(e.track);
-        setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
       }
+      // Chỉ set vào state khi đã có track thực sự (tránh tab đen)
+      setRemoteStreams((prev) => ({ ...prev, [peerUid]: remoteStream }));
     };
 
     // ── ICE: push nhiều candidates, không ghi đè ──────────────────────────
@@ -250,28 +243,36 @@ export default function useCallGroup(currentUserId) {
 
     } else {
       // ── CALLEE: chờ offer rồi tạo answer ────────────────────────────────
-      // Dùng onValue (không phải onlyOnce) và chờ đến khi offer thực sự có
-      // → tránh race condition nếu caller chưa ghi offer kịp
-      const offerData = await new Promise((resolve, reject) => {
-        const offerRef = ref(db, `groupCalls/${rk}/offer`);
-        const timeout  = setTimeout(() => {
-          off(offerRef);
-          reject(new Error(`Offer timeout for peer ${peerUid}`));
-        }, 15000); // chờ tối đa 15 giây
+      // Dùng onValue và chờ đến khi offer thực sự có
+      // FIX: nếu timeout, chỉ đóng peer này (không fullCleanup toàn call)
+      let offerData;
+      try {
+        offerData = await new Promise((resolve, reject) => {
+          const offerRef = ref(db, `groupCalls/${rk}/offer`);
+          const timeout  = setTimeout(() => {
+            off(offerRef);
+            reject(new Error(`Offer timeout for peer ${peerUid}`));
+          }, 15000);
 
-        onValue(offerRef, (snap) => {
-          const data = snap.val();
-          if (!data) return; // chưa có, tiếp tục chờ
-          clearTimeout(timeout);
-          off(offerRef);
-          resolve(data);
+          onValue(offerRef, (snap) => {
+            const data = snap.val();
+            if (!data) return;
+            clearTimeout(timeout);
+            off(offerRef);
+            resolve(data);
+          });
         });
-      });
+      } catch (err) {
+        // FIX: timeout chỉ đóng peer này, không crash toàn bộ call
+        console.warn(`[buildPeer callee] ${err.message} — closing peer only`);
+        closePeer(peerUid);
+        return; // thoát buildPeer, các peer khác vẫn chạy bình thường
+      }
 
       await pc.setRemoteDescription(
         new RTCSessionDescription(JSON.parse(offerData.offer))
       );
-      await flushIceQueue(peerUid); // flush ICE candidates đã queue
+      await flushIceQueue(peerUid);
 
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -313,14 +314,15 @@ export default function useCallGroup(currentUserId) {
       const callerName =
         (typeof callerMember === "object" ? callerMember?.name : null) || currentUserId;
 
-      // Ghi invite — bao gồm members list để callee biết cần connect với ai
+      // Ghi invite — bao gồm ALL members (trừ caller) để callee biết danh sách đầy đủ
+      // allMembers = tất cả member trong group trừ caller (vì caller là callerId)
       await set(ref(db, `groupCallInvite/${group.id}`), {
         callerId:    currentUserId,
         callerName:  callerName,
         groupId:     group.id,
         groupName:   group.name || "Group Call",
         timestamp:   Date.now(),
-        members:     normalizedMembers, // ← FIX: callee cần biết danh sách này
+        members:     normalizedMembers,
       });
 
       // Tạo peer connection (caller side) với từng member
@@ -348,16 +350,15 @@ export default function useCallGroup(currentUserId) {
       localRef.current = stream;
       setLocalStream(stream);
 
-      // members trong invite = danh sách các member KHÁC (không có caller, không có mình)
-      // vì startGroupCall đã filter bỏ currentUserId (caller) trước khi ghi
-      // Callee cần connect với: caller + tất cả member khác (trừ mình)
+      // incoming.members = danh sách member (đã bỏ caller ở startGroupCall)
+      // Cần loại bỏ chính mình ra trước khi connect
       const otherMembers = (incoming.members || []).filter(
-        (m) => m.uid !== currentUserId && m.uid !== incoming.callerId
+        (m) => m.uid !== currentUserId
       );
 
       const allPeers = [
-        { uid: incoming.callerId, name: incoming.callerName }, // caller luôn đứng đầu
-        ...otherMembers,
+        { uid: incoming.callerId, name: incoming.callerName }, // caller
+        ...otherMembers, // các member khác (không phải mình, không phải caller)
       ];
 
       // FIX: set activeGroupRef cho callee để endGroupCall hoạt động đúng
@@ -366,9 +367,27 @@ export default function useCallGroup(currentUserId) {
         members: allPeers,
       };
 
-      // FIX: tạo peer với TẤT CẢ peers, không chỉ caller
-      for (const peer of allPeers) {
-        await buildPeer(peer.uid, stream, false);
+      // Thông báo cho các member đang active biết mình vừa join
+      // → họ sẽ gửi offer tới mình (buildPeer isCallerSide=true từ phía họ)
+      await set(ref(db, `groupCallJoined/${incoming.groupId}/${currentUserId}`), {
+        uid: currentUserId,
+        timestamp: Date.now(),
+      });
+
+      // Với caller: isCallerSide=false vì caller đã ghi offer trước → mình chờ và tạo answer
+      // Với các member khác chưa join: isCallerSide=true → mình gửi offer trước,
+      //   họ sẽ nhận khi họ accept
+      // Với các member đã join trước mình: họ sẽ buildPeer(mình, true) khi thấy joined event
+      //   nên mình chờ offer từ họ (isCallerSide=false)
+      // → Để đơn giản và tránh race condition: mình luôn là callee với caller,
+      //   và luôn là caller với các member còn lại (vì nếu họ chưa join, mình gửi offer;
+      //   nếu họ đã join, cả 2 đều gửi offer → dùng roomKey để tiebreak: uid nhỏ hơn = caller)
+      await buildPeer(incoming.callerId, stream, false);
+      for (const peer of otherMembers) {
+        // Tiebreak: uid nhỏ hơn theo alphabet = caller side
+        // Điều này đảm bảo chỉ 1 bên gửi offer, tránh dual-offer
+        const iAmCaller = currentUserId < peer.uid;
+        await buildPeer(peer.uid, stream, iAmCaller);
       }
 
     } catch (err) {
@@ -430,10 +449,9 @@ export default function useCallGroup(currentUserId) {
         if (data.callerId === currentUserId) return; // mình là người gọi
         if (callStateRef.current !== null) return;   // đang trong call khác
 
-        // Xóa invite NGAY trên Firebase trước khi set state
-        // → nếu listener bị off/on lại (re-render), sẽ không fire lần 2
-        await remove(ref(db, `groupCallInvite/${groupId}`));
-
+        // FIX: set state TRƯỚC, remove SAU
+        // Nếu remove trước thì khi listener re-fire (do re-subscribe),
+        // snap.val() = null → không setIncomingCall → modal không bao giờ mở
         setIncomingCall({
           groupId:    data.groupId,
           groupName:  data.groupName,
@@ -442,6 +460,8 @@ export default function useCallGroup(currentUserId) {
           members:    data.members || [],
         });
         setCallState("incoming");
+
+        await remove(ref(db, `groupCallInvite/${groupId}`));
       });
     });
 
