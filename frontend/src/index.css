@@ -7,6 +7,10 @@ body{
     display: none;
 }
 
+html.dark {
+  background: #121212;
+}
+
 /* Main Page Container */
 .fullPage {
     font-family: 'Roboto', sans-serif;

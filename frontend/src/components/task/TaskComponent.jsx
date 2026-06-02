@@ -1,28 +1,153 @@
 // TaskComponent.jsx
-//this component is responsible for rendering individual Main Task for selection
-import React from 'react'
+// This component renders a draggable task card
 
-export default function TaskComponent({ task, onDragStart }) {
-  console.log('Rendering TaskComponent for task:', task)
+import React, { useEffect, useState } from "react";
+
+export default function TaskComponent({
+  task,
+  onDragStart,
+}) {
+  const [isMobile, setIsMobile] =
+    useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(
+        window.innerWidth <= 768
+      );
+    }
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    return () =>
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+  }, []);
+
   return (
     <div
-      style={styleSheet.taskComponent}
-      draggable
-      onDragStart={() => onDragStart(task)}
+      style={{
+        ...styleSheet.taskComponent,
+        ...(isMobile
+          ? styleSheet.taskComponentMobile
+          : {}),
+      }}
+      draggable={!isMobile}
+      onDragStart={() =>
+        onDragStart?.(task)
+      }
     >
-      <h3>{task.name}</h3>
-      <p>Asignee: {task.assignedTo}</p>
+      <h3 style={styleSheet.title}>
+        {task.name}
+      </h3>
+
+      <p style={styleSheet.text}>
+        Assignee:{" "}
+        {task.assignedTo ||
+          "Unassigned"}
+      </p>
+
+      {task.status && (
+        <p style={styleSheet.status}>
+          Status: {task.status}
+        </p>
+      )}
+
+      {task.progress !==
+        undefined && (
+        <div
+          style={
+            styleSheet.progressContainer
+          }
+        >
+          <div
+            style={{
+              ...styleSheet.progressBar,
+              width: `${task.progress}%`,
+            }}
+          />
+
+          <span
+            style={
+              styleSheet.progressText
+            }
+          >
+            {task.progress}%
+          </span>
+        </div>
+      )}
     </div>
-  )
+  );
 }
 
 const styleSheet = {
   taskComponent: {
-    border: '1px solid #ccc',
-    padding: '10px',
-    margin: '10px 0',
-    borderRadius: '5px',
-    backgroundColor: '#f9f9f9',
-    cursor: 'grab'
-  }
-}
+    border: "1px solid #caf0f8",
+    padding: "12px",
+    margin: "10px 0",
+    borderRadius: "10px",
+    backgroundColor: "#ffffff",
+    cursor: "grab",
+    boxShadow:
+      "0 4px 12px rgba(0,119,182,0.08)",
+    transition: "0.2s",
+    width: "100%",
+    wordBreak: "break-word",
+  },
+
+  taskComponentMobile: {
+    minWidth: "220px",
+    margin: "8px",
+  },
+
+  title: {
+    margin: "0 0 8px 0",
+    fontSize: "1rem",
+    color: "#023047",
+  },
+
+  text: {
+    margin: "4px 0",
+    fontSize: "0.9rem",
+    color: "#555",
+  },
+
+  status: {
+    margin: "4px 0",
+    fontSize: "0.85rem",
+    fontWeight: "bold",
+    color: "#0077b6",
+  },
+
+  progressContainer: {
+    position: "relative",
+    width: "100%",
+    height: "20px",
+    backgroundColor: "#e9ecef",
+    borderRadius: "999px",
+    overflow: "hidden",
+    marginTop: "10px",
+  },
+
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#0077b6",
+    transition: "width 0.3s ease",
+  },
+
+  progressText: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform:
+      "translate(-50%, -50%)",
+    fontSize: "0.75rem",
+    fontWeight: "bold",
+    color: "#fff",
+  },
+};

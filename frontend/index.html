@@ -32,6 +32,14 @@
     <div id="root"></div>
 
     <!-- Vite entry -->
-    <script type="module" src="/src/index.jsx"></script>
+    <script type="module" src="/src/index.jsx">
+
+      const dark =
+        localStorage.getItem("darkMode") === "true";
+
+      if (dark) {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
   </body>
 </html>

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 import {
   formatLocalDate,
@@ -13,6 +14,8 @@ import {
 
 export default function SchedulePopUp({ date, close }) {
   const { getIdToken, currentUser } = useAuth();
+  const { darkMode } = useDarkMode();
+
   const timelineRef = useRef(null);
 
   const [events, setEvents] = useState([]);
@@ -21,8 +24,25 @@ export default function SchedulePopUp({ date, close }) {
   const [eventTitle, setEventTitle] = useState("");
   const [isTimeSelected, setIsTimeSelected] = useState(false);
   const [linkedFiles, setLinkedFiles] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadEvents();
+      loadLinkedFiles();
+    }
+  }, [date, currentUser]);
 
   function handleTimelineClick(e) {
     const container = timelineRef.current;
@@ -130,9 +150,14 @@ export default function SchedulePopUp({ date, close }) {
         scheduleId: selectedEvent.id,
       });
 
-      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id));
+      setEvents((prev) =>
+        prev.filter((event) => event.id !== selectedEvent.id)
+      );
+
       setSelectedEvent(null);
       setEventTitle("");
+      setClickedMinutes(null);
+      setIsTimeSelected(false);
     } catch (err) {
       console.error("Delete error:", err);
     }
@@ -155,17 +180,19 @@ export default function SchedulePopUp({ date, close }) {
 
       setSelectedEvent(null);
       setEventTitle("");
+      setClickedMinutes(null);
+      setIsTimeSelected(false);
     } catch (err) {
       console.error("Update error:", err);
     }
   }
 
-  useEffect(() => {
-    if (currentUser) {
-      loadEvents();
-      loadLinkedFiles();
-    }
-  }, [date, currentUser]);
+  function clearDetails() {
+    setIsTimeSelected(false);
+    setSelectedEvent(null);
+    setEventTitle("");
+    setClickedMinutes(null);
+  }
 
   function renderEvents() {
     const containerHeight = timelineRef.current?.scrollHeight || 960;
@@ -190,10 +217,11 @@ export default function SchedulePopUp({ date, close }) {
           }}
           style={{
             ...styleSheet.eventBlock,
+            ...(isMobile ? styleSheet.eventBlockMobile : {}),
             top: `${top}px`,
             height: `${height}px`,
             backgroundColor:
-              selectedEvent?.id === event.id ? "#ff9800" : "#2196F3",
+              selectedEvent?.id === event.id ? "#ff9800" : "#0077b6",
           }}
         >
           {event.title}
@@ -205,14 +233,39 @@ export default function SchedulePopUp({ date, close }) {
   return (
     <div style={styleSheet.wrapper}>
       <div style={styleSheet.overlay} onClick={close}>
-        <div style={styleSheet.root} onClick={(e) => e.stopPropagation()}>
-          <h3 style={styleSheet.title}>Schedule for {date?.toDateString()}</h3>
+        <div
+          style={{
+            ...styleSheet.root,
+            ...(darkMode ? styleSheet.rootDark : styleSheet.rootLight),
+            ...(isMobile ? styleSheet.rootMobile : {}),
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3
+            style={{
+              ...styleSheet.title,
+              color: darkMode ? "#ffffff" : "#023047",
+            }}
+          >
+            Schedule for {date?.toDateString()}
+          </h3>
 
-          <div style={styleSheet.mainContent}>
+          <div
+            style={{
+              ...styleSheet.mainContent,
+              ...(isMobile ? styleSheet.mainContentMobile : {}),
+            }}
+          >
             <div style={styleSheet.leftPanel}>
               <div
                 ref={timelineRef}
-                style={styleSheet.timeLineContainter}
+                style={{
+                  ...styleSheet.timeLineContainter,
+                  ...(darkMode
+                    ? styleSheet.timeLineContainterDark
+                    : styleSheet.timeLineContainterLight),
+                  ...(isMobile ? styleSheet.timeLineContainterMobile : {}),
+                }}
                 onClick={handleTimelineClick}
               >
                 {hours.map((hour) => {
@@ -220,12 +273,32 @@ export default function SchedulePopUp({ date, close }) {
                   const ampm = hour < 12 ? "AM" : "PM";
 
                   return (
-                    <div key={hour} style={styleSheet.timeRow}>
-                      <div style={styleSheet.timeLabel}>
+                    <div
+                      key={hour}
+                      style={{
+                        ...styleSheet.timeRow,
+                        borderBottom: darkMode
+                          ? "1px solid #16425b"
+                          : "1px solid #eeeeee",
+                      }}
+                    >
+                      <div
+                        style={{
+                          ...styleSheet.timeLabel,
+                          color: darkMode ? "#b8dce8" : "#666666",
+                        }}
+                      >
                         {displayHour}:00 {ampm}
                       </div>
 
-                      <div style={styleSheet.timeSlot}></div>
+                      <div
+                        style={{
+                          ...styleSheet.timeSlot,
+                          borderLeft: darkMode
+                            ? "2px solid #16425b"
+                            : "2px solid #eeeeee",
+                        }}
+                      />
                     </div>
                   );
                 })}
@@ -247,23 +320,57 @@ export default function SchedulePopUp({ date, close }) {
                 </button>
               </div>
 
-              <button style={styleSheet.closeButton} onClick={close}>
+              <button
+                style={{
+                  ...styleSheet.closeButton,
+                  ...(darkMode
+                    ? styleSheet.closeButtonDark
+                    : styleSheet.closeButtonLight),
+                }}
+                onClick={close}
+              >
                 Close
               </button>
             </div>
 
             <div style={styleSheet.rightPanel}>
               <div style={styleSheet.linkedFilesSection}>
-                <h4>Linked Files</h4>
+                <h4
+                  style={{
+                    margin: 0,
+                    color: darkMode ? "#ffffff" : "#023047",
+                  }}
+                >
+                  Linked Files
+                </h4>
 
-                <div style={styleSheet.linkedFilesBox}>
+                <div
+                  style={{
+                    ...styleSheet.linkedFilesBox,
+                    ...(darkMode
+                      ? styleSheet.linkedFilesBoxDark
+                      : styleSheet.linkedFilesBoxLight),
+                  }}
+                >
                   {linkedFiles.length === 0 ? (
-                    <div style={styleSheet.emptyFiles}>No linked files</div>
+                    <div
+                      style={{
+                        ...styleSheet.emptyFiles,
+                        color: darkMode ? "#b8dce8" : "#888888",
+                      }}
+                    >
+                      No linked files
+                    </div>
                   ) : (
                     linkedFiles.map((file) => (
                       <div
                         key={file.id}
-                        style={styleSheet.fileChip}
+                        style={{
+                          ...styleSheet.fileChip,
+                          ...(darkMode
+                            ? styleSheet.fileChipDark
+                            : styleSheet.fileChipLight),
+                        }}
                         title={file.name}
                       >
                         📄 {file.name}
@@ -276,14 +383,24 @@ export default function SchedulePopUp({ date, close }) {
               {isTimeSelected && (
                 <div style={styleSheet.detailsPanel}>
                   <input
-                    style={styleSheet.input}
+                    style={{
+                      ...styleSheet.input,
+                      ...(darkMode
+                        ? styleSheet.inputDark
+                        : styleSheet.inputLight),
+                    }}
                     placeholder="Event title..."
                     value={eventTitle}
                     onChange={(e) => setEventTitle(e.target.value)}
                   />
 
                   <input
-                    style={styleSheet.input}
+                    style={{
+                      ...styleSheet.input,
+                      ...(darkMode
+                        ? styleSheet.inputDark
+                        : styleSheet.inputLight),
+                    }}
                     type="time"
                     value={formatTime(clickedMinutes)}
                     onChange={(e) => {
@@ -293,18 +410,21 @@ export default function SchedulePopUp({ date, close }) {
                   />
 
                   <div style={styleSheet.detailButtons}>
-                    <button style={styleSheet.updateButton} onClick={updateEvent}>
+                    <button
+                      style={styleSheet.updateButton}
+                      onClick={updateEvent}
+                    >
                       Save Details
                     </button>
 
                     <button
-                      style={styleSheet.closeButton}
-                      onClick={() => {
-                        setIsTimeSelected(false);
-                        setSelectedEvent(null);
-                        setEventTitle("");
-                        setClickedMinutes(null);
+                      style={{
+                        ...styleSheet.closeButton,
+                        ...(darkMode
+                          ? styleSheet.closeButtonDark
+                          : styleSheet.closeButtonLight),
                       }}
+                      onClick={clearDetails}
                     >
                       Close Details
                     </button>
@@ -328,31 +448,51 @@ const styleSheet = {
 
   overlay: {
     position: "fixed",
-    top: 0,
-    left: 0,
+    inset: 0,
     width: "100%",
     height: "100%",
     backgroundColor: "rgba(0,0,0,0.4)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 5000,
+    padding: "12px",
   },
 
   root: {
-    background: "#fff",
-    padding: "1.5rem",
-    borderRadius: "10px",
-    width: "60vw",
-    height: "80vh",
-    maxHeight: "80vh",
+    padding: "clamp(0.75rem, 2vw, 1.5rem)",
+    borderRadius: "14px",
+    width: "min(900px, 96vw)",
+    height: "min(82vh, 720px)",
+    maxHeight: "82vh",
     display: "flex",
     flexDirection: "column",
-    gap: "1rem",
+    gap: "0.75rem",
+    overflow: "hidden",
+  },
+
+  rootLight: {
+    background: "#ffffff",
+    color: "#023047",
+  },
+
+  rootDark: {
+    background: "#0b2635",
+    color: "#ffffff",
+    border: "1px solid #16425b",
+  },
+
+  rootMobile: {
+    width: "96vw",
+    height: "92vh",
+    maxHeight: "92vh",
+    padding: "0.75rem",
   },
 
   title: {
     textAlign: "center",
+    margin: 0,
+    fontSize: "clamp(1rem, 2vw, 1.4rem)",
   },
 
   mainContent: {
@@ -360,53 +500,88 @@ const styleSheet = {
     justifyContent: "center",
     gap: "1rem",
     width: "100%",
+    flex: 1,
     overflow: "hidden",
+  },
+
+  mainContentMobile: {
+    flexDirection: "column",
+    overflowY: "auto",
   },
 
   leftPanel: {
     display: "flex",
     flexDirection: "column",
     gap: "0.5rem",
-    flex: 1,
+    flex: 1.2,
+    minWidth: 0,
   },
 
   rightPanel: {
     display: "flex",
     flexDirection: "column",
     flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
   },
 
   input: {
     padding: "0.5rem",
-    border: "1px solid #ccc",
-    borderRadius: "6px",
+    borderRadius: "8px",
+    width: "100%",
+    outline: "none",
+  },
+
+  inputLight: {
+    background: "#ffffff",
+    color: "#023047",
+    border: "1px solid #cccccc",
+  },
+
+  inputDark: {
+    background: "#071923",
+    color: "#ffffff",
+    border: "1px solid #16425b",
   },
 
   timeLineContainter: {
-    border: "1px solid #ddd",
-    borderRadius: "6px",
-    height: "360px",
+    borderRadius: "8px",
+    height: "420px",
+    minHeight: "420px",
     padding: "0.5rem",
-    overflowY: "scroll",
+    overflowY: "auto",
     position: "relative",
+  },
+
+  timeLineContainterLight: {
+    background: "#ffffff",
+    border: "1px solid #dddddd",
+  },
+
+  timeLineContainterDark: {
+    background: "#071923",
+    border: "1px solid #16425b",
+  },
+
+  timeLineContainterMobile: {
+    height: "360px",
+    minHeight: "360px",
   },
 
   timeRow: {
     display: "flex",
     alignItems: "center",
-    borderBottom: "1px solid #eee",
     height: "40px",
   },
 
   timeLabel: {
     width: "80px",
     fontSize: "0.8rem",
-    color: "#666",
+    flexShrink: 0,
   },
 
   timeSlot: {
     flex: 1,
-    borderLeft: "2px solid #eee",
     height: "40px",
   },
 
@@ -414,92 +589,133 @@ const styleSheet = {
     position: "absolute",
     left: "90px",
     right: "10px",
-    borderRadius: "6px",
+    borderRadius: "8px",
     color: "white",
-    padding: "4px",
+    padding: "4px 6px",
     fontSize: "0.8rem",
     cursor: "pointer",
     overflow: "hidden",
   },
 
+  eventBlockMobile: {
+    left: "74px",
+  },
+
   buttonContainer: {
     display: "flex",
     gap: "0.5rem",
+    flexWrap: "wrap",
   },
 
   addButton: {
     flex: 1,
+    minWidth: "80px",
     padding: "0.5rem",
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#0077b6",
     color: "white",
-    border: "none",
-    borderRadius: "4px",
+    border: "1px solid #0077b6",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 
   updateButton: {
     flex: 1,
+    minWidth: "80px",
     padding: "0.5rem",
-    backgroundColor: "#2196F3",
+    backgroundColor: "#005f92",
     color: "white",
-    border: "none",
-    borderRadius: "4px",
+    border: "1px solid #005f92",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 
   deleteButton: {
     flex: 1,
+    minWidth: "80px",
     padding: "0.5rem",
-    backgroundColor: "#f44336",
+    backgroundColor: "#d62828",
     color: "white",
-    border: "none",
-    borderRadius: "4px",
+    border: "1px solid #d62828",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 
   closeButton: {
     flex: 1,
+    minWidth: "80px",
     padding: "0.5rem",
-    backgroundColor: "#ddd",
-    border: "none",
-    borderRadius: "4px",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 
+  closeButtonLight: {
+    backgroundColor: "#e6f7fc",
+    color: "#0077b6",
+    border: "1px solid #caf0f8",
+  },
+
+  closeButtonDark: {
+    backgroundColor: "#12384c",
+    color: "#ffffff",
+    border: "1px solid #16425b",
+  },
+
   linkedFilesSection: {
-    marginTop: "1rem",
+    marginTop: 0,
     display: "flex",
     flexDirection: "column",
     gap: "0.5rem",
+    minHeight: 0,
   },
 
   linkedFilesBox: {
-    border: "1px solid #ddd",
-    borderRadius: "6px",
+    borderRadius: "8px",
     padding: "0.5rem",
     display: "flex",
     flexWrap: "wrap",
     gap: "6px",
+    overflowY: "auto",
+    maxHeight: "180px",
+  },
+
+  linkedFilesBoxLight: {
+    background: "#ffffff",
+    border: "1px solid #dddddd",
+  },
+
+  linkedFilesBoxDark: {
+    background: "#071923",
+    border: "1px solid #16425b",
   },
 
   emptyFiles: {
     fontSize: "0.8rem",
-    color: "#888",
     width: "100%",
     textAlign: "center",
     padding: "6px 0",
   },
 
   fileChip: {
+    maxWidth: "100%",
     padding: "4px 8px",
     borderRadius: "12px",
-    background: "#f1f1f1",
     fontSize: "0.8rem",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     fontWeight: "500",
     cursor: "pointer",
+  },
+
+  fileChipLight: {
+    background: "#f1f1f1",
+    color: "#023047",
+  },
+
+  fileChipDark: {
+    background: "#12384c",
+    color: "#eaf8fc",
+    border: "1px solid #16425b",
   },
 
   detailsPanel: {
@@ -513,5 +729,6 @@ const styleSheet = {
   detailButtons: {
     display: "flex",
     gap: "0.5rem",
+    flexWrap: "wrap",
   },
 };

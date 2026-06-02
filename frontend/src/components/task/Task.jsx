@@ -30,6 +30,7 @@ import {
   updateScheduleService,
   createTaskUsingAIService,
   deleteScheduleService,
+  fetchTaskLogsService,
 } from "../../services/taskService/taskService";
 
 import { useTasks } from "../../hooks/taskHook/useTask";
@@ -73,12 +74,6 @@ export default function Task() {
   const [subTaskName, setSubTaskName] = useState("");
   const [subTaskDescription, setSubTaskDescription] = useState("");
 
-  // const [mainTasks, setMainTasks] = useState([]);
-  //const [tasks, setTasks] = useState([]);
-
-  // state for selected main task
-  // const [selectedTaskId, setSelectedTaskId] = useState(null);
-
   // state for dragging sub task
   const [draggedTask, setDraggedTask] = useState(null);
 
@@ -109,15 +104,6 @@ export default function Task() {
   const [aiGeneratedTask, setAiGeneratedTask] = useState("");
   const [aiDescription, setAiDescription] = useState("");
 
-  //const [isGeneratingTask, setIsGeneratingTask] = useState(false);
-
-  // const [aiSteps, setAiSteps] = useState([
-  //   { id: 1, name: "Generate task plan", done: false },
-  //   { id: 2, name: "Create schedule", done: false },
-  //   { id: 3, name: "Create main task", done: false },
-  //   { id: 4, name: "Create subtasks", done: false },
-  // ]);
-
   // GROUPS
   const [groups, setGroups] = useState([]);
 
@@ -143,289 +129,16 @@ export default function Task() {
   // Task Chart Modal
   const [isShowingChart, setIsShowingChart] = useState(false);
 
-  // =========================
-  // FETCH MAIN TASKS
-  // =========================
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // const fetchMainTasks = async () => {
-  //   try {
-  //     const data = await fetchMainTasksService(getIdToken, currentUser.uid);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
 
-  //     if (data.success) {
-  //       setMainTasks(data.data);
-
-  //       //for (let task of data.data) //console.log("Fetched main task:", task);
-
-  //       if (data.data.length > 0 && !selectedTaskId) {
-  //         setSelectedTaskId(data.data[0].id);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error("Fetch main tasks error:", error);
-  //   }
-  // };
-
-  // =========================
-  // FETCH SUBTASKS
-  // =========================
-
-  // const fetchSubTasks = async (taskId) => {
-  //   try {
-  //     const data = await fetchSubTasksService(getIdToken, taskId);
-
-  //     if (data.success) {
-  //       setTasks(data.data);
-  //     }
-  //   } catch (error) {
-  //     console.error("Fetch subtasks error:", error);
-  //   }
-  // };
-
-  // =========================
-  // CREATE MAIN TASK
-  // =========================
-
-  // const createMainTask = async () => {
-  //   if (!mainTaskName.trim()) return;
-
-  //   try {
-  //     const data = await createMainTaskService(getIdToken, {
-  //       name: mainTaskName,
-  //       userId: currentUser.uid,
-  //       expireAt: mainTaskExpireAt
-  //         ? new Date(mainTaskExpireAt).toISOString()
-  //         : null,
-  //       description: mainTaskDescription,
-  //     });
-
-  //     if (data.success) {
-  //       setMainTaskName("");
-  //       setIsCreatingMainTask(false);
-
-  //       fetchMainTasks();
-
-  //       const scheduleId = uuidv4();
-  //       const title = `Task: ${mainTaskName}`;
-  //       const formattedDate = mainTaskExpireAt
-  //         ? mainTaskExpireAt
-  //         : new Date().toISOString().split("T")[0];
-  //       const startMinutes = 9 * 60; // Default to 9:00 AM
-  //       updateSchedule(
-  //         scheduleId,
-  //         title,
-  //         formattedDate,
-  //         startMinutes,
-  //         currentUser.uid,
-  //       );
-  //     }
-  //   } catch (error) {
-  //     console.error("Create main task error:", error);
-  //   }
-  // };
-
-  // // =========================
-  // // CREATE SUBTASK
-  // // =========================
-
-  // const createSubTask = async () => {
-  //   if (!subTaskName.trim() || !selectedTaskId) return;
-
-  //   try {
-  //     const data = await createSubTaskService(getIdToken, selectedTaskId, {
-  //       name: subTaskName,
-  //       status: "To do",
-  //       timeLogged: 0,
-  //       assignedTo: null,
-  //       description: subTaskDescription,
-  //     });
-
-  //     if (data.success) {
-  //       setSubTaskName("");
-  //       setSubTaskDescription("");
-  //       setIsCreatingSubTask(false);
-
-  //       fetchSubTasks(selectedTaskId);
-  //     }
-  //   } catch (error) {
-  //     console.error("Create subtask error:", error);
-  //   }
-  // };
-
-  // // =========================
-  // // EDIT SUBTASK
-  // // =========================
-
-  // const updateSubTask = async () => {
-  //   if (!editingSubTask) return;
-
-  //   try {
-  //     const data = await updateSubTaskService(
-  //       getIdToken,
-  //       selectedTaskId,
-  //       editingSubTask.id,
-  //       {
-  //         name: editSubTaskName,
-  //         status: editSubTaskStatus,
-  //         assignedTo: editSubTaskAssignedTo,
-  //         description: editSubTaskDescription,
-  //       },
-  //     );
-
-  //     if (data.success) {
-  //       setTasks((prev) =>
-  //         prev.map((task) =>
-  //           task.id === editingSubTask.id
-  //             ? {
-  //                 ...task,
-  //                 name: editSubTaskName,
-  //                 status: editSubTaskStatus,
-  //                 assignedTo: editSubTaskAssignedTo,
-  //                 description: editSubTaskDescription,
-  //               }
-  //             : task,
-  //         ),
-  //       );
-
-  //       setEditingSubTask(null);
-  //     }
-  //   } catch (error) {
-  //     console.error("Update subtask error:", error);
-  //   }
-  // };
-
-  // =========================
-  // UPDATE MAIN TASK
-  // =========================
-
-  // const updateMainTask = async () => {
-  //   if (!editingTask) return;
-
-  //   try {
-  //     const data = await updateMainTaskService(getIdToken, editingTask.id, {
-  //       name: editingTask.name,
-  //       group: editingTask.group,
-  //       expireAt: mainTaskExpireAt
-  //         ? new Date(mainTaskExpireAt).toISOString()
-  //         : null,
-  //       description: mainTaskDescription,
-  //     });
-
-  //     const updatedTask = await addTaskToGroupService(
-  //       getIdToken,
-  //       editingTask.group?.id,
-  //       { taskId: editingTask.id },
-  //     );
-
-  //     const scheduleId = uuidv4();
-  //     const title = `Task: ${editingTask.name}`;
-  //     const formattedDate = mainTaskExpireAt
-  //       ? mainTaskExpireAt
-  //       : new Date().toISOString().split("T")[0];
-  //     const startMinutes = 9 * 60; // Default to 9:00 AM
-  //     updateSchedule(
-  //       scheduleId,
-  //       title,
-  //       formattedDate,
-  //       startMinutes,
-  //       currentUser.uid,
-  //     );
-  //     //console.log("editingTask.group:", editingTask.group);
-  //     if (updatedTask.success) {
-  //       //console.log("Task added to group successfully");
-  //     } else {
-  //       console.error("Failed to add task to group");
-  //     }
-
-  //     if (data.success) {
-  //       setMainTasks((prev) =>
-  //         prev.map((task) =>
-  //           task.id === editingTask.id
-  //             ? {
-  //                 ...task,
-  //                 name: editingTask.name,
-  //                 group: editingTask.group,
-  //               }
-  //             : task,
-  //         ),
-  //       );
-
-  //       setEditingTask(null);
-  //     }
-  //   } catch (error) {
-  //     console.error("Update main task error:", error);
-  //   }
-  // };
-
-  // =========================
-  // UPDATE SUBTASK STATUS
-  // =========================
-
-  // const updateSubTaskStatus = async (taskId, subTaskId, status) => {
-  //   try {
-  //     await updateSubTaskService(getIdToken, taskId, subTaskId, {
-  //       status,
-  //     });
-  //   } catch (error) {
-  //     console.error("Update subtask error:", error);
-  //   }
-  // };
-
-  // =========================
-  // HANDLE DROP
-  // =========================
-
-  const handleDrop = async (status) => {
-    if (!draggedTask) return;
-
-    await updateSubTask(selectedTaskId, draggedTask.id, {
-      status,
-    });
-
-    await fetchSubTasks(selectedTaskId);
-  };
-  // =========================
-  // DELETE MAIN TASK
-  // =========================
-
-  // const deleteMainTask = async (taskId) => {
-  //   try {
-  //     const data = await deleteMainTaskService(getIdToken, taskId);
-
-  //     if (data.success) {
-  //       const updatedTasks = mainTasks.filter((task) => task.id !== taskId);
-
-  //       setMainTasks(updatedTasks);
-
-  //       if (selectedTaskId === taskId) {
-  //         setSelectedTaskId(null);
-  //         setMainTaskSelected(false);
-  //         setTasks([]);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error("Delete main task error:", error);
-  //   }
-  // };
-
-  // =========================
-  // DELETE SUBTASK
-  // =========================
-
-  // const deleteSubTask = async (subTaskId) => {
-  //   try {
-  //     const data = await deleteSubTaskService(
-  //       getIdToken,
-  //       selectedTaskId,
-  //       subTaskId,
-  //     );
-
-  //     if (data.success) {
-  //       setTasks((prev) => prev.filter((task) => task.id !== subTaskId));
-  //     }
-  //   } catch (error) {
-  //     console.error("Delete subtask error:", error);
-  //   }
-  // };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleCreateMainTask = async () => {
     if (!mainTaskName.trim()) return;
@@ -566,101 +279,6 @@ export default function Task() {
     }
   };
 
-  // =========================
-  // CREATE TASK USING AI
-  // =========================
-  // const createTaskUsingAI = async (description) => {
-  //   //console.log("Creating task using AI with description:", description);
-  //   try {
-  //     setIsGeneratingTask(true);
-
-  //     setAiSteps([
-  //       { id: 1, name: "Generate task plan", done: false },
-  //       { id: 2, name: "Create schedule", done: false },
-  //       { id: 3, name: "Create main task", done: false },
-  //       { id: 4, name: "Create subtasks", done: false },
-  //     ]);
-
-  //     const data = await createTaskUsingAIService(getIdToken, {
-  //       description,
-  //       userId: currentUser.uid,
-  //     });
-  //     //console.log("before setting AI generated task:", data.result);
-  //     // setAiGeneratedTask(data.result);
-
-  //     markStepDone(1);
-  //     //console.log("after setting AI generated task:", data.result);
-  //     if (data.result) {
-  //       try {
-  //         //clean up the response to extract JSON
-  //         const cleanedJson = data.result
-  //           .replace(/^```json\s*/i, "")
-  //           .replace(/```$/i, "")
-  //           .trim();
-
-  //         const task = JSON.parse(cleanedJson);
-
-  //         //console.log("AI generated task:", task);
-
-  //         const subTasks = task.subTasks;
-
-  //         const { subTasks: _, ...mainTask } = task;
-
-  //         // console.log("AI generated subtasks:", subTasks);
-  //         // console.log("AI generated main task:", mainTask);
-  //         const title = `Task: ${mainTask.name}`;
-  //         const formattedDate = mainTask.expireAt
-  //           ? mainTask.expireAt
-  //           : new Date().toISOString().split("T")[0];
-  //         const startMinutes = 9 * 60; // Default to 9:00 AM
-  //         const scheduleId = await updateSchedule(
-  //           title,
-  //           formattedDate,
-  //           startMinutes,
-  //           currentUser.uid,
-  //         );
-
-  //         markStepDone(2);
-
-  //         // Create main task
-  //         const mainTaskData = await createMainTask({
-  //           name: mainTask.name,
-  //           userId: currentUser.uid,
-  //           expireAt: mainTask.expireAt
-  //             ? new Date(mainTask.expireAt).toISOString()
-  //             : null,
-  //           description: mainTask.description,
-  //           scheduleId: scheduleId,
-  //         });
-  //         // Update schedule in realtime database
-
-  //         markStepDone(3);
-
-  //         //add indivinual task to group if group exist
-  //         for (let sTask of subTasks) {
-  //           await createSubTask(mainTaskData.data.id, {
-  //             name: sTask.name,
-  //             status: sTask.status || "To do",
-  //             timeLogged: 0,
-  //             assignedTo: null,
-  //             description: sTask.description || "",
-  //           });
-  //         }
-  //         markStepDone(4);
-  //         setTimeout(() => {
-  //           setIsGeneratingTask(false);
-  //           setIsCreatingUsingAI(false);
-  //         }, 1000);
-  //       } catch (error) {
-  //         console.error("Failed to parse AI response:", error);
-  //         console.log("Raw AI response:", data.result);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error("Create task using AI error:", error);
-  //   }
-  // };
-
   const fetchGroupList = async () => {
     try {
       const data = await fetchGroupTasksService(getIdToken, currentUser.uid);
@@ -719,25 +337,6 @@ export default function Task() {
       console.error("Log time error:", error);
     }
   }
-  // =========================
-  // UPDATE SCHEDULE IN REALTIME DB
-  // =========================
-  // const updateSchedule = async (title, formattedDate, startMinutes, userId) => {
-  //   try {
-  //     const data = await updateScheduleService(
-  //       getIdToken,
-  //       title,
-  //       formattedDate,
-  //       startMinutes,
-  //       userId,
-  //     );
-  //     if (data.success) {
-  //       return data.schedule?.scheduleId;
-  //     }
-  //   } catch (error) {
-  //     console.error("Update schedule error:", error);
-  //   }
-  // };
 
   // =========================
   // EFFECTS
@@ -767,17 +366,6 @@ export default function Task() {
       window.removeEventListener("click", closeMenu);
     };
   }, []);
-
-  // Mark AI step as done
-  // const markStepDone = (stepId) => {
-  //   setAiSteps((prev) =>
-  //     prev.map((step) =>
-  //       step.id === stepId
-  //         ? { ...step, done: true }
-  //         : step
-  //     )
-  //   );
-  // };
 
   // =========================
   // RENDER COLUMN
@@ -826,10 +414,20 @@ export default function Task() {
 
       <h1 style={{ paddingLeft: "20px" }}>Task</h1>
 
-      <div style={{ display: "flex" }}>
+      <div
+        style={{
+          ...styleSheet.pageLayout,
+          ...(isMobile ? styleSheet.pageLayoutMobile : {}),
+        }}
+      >
         {/* LEFT SIDE */}
 
-        <div style={styleSheet.leftContainer}>
+        <div
+          style={{
+            ...styleSheet.leftContainer,
+            ...(isMobile ? styleSheet.leftContainerMobile : {}),
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center" }}>
             <button
               onClick={() => setIsCreatingMainTask(true)}
@@ -869,7 +467,7 @@ export default function Task() {
             </button>
           </div>
 
-          <div style={styleSheet.taskListContainer}>
+        <div style={{...styleSheet.taskListContainer, ...(isMobile ? styleSheet.taskListContainerMobile : {})}}>
             {mainTasks.map((task) => (
               <div
                 key={task.id}
@@ -953,7 +551,12 @@ export default function Task() {
         {/* MIDDLE */}
 
         {mainTaskSelected ? (
-          <div style={styleSheet.rightContainer}>
+          <div
+            style={{
+              ...styleSheet.rightContainer,
+              ...(isMobile ? styleSheet.rightContainerMobile : {}),
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <button
                 onClick={() => setIsCreatingSubTask(true)}
@@ -984,7 +587,12 @@ export default function Task() {
               </button>
             </div>
 
-            <div style={styleSheet.taskContainer}>
+            <div
+              style={{
+                ...styleSheet.taskContainer,
+                ...(isMobile ? styleSheet.taskContainerMobile : {}),
+              }}
+            >
               {renderColumn("To do")}
               {renderColumn("In Progress")}
               {renderColumn("Done")}
@@ -1473,11 +1081,29 @@ export default function Task() {
 }
 
 const styleSheet = {
+  pageLayout: {
+    display: "flex",
+    width: "100%",
+  },
+
+  pageLayoutMobile: {
+    flexDirection: "column",
+  },
+
   taskListContainer: {
     width: "100%",
     marginBottom: "20px",
     maxHeight: "75vh",
     overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+  },
+  
+  taskListContainerMobile: {
+    flexDirection: "row",
+    overflowX: "auto",
+    overflowY: "hidden",
+    paddingBottom: "10px",
   },
 
   taskContainer: {
@@ -1485,6 +1111,14 @@ const styleSheet = {
     display: "flex",
     alignItems: "flex-start",
     gap: "10px",
+    paddingRight: "20px",
+  },
+
+  taskContainerMobile: {
+    flexDirection: "row",
+    overflowX: "auto",
+    overflowY: "hidden",
+    paddingBottom: "10px",
   },
 
   input: {
@@ -1506,22 +1140,24 @@ const styleSheet = {
 
   button: {
     padding: "8px 16px",
-    backgroundColor: "#007bff",
+    backgroundColor: "#0077b6",
     color: "#fff",
     border: "none",
-    borderRadius: "4px",
+    borderRadius: "8px",
     cursor: "pointer",
   },
 
   taskBox: {
-    width: "100%",
-    minHeight: "300px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
+    minWidth: "260px",
+    width: "33.33%",
+    minHeight: "260px",
+    border: "1px solid #caf0f8",
+    borderRadius: "10px",
     backgroundColor: "#fff",
     padding: "10px",
     maxHeight: "50vh",
     overflowY: "auto",
+    flexShrink: 0,
   },
 
   leftContainer: {
@@ -1529,9 +1165,17 @@ const styleSheet = {
     padding: "10px",
   },
 
+  leftContainerMobile: {
+    width: "100%",
+  },
+
   rightContainer: {
     width: "80%",
     padding: "10px",
+  },
+
+  rightContainerMobile: {
+    width: "100%",
   },
 
   placeholderContainer: {
@@ -1553,15 +1197,6 @@ const styleSheet = {
 
   subTaskItem: {
     marginBottom: "10px",
-  },
-
-  deleteButton: {
-    padding: "6px 10px",
-    backgroundColor: "#dc3545",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
   },
 
   menuButton: {
@@ -1594,24 +1229,26 @@ const styleSheet = {
 
   modalOverlay: {
     position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
+    inset: 0,
     backgroundColor: "rgba(0,0,0,0.5)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 5000,
+    padding: "1rem",
   },
 
   modalContainer: {
     backgroundColor: "#fff",
     padding: "20px",
     borderRadius: "10px",
-    minWidth: "350px",
+    width: "100%",
+    maxWidth: "420px",
+    maxHeight: "90vh",
+    overflowY: "auto",
     boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
   },
+
   subTaskContextMenuItem: {
     width: "100%",
     padding: "10px",

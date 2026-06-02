@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Navbar from "../shared/Navbar";
 import SchedulePopUp from "./SchedulePopUp";
 import { useScheduleRealtime } from "../../hooks/scheduleHook/useScheduleRealtime";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 import {
   MONTHS,
@@ -28,6 +29,7 @@ export default function Schedule() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  const { darkMode } = useDarkMode();
   const eventList = useScheduleRealtime();
 
   const today = todayDate.getDate();
@@ -73,7 +75,12 @@ export default function Schedule() {
   }, [month, year, daysInMonth]);
 
   return (
-    <div style={styleSheet.page}>
+    <div
+      style={{
+        ...styleSheet.page,
+        ...(darkMode ? styleSheet.pageDark : styleSheet.pageLight),
+      }}
+    >
       <Navbar />
 
       <img
@@ -91,7 +98,15 @@ export default function Schedule() {
           ...(isMobile ? styleSheet.titleContainerMobile : {}),
         }}
       >
-        <button style={styleSheet.monthNavigate} onClick={prevMonth}>
+        <button
+          style={{
+            ...styleSheet.monthNavigate,
+            ...(darkMode
+              ? styleSheet.monthNavigateDark
+              : styleSheet.monthNavigateLight),
+          }}
+          onClick={prevMonth}
+        >
           &lt; Back
         </button>
 
@@ -99,19 +114,33 @@ export default function Schedule() {
           style={{
             ...styleSheet.title,
             ...(isMobile ? styleSheet.titleMobile : {}),
+            color: darkMode ? "#ffffff" : "#023047",
           }}
           onClick={dropDownMonthSelection}
         >
           {selectedMonthName} {year}
         </h2>
 
-        <button style={styleSheet.monthNavigate} onClick={nextMonth}>
+        <button
+          style={{
+            ...styleSheet.monthNavigate,
+            ...(darkMode
+              ? styleSheet.monthNavigateDark
+              : styleSheet.monthNavigateLight),
+          }}
+          onClick={nextMonth}
+        >
           Next &gt;
         </button>
       </div>
 
       <div style={styleSheet.tableWrapper}>
-        <table style={styleSheet.table}>
+        <table
+          style={{
+            ...styleSheet.table,
+            ...(darkMode ? styleSheet.tableDark : styleSheet.tableLight),
+          }}
+        >
           <thead>
             <tr>
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
@@ -120,6 +149,7 @@ export default function Schedule() {
                   style={{
                     ...styleSheet.th,
                     ...(isMobile ? styleSheet.thMobile : {}),
+                    color: darkMode ? "#b8dce8" : "#6c757d",
                   }}
                 >
                   {isMobile ? day : getFullDayName(day)}
@@ -157,14 +187,23 @@ export default function Schedule() {
                         backgroundColor: isToday
                           ? "#0077b6"
                           : hasEvent
-                            ? "#e3f2fd"
-                            : "transparent",
-                        color: isToday ? "#ffffff" : "#023047",
+                            ? darkMode
+                              ? "#12384c"
+                              : "#e3f2fd"
+                            : darkMode
+                              ? "#071923"
+                              : "transparent",
+                        color: isToday
+                          ? "#ffffff"
+                          : darkMode
+                            ? "#eaf8fc"
+                            : "#023047",
+                        border: darkMode
+                          ? "1px solid #16425b"
+                          : "1px solid #e6f7fc",
                         cursor: isCurrentMonth ? "pointer" : "default",
                       }}
-                      onClick={() => {
-                        if (isCurrentMonth) openSchedule(day);
-                      }}
+                      onClick={() => isCurrentMonth && openSchedule(day)} 
                     >
                       {isCurrentMonth ? day : ""}
 
@@ -195,6 +234,7 @@ export default function Schedule() {
             style={{
               ...styleSheet.modal,
               ...(isMobile ? styleSheet.modalMobile : {}),
+              ...(darkMode ? styleSheet.modalDark : styleSheet.modalLight),
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -209,7 +249,10 @@ export default function Schedule() {
               <select
                 value={tempMonth}
                 onChange={(e) => setTempMonth(Number(e.target.value))}
-                style={styleSheet.select}
+                style={{
+                  ...styleSheet.select,
+                  ...(darkMode ? styleSheet.inputDark : styleSheet.inputLight),
+                }}
               >
                 {MONTHS.map((m, i) => (
                   <option key={i} value={i}>
@@ -224,7 +267,10 @@ export default function Schedule() {
                 max="2100"
                 value={tempYear}
                 onChange={(e) => setTempYear(Number(e.target.value))}
-                style={styleSheet.yearInput}
+                style={{
+                  ...styleSheet.yearInput,
+                  ...(darkMode ? styleSheet.inputDark : styleSheet.inputLight),
+                }}
               />
             </div>
 
@@ -241,7 +287,12 @@ export default function Schedule() {
               </button>
 
               <button
-                style={styleSheet.secondaryButton}
+                style={{
+                  ...styleSheet.secondaryButton,
+                  ...(darkMode
+                    ? styleSheet.secondaryButtonDark
+                    : styleSheet.secondaryButtonLight),
+                }}
                 onClick={() => setShowPicker(false)}
               >
                 Cancel
@@ -500,5 +551,67 @@ const styleSheet = {
 
   bgLogo: {
     display: "none",
+  },
+
+  pageLight: {
+    background: "#f8fdff",
+  },
+
+  pageDark: {
+    background: "#071923",
+  },
+
+  monthNavigateLight: {
+    color: "#0077b6",
+    border: "1px solid #caf0f8",
+    background: "#ffffff",
+  },
+
+  monthNavigateDark: {
+    color: "#eaf8fc",
+    border: "1px solid #16425b",
+    background: "#12384c",
+  },
+
+  tableLight: {
+    background: "rgba(255,255,255,0.85)",
+  },
+
+  tableDark: {
+    background: "#0b2635",
+  },
+
+  modalLight: {
+    background: "#ffffff",
+    color: "#023047",
+  },
+
+  modalDark: {
+    background: "#0b2635",
+    color: "#ffffff",
+  },
+
+  inputLight: {
+    background: "#ffffff",
+    color: "#023047",
+    border: "1px solid #caf0f8",
+  },
+
+  inputDark: {
+    background: "#071923",
+    color: "#ffffff",
+    border: "1px solid #16425b",
+  },
+
+  secondaryButtonLight: {
+    background: "#e6f7fc",
+    color: "#0077b6",
+    border: "1px solid #caf0f8",
+  },
+
+  secondaryButtonDark: {
+    background: "#12384c",
+    color: "#ffffff",
+    border: "1px solid #16425b",
   },
 };

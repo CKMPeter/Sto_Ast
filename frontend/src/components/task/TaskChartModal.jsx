@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Button } from "react-bootstrap";
 import {
   PieChart,
@@ -14,9 +14,20 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const COLORS = ["#ffc107", "#0d6efd", "#198754", "#dc3545"];
+const COLORS = ["#0077b6", "#005f92", "#48a6d9", "#d62828"];
 
 export default function TaskChartModal({ show, onClose, subtasks = [] }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const pieData = useMemo(() => {
     const counts = {
       "To do": 0,
@@ -32,7 +43,10 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 
     return Object.entries(counts)
       .filter(([, value]) => value > 0)
-      .map(([name, value]) => ({ name, value }));
+      .map(([name, value]) => ({
+        name,
+        value,
+      }));
   }, [subtasks]);
 
   const burndownData = useMemo(() => {
@@ -46,12 +60,17 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 
     const totalTimeLogged = sorted.reduce(
       (sum, task) => sum + Number(task.timeLogged || 0),
-      0,
+      0
     );
 
     let remaining = totalTimeLogged;
 
-    const data = [{ date: "Start", remaining }];
+    const data = [
+      {
+        date: "Start",
+        remaining,
+      },
+    ];
 
     sorted.forEach((task) => {
       remaining -= Number(task.timeLogged || 0);
@@ -70,33 +89,52 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
   }, [subtasks]);
 
   return (
-    <Modal show={show} onHide={onClose} centered size="xl">
+    <Modal
+      show={show}
+      onHide={onClose}
+      centered
+      size={isMobile ? undefined : "xl"}
+      dialogClassName="task-chart-modal"
+    >
       <Modal.Header closeButton>
         <Modal.Title>Task Analytics</Modal.Title>
       </Modal.Header>
 
-      <Modal.Body style={{ minHeight: "400px", height: "70vh", gap: "2rem" }}>
+      <Modal.Body
+        style={{
+          ...styles.modalBody,
+          ...(isMobile ? styles.modalBodyMobile : {}),
+        }}
+      >
         <div
           style={{
-            display: "flex",
-            gap: "20px",
-            width: "100%",
-            height: "100%",
+            ...styles.chartLayout,
+            ...(isMobile ? styles.chartLayoutMobile : {}),
           }}
         >
-          <div style={styles.chartBox}>
-            <h5>Status Pie Chart</h5>
+          <div
+            style={{
+              ...styles.chartBox,
+              ...(isMobile ? styles.chartBoxMobile : {}),
+            }}
+          >
+            <h5 style={styles.chartTitle}>Status Pie Chart</h5>
 
             {pieData.length > 0 ? (
-              <div style={styles.chartArea}>
+              <div
+                style={{
+                  ...styles.chartArea,
+                  ...(isMobile ? styles.chartAreaMobile : {}),
+                }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       dataKey="value"
                       nameKey="name"
-                      outerRadius={90}
-                      label
+                      outerRadius={isMobile ? 65 : 90}
+                      label={!isMobile}
                     >
                       {pieData.map((entry, index) => (
                         <Cell
@@ -112,35 +150,51 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p>No task status data available.</p>
+              <p style={styles.emptyText}>No task status data available.</p>
             )}
           </div>
 
-          <div style={styles.chartBox}>
-            <h5>Burndown Chart</h5>
+          <div
+            style={{
+              ...styles.chartBox,
+              ...(isMobile ? styles.chartBoxMobile : {}),
+            }}
+          >
+            <h5 style={styles.chartTitle}>Burndown Chart</h5>
 
             {burndownData.length > 1 ? (
-              <div style={styles.chartArea}>
+              <div
+                style={{
+                  ...styles.chartArea,
+                  ...(isMobile ? styles.chartAreaMobile : {}),
+                }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={burndownData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis allowDecimals={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                    />
                     <Tooltip />
                     <Legend />
 
                     <Line
                       type="monotone"
                       dataKey="remaining"
-                      name="Remaining logged time (min)"
-                      stroke="#dc3545"
+                      name="Remaining logged time"
+                      stroke="#d62828"
                       strokeWidth={3}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p>No time logged data available.</p>
+              <p style={styles.emptyText}>No time logged data available.</p>
             )}
           </div>
         </div>
@@ -156,15 +210,64 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 }
 
 const styles = {
+  modalBody: {
+    minHeight: "400px",
+    height: "70vh",
+    overflow: "hidden",
+  },
+
+  modalBodyMobile: {
+    height: "75vh",
+    overflowY: "auto",
+    padding: "12px",
+  },
+
+  chartLayout: {
+    display: "flex",
+    gap: "20px",
+    width: "100%",
+    height: "100%",
+  },
+
+  chartLayoutMobile: {
+    flexDirection: "column",
+    height: "auto",
+  },
+
   chartBox: {
     flex: 1,
     minWidth: 0,
     height: "100%",
+    padding: "10px",
+    border: "1px solid #caf0f8",
+    borderRadius: "14px",
+    backgroundColor: "#ffffff",
+  },
+
+  chartBoxMobile: {
+    height: "320px",
+    minHeight: "320px",
+  },
+
+  chartTitle: {
+    color: "#023047",
+    fontWeight: "700",
+    marginBottom: "10px",
   },
 
   chartArea: {
     width: "100%",
     height: "calc(100% - 40px)",
     minHeight: "300px",
+  },
+
+  chartAreaMobile: {
+    minHeight: "250px",
+    height: "250px",
+  },
+
+  emptyText: {
+    color: "#6c757d",
+    marginTop: "20px",
   },
 };

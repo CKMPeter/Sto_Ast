@@ -12,8 +12,11 @@ import { styled } from "@mui/material/styles";
 import useCallGroup from "../../webrtc/useCallGroup";
 import CallModalGroup from "./CallModalGroup";
 
+import { useDarkMode } from "../../hooks/useDarkMode";
+
 export function Message() {
   const { currentUser } = useAuth();
+  const { darkMode } = useDarkMode();
 
   // CALL
   const {
@@ -285,13 +288,13 @@ export function Message() {
   return (
     <div>
       <Navbar />
-      <Container>
+      <Container darkMode={darkMode}>
         {/* SIDEBAR */}
-        <Sidebar>
+        <Sidebar darkMode={darkMode}>
           <div style={styleSheet.buttonArea}>
             <button
               className="btn btn-warning"
-              style={styleSheet.flexButton}
+              style={styleSheet.flexButton(darkMode)}
               onClick={() => setShowCreateGroup(true)}
             >
               + Group
@@ -299,7 +302,7 @@ export function Message() {
 
             <button
               className="btn btn-success"
-              style={styleSheet.flexButton}
+              style={styleSheet.flexButton(darkMode)}
               onClick={() => setShowAddFriend(true)}
             >
               + Add
@@ -326,7 +329,12 @@ export function Message() {
             selectedUserId={selectedUserId}
           />
 
-          <div style={styleSheet.groupsContainer}>
+          <div
+            style={{
+              ...styleSheet.groupsContainer,
+              color: darkMode ? "#ffffff" : "#023047",
+            }}
+          >
             <strong>Groups</strong>
 
             {groups.map((g) => (
@@ -336,7 +344,7 @@ export function Message() {
                   setSelectedGroupId(g.id);
                   setSelectedUserId(null);
                 }}
-                style={styleSheet.groupItem(selectedGroupId === g.id)}
+                style={styleSheet.groupItem(selectedGroupId === g.id, darkMode)}
               >
                 👥 {g.name}
               </div>
@@ -345,8 +353,8 @@ export function Message() {
         </Sidebar>
 
         {/* CHAT */}
-        <ChatArea>
-          <Header>
+        <ChatArea darkMode={darkMode}>
+          <Header darkMode={darkMode}>
             <div>
               {selectedGroup
                 ? `👥 ${selectedGroup.name}`
@@ -356,13 +364,13 @@ export function Message() {
             </div>
 
             {selectedGroupId && (
-              <CallBtn onClick={() => startGroupCall(selectedGroup)}>
+              <CallBtn darkMode={darkMode} onClick={() => startGroupCall(selectedGroup)}>
                 👥 Call Group
               </CallBtn>
             )}
 
             {selectedUserId && (
-              <CallBtn
+              <CallBtn darkMode={darkMode}
                 onClick={() =>
                   startCall(
                     selectedUserId,
@@ -376,14 +384,14 @@ export function Message() {
           </Header>
 
           {/* CHAT BODY */}
-          <ChatBody>
+          <ChatBody darkMode={darkMode}>
             {selectedUserId || selectedGroupId ? (
               messages.map((msg) => {
                 const isMe = msg.senderId === currentUser.uid;
 
                 return (
                   <Row key={msg.id} isMe={isMe}>
-                    <Bubble isMe={isMe}>
+                    <Bubble isMe={isMe} darkMode={darkMode}>
                       {msg.text && <div>{msg.text}</div>}
 
                       {msg.type === "voice" && msg.voiceDataUrl && (
@@ -412,7 +420,7 @@ export function Message() {
                 );
               })
             ) : (
-              <Empty>Select a conversation</Empty>
+              <Empty darkMode={darkMode}>Select a conversation</Empty>
             )}
 
             <div ref={bottomRef} />
@@ -420,7 +428,7 @@ export function Message() {
 
           {/* FILE PREVIEW */}
           {filePreview && (
-            <PreviewBox>
+            <PreviewBox darkMode={darkMode}>
               {filePreview.file.type.startsWith("image") ? (
                 <img
                   src={filePreview.url}
@@ -440,10 +448,13 @@ export function Message() {
           {uploading && <Uploading>Uploading...</Uploading>}
 
           {/* FOOTER */}
-          <Footer>
-            <FileBtn onClick={() => fileInputRef.current.click()}>📎</FileBtn>
+          <Footer darkMode={darkMode}>
+            <FileBtn darkMode={darkMode} onClick={() => fileInputRef.current.click()}>
+              📎
+            </FileBtn>
 
             <input
+              darkMode={darkMode}
               type="file"
               hidden
               ref={fileInputRef}
@@ -452,19 +463,22 @@ export function Message() {
 
             <button
               onClick={isRecording ? stopRecording : startRecording}
-              style={styleSheet.recordButton(isRecording)}
+              style={styleSheet.recordButton(isRecording, darkMode)}
             >
               {isRecording ? "⏹" : "🎤"}
             </button>
 
             <Input
+              darkMode={darkMode}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Type a message..."
             />
 
-            <SendBtn onClick={handleSend}>Send</SendBtn>
+            <SendBtn darkMode={darkMode} onClick={handleSend}>
+              Send
+            </SendBtn>
           </Footer>
         </ChatArea>
       </Container>
@@ -515,6 +529,7 @@ export function Message() {
 
             <div style={modalStyles.searchRow}>
               <input
+                darkMode={darkMode}
                 type="text"
                 placeholder="Search email..."
                 value={friendSearch}
@@ -577,6 +592,7 @@ export function Message() {
             {/* GROUP NAME */}
             <div style={{ marginBottom: "16px" }}>
               <input
+                darkMode={darkMode}
                 type="text"
                 placeholder="Group name..."
                 value={groupName}
@@ -669,15 +685,19 @@ const styleSheet = {
     color: "#023047",
   },
 
-  groupItem: (selected) => ({
+  groupItem: (selected, darkMode) => ({
     padding: "10px 12px",
     borderRadius: "12px",
     marginTop: "6px",
     cursor: "pointer",
     transition: "0.2s",
-    background: selected ? "#0077b6" : "#ffffff",
-    color: selected ? "#ffffff" : "#023047",
-    border: selected ? "none" : "1px solid #caf0f8",
+    background: selected ? "#0077b6" : darkMode ? "#12384c" : "#ffffff",
+    color: selected ? "#ffffff" : darkMode ? "#eaf8fc" : "#023047",
+    border: selected
+      ? "none"
+      : darkMode
+        ? "1px solid #16425b"
+        : "1px solid #caf0f8",
   }),
 
   audio: {
@@ -705,13 +725,42 @@ const styleSheet = {
     padding: "8px 12px",
     cursor: "pointer",
   }),
+
+  flexButton: (darkMode) => ({
+    flex: 1,
+    background: darkMode ? "#12384c" : "#0077b6",
+    color: "#ffffff",
+    border: darkMode ? "1px solid #16425b" : "1px solid #0077b6",
+    borderRadius: "12px",
+    padding: "10px",
+    fontWeight: "600",
+    cursor: "pointer",
+  }),
+
+  recordButton: (recording, darkMode) => ({
+    background: recording ? "#d62828" : darkMode ? "#12384c" : "#e6f7fc",
+
+    color: recording ? "#ffffff" : darkMode ? "#eaf8fc" : "#0077b6",
+
+    border: recording
+      ? "1px solid #d62828"
+      : darkMode
+        ? "1px solid #16425b"
+        : "1px solid #caf0f8",
+
+    borderRadius: "12px",
+    padding: "8px 12px",
+    cursor: "pointer",
+  }),
 };
 /* STYLES */
 
-const Container = styled("div")(() => ({
+const Container = styled("div")(({ darkMode }) => ({
   display: "flex",
   height: "calc(100vh - 64px)",
-  background: "linear-gradient(135deg, #f8fdff 0%, #e6f7fc 100%)",
+  background: darkMode
+    ? "linear-gradient(135deg, #071923 0%, #0b2635 100%)"
+    : "linear-gradient(135deg, #f8fdff 0%, #e6f7fc 100%)",
 
   "@media (max-width: 768px)": {
     flexDirection: "column",
@@ -720,27 +769,30 @@ const Container = styled("div")(() => ({
   },
 }));
 
-const Sidebar = styled("div")(() => ({
+const Sidebar = styled("div")(({ darkMode }) => ({
   width: "280px",
   padding: "16px",
-  background: "#ffffff",
-  borderRight: "1px solid #caf0f8",
-  boxShadow: "2px 0 10px rgba(0,119,182,0.08)",
+  background: darkMode ? "#0b2635" : "#ffffff",
+  color: darkMode ? "#ffffff" : "#023047",
+  borderRight: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+  boxShadow: darkMode
+    ? "2px 0 10px rgba(0,0,0,0.3)"
+    : "2px 0 10px rgba(0,119,182,0.08)",
   overflowY: "auto",
 
   "@media (max-width: 768px)": {
     width: "100%",
     maxHeight: "250px",
     borderRight: "none",
-    borderBottom: "1px solid #caf0f8",
+    borderBottom: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
   },
 }));
 
-const ChatArea = styled("div")(() => ({
+const ChatArea = styled("div")(({ darkMode }) => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  background: "#f8fdff",
+  background: darkMode ? "#071923" : "#f8fdff",
   height: "88vh",
 
   "@media (max-width: 768px)": {
@@ -748,7 +800,7 @@ const ChatArea = styled("div")(() => ({
   },
 }));
 
-const Header = styled("div")(() => ({
+const Header = styled("div")(({ darkMode }) => ({
   minHeight: "65px",
   padding: "12px 20px",
   display: "flex",
@@ -756,8 +808,9 @@ const Header = styled("div")(() => ({
   alignItems: "center",
   gap: "10px",
   flexWrap: "wrap",
-  background: "#ffffff",
-  borderBottom: "1px solid #caf0f8",
+  background: darkMode ? "#0b2635" : "#ffffff",
+  color: darkMode ? "#ffffff" : "#023047",
+  borderBottom: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
 
   "@media (max-width: 768px)": {
     flexDirection: "column",
@@ -766,11 +819,13 @@ const Header = styled("div")(() => ({
   },
 }));
 
-const ChatBody = styled("div")(() => ({
+const ChatBody = styled("div")(({ darkMode }) => ({
   flex: 1,
   overflowY: "auto",
   padding: "20px",
-  background: "linear-gradient(180deg,#f8fdff 0%,#eefaff 100%)",
+  background: darkMode
+    ? "linear-gradient(180deg,#071923 0%,#0b2635 100%)"
+    : "linear-gradient(180deg,#f8fdff 0%,#eefaff 100%)",
 }));
 
 const Row = styled("div")(({ isMe }) => ({
@@ -779,37 +834,46 @@ const Row = styled("div")(({ isMe }) => ({
   marginBottom: "10px",
 }));
 
-const Bubble = styled("div")(({ isMe }) => ({
-  background: isMe ? "#0077b6" : "#ffffff",
-  color: isMe ? "#ffffff" : "#023047",
+const Bubble = styled("div")(({ isMe, darkMode }) => ({
+  background: isMe ? "#0077b6" : darkMode ? "#12384c" : "#ffffff",
+  color: isMe ? "#ffffff" : darkMode ? "#eaf8fc" : "#023047",
   padding: "12px 16px",
   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
   maxWidth: "65%",
   wordBreak: "break-word",
+  border: isMe
+    ? "1px solid #0077b6"
+    : darkMode
+      ? "1px solid #16425b"
+      : "1px solid #caf0f8",
 
   "@media (max-width: 768px)": {
     maxWidth: "90%",
   },
 }));
 
-const Footer = styled("div")(() => ({
+const Footer = styled("div")(({ darkMode }) => ({
   display: "flex",
   alignItems: "center",
   gap: "10px",
   padding: "14px",
-  background: "#ffffff",
-  borderTop: "1px solid #caf0f8",
+  background: darkMode ? "#0b2635" : "#ffffff",
+  borderTop: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
 
   "@media (max-width: 768px)": {
     flexWrap: "wrap",
   },
 }));
 
-const Input = styled("input")(() => ({
+const Input = styled("input")(({ darkMode }) => ({
   flex: 1,
   minWidth: 0,
   padding: "12px 16px",
   borderRadius: "25px",
+  border: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+  background: darkMode ? "#071923" : "#f8fdff",
+  color: darkMode ? "#ffffff" : "#023047",
+  outline: "none",
 
   "@media (max-width: 768px)": {
     width: "100%",
@@ -817,31 +881,43 @@ const Input = styled("input")(() => ({
   },
 }));
 
-const SendBtn = styled("button")(() => ({
-  background: "#0077b6",
+const SendBtn = styled("button")(({ darkMode }) => ({
+  background: darkMode ? "#12384c" : "#0077b6",
+
   color: "#ffffff",
-  border: "none",
+
+  border: darkMode ? "1px solid #16425b" : "none",
+
   borderRadius: "14px",
   padding: "10px 18px",
   fontWeight: "600",
   cursor: "pointer",
-  transition: "0.2s",
 }));
 
-const FileBtn = styled("button")(() => ({
-  background: "#e6f7fc",
-  color: "#0077b6",
-  border: "1px solid #caf0f8",
+const FileBtn = styled("button")(({ darkMode }) => ({
+  background: darkMode
+    ? "#12384c"
+    : "#e6f7fc",
+
+  color: darkMode
+    ? "#eaf8fc"
+    : "#0077b6",
+
+  border: darkMode
+    ? "1px solid #16425b"
+    : "1px solid #caf0f8",
+
   borderRadius: "12px",
   padding: "8px 12px",
   cursor: "pointer",
   fontSize: "18px",
 }));
 
-const PreviewBox = styled("div")(() => ({
+const PreviewBox = styled("div")(({ darkMode }) => ({
   padding: "12px",
-  background: "#ffffff",
-  borderTop: "1px solid #caf0f8",
+  background: darkMode ? "#0b2635" : "#ffffff",
+  color: darkMode ? "#ffffff" : "#023047",
+  borderTop: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
 }));
 
 const Uploading = styled("div")(() => ({
@@ -857,16 +933,23 @@ const IncomingBox = styled("div")(() => ({
   borderBottom: "1px solid #caf0f8",
 }));
 
-const Empty = styled("p")(() => ({
-  color: "#6c757d",
+const Empty = styled("p")(({ darkMode }) => ({
+  color: darkMode ? "#b8dce8" : "#6c757d",
   textAlign: "center",
   marginTop: "40px",
 }));
 
-const CallBtn = styled("button")(() => ({
-  background: "#005f91",
+const CallBtn = styled("button")(({ darkMode }) => ({
+  background: darkMode
+    ? "#12384c"
+    : "#005f91",
+
   color: "#fff",
-  border: "none",
+
+  border: darkMode
+    ? "1px solid #16425b"
+    : "none",
+
   borderRadius: "12px",
   padding: "10px 16px",
 
