@@ -362,7 +362,14 @@ export function Message() {
             )}
 
             {selectedUserId && (
-              <CallBtn onClick={() => startCall(selectedUserId, currentUser?.displayName || currentUser?.email)}>
+              <CallBtn
+                onClick={() =>
+                  startCall(
+                    selectedUserId,
+                    currentUser?.displayName || currentUser?.email,
+                  )
+                }
+              >
                 📹 Call
               </CallBtn>
             )}
@@ -641,25 +648,35 @@ export function Message() {
 const styleSheet = {
   buttonArea: {
     display: "flex",
-    gap: "8px",
-    marginBottom: "10px",
+    gap: "10px",
+    marginBottom: "12px",
   },
 
   flexButton: {
     flex: 1,
+    background: "#0077b6",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "12px",
+    padding: "10px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
 
   groupsContainer: {
-    marginTop: "10px",
-    color: "#222",
+    marginTop: "15px",
+    color: "#023047",
   },
 
-  groupItem: (isSelected) => ({
-    padding: "8px",
+  groupItem: (selected) => ({
+    padding: "10px 12px",
+    borderRadius: "12px",
+    marginTop: "6px",
     cursor: "pointer",
-    borderRadius: "8px",
-    background: isSelected ? "#e3f2fd" : "transparent",
-    color: "#222",
+    transition: "0.2s",
+    background: selected ? "#0077b6" : "#ffffff",
+    color: selected ? "#ffffff" : "#023047",
+    border: selected ? "none" : "1px solid #caf0f8",
   }),
 
   audio: {
@@ -667,242 +684,160 @@ const styleSheet = {
   },
 
   imageMessage: {
-    maxWidth: "200px",
-    borderRadius: "10px",
+    maxWidth: "220px",
+    borderRadius: "12px",
   },
 
   previewImage: {
-    width: "80px",
-    borderRadius: "8px",
+    width: "90px",
+    borderRadius: "12px",
   },
 
-  recordButton: (isRecording) => ({
-    marginRight: "8px",
-    background: isRecording ? "#ff4d4f" : "#eeeeee",
-    color: isRecording ? "white" : "#222",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    padding: "6px 10px",
+  recordButton: (recording) => ({
+    background: recording ? "#d62828" : "#e6f7fc",
+    color: recording ? "#ffffff" : "#0077b6",
+    border: recording ? "1px solid #d62828" : "1px solid #caf0f8",
+    borderRadius: "12px",
+    padding: "8px 12px",
     cursor: "pointer",
   }),
 };
 /* STYLES */
 
-// const Container = styled("div")(() => ({
-//   display: "flex",
-//   height: "calc(100vh - 64px)",
-//   background: "#0f0f0f",
-// }));
-
-// const Sidebar = styled("div")(() => ({
-//   width: "260px",
-//   borderRight: "1px solid #222",
-//   padding: "10px",
-// }));
-
-// const ChatArea = styled("div")(() => ({
-//   flex: 1,
-//   display: "flex",
-//   flexDirection: "column",
-// }));
-
-// const Header = styled("div")(() => ({
-//   height: "60px",
-//   padding: "0 15px",
-//   display: "flex",
-//   justifyContent: "space-between",
-//   alignItems: "center",
-//   borderBottom: "1px solid #222",
-//   color: "white",
-// }));
-
-// const ChatBody = styled("div")(() => ({
-//   flex: 1,
-//   overflowY: "auto",
-//   padding: "15px",
-//   background: "#121212",
-// }));
-
-// const Row = styled("div")(({ isMe }) => ({
-//   display: "flex",
-//   justifyContent: isMe
-//     ? "flex-end"
-//     : "flex-start",
-// }));
-
-// const Bubble = styled("div")(({ isMe }) => ({
-//   background: isMe
-//     ? "#0084ff"
-//     : "#2a2a2a",
-//   color: "white",
-//   padding: "10px",
-//   borderRadius: "16px",
-//   maxWidth: "60%",
-//   marginBottom: "8px",
-// }));
-
-// const Footer = styled("div")(() => ({
-//   display: "flex",
-//   padding: "10px",
-//   background: "#181818",
-// }));
-
-// const Input = styled("input")(() => ({
-//   flex: 1,
-//   borderRadius: "20px",
-//   padding: "10px",
-// }));
-
-// const SendBtn = styled("button")(() => ({
-//   marginLeft: "10px",
-//   background: "#0084ff",
-//   color: "white",
-// }));
-
-// const FileBtn = styled("button")(() => ({
-//   background: "transparent",
-//   color: "white",
-// }));
-
-// const PreviewBox = styled("div")(() => ({
-//   padding: "10px",
-//   background: "#222",
-//   color: "white",
-// }));
-
-// const Uploading = styled("div")(() => ({
-//   color: "white",
-// }));
-
-// const IncomingBox = styled("div")(() => ({
-//   color: "white",
-// }));
-
-// const Empty = styled("p")(() => ({
-//   color: "#aaa",
-// }));
-
-// const CallBtn = styled("button")(() => ({
-//   background: "#1f8f5f",
-//   color: "white",
-// }));
 const Container = styled("div")(() => ({
   display: "flex",
   height: "calc(100vh - 64px)",
-  background: "#f5f5f5",
+  background: "linear-gradient(135deg, #f8fdff 0%, #e6f7fc 100%)",
 }));
 
 const Sidebar = styled("div")(() => ({
-  width: "260px",
-  borderRight: "1px solid #ddd",
-  padding: "10px",
+  width: "280px",
+  padding: "16px",
   background: "#ffffff",
+  borderRight: "1px solid #caf0f8",
+  boxShadow: "2px 0 10px rgba(0,119,182,0.08)",
+  overflowY: "auto",
 }));
 
 const ChatArea = styled("div")(() => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  background: "#fafafa",
+  background: "#f8fdff",
   height: "88vh",
 }));
 
 const Header = styled("div")(() => ({
-  height: "60px",
-  padding: "0 15px",
+  height: "65px",
+  padding: "0 20px",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  borderBottom: "1px solid #ddd",
   background: "#ffffff",
-  color: "#222",
+  borderBottom: "1px solid #caf0f8",
+  color: "#023047",
+  fontWeight: "600",
+  boxShadow: "0 2px 8px rgba(0,119,182,0.05)",
 }));
 
 const ChatBody = styled("div")(() => ({
   flex: 1,
   overflowY: "auto",
-  padding: "15px",
-  background: "#f3f4f6",
+  padding: "20px",
+  background: "linear-gradient(180deg,#f8fdff 0%,#eefaff 100%)",
 }));
 
 const Row = styled("div")(({ isMe }) => ({
   display: "flex",
   justifyContent: isMe ? "flex-end" : "flex-start",
+  marginBottom: "10px",
 }));
 
 const Bubble = styled("div")(({ isMe }) => ({
-  background: isMe ? "#1976d2" : "#ffffff",
-  color: isMe ? "#ffffff" : "#222",
-  padding: "10px",
-  borderRadius: "16px",
-  maxWidth: "60%",
-  marginBottom: "8px",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+  background: isMe ? "#0077b6" : "#ffffff",
+  color: isMe ? "#ffffff" : "#023047",
+  padding: "12px 16px",
+  borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+  maxWidth: "65%",
+  wordBreak: "break-word",
+  boxShadow: isMe
+    ? "0 6px 18px rgba(0,119,182,0.25)"
+    : "0 4px 14px rgba(0,0,0,0.06)",
 }));
 
 const Footer = styled("div")(() => ({
   display: "flex",
-  padding: "10px",
+  alignItems: "center",
+  gap: "10px",
+  padding: "14px",
   background: "#ffffff",
-  borderTop: "1px solid #ddd",
+  borderTop: "1px solid #caf0f8",
 }));
 
 const Input = styled("input")(() => ({
   flex: 1,
-  borderRadius: "20px",
-  padding: "10px 14px",
-  border: "1px solid #ccc",
+  padding: "12px 16px",
+  borderRadius: "25px",
+  border: "1px solid #caf0f8",
+  background: "#f8fdff",
   outline: "none",
-  background: "#fff",
+  color: "#023047",
+  fontSize: "14px",
 }));
 
 const SendBtn = styled("button")(() => ({
-  marginLeft: "10px",
-  background: "#1976d2",
-  color: "white",
+  background: "#0077b6",
+  color: "#ffffff",
   border: "none",
-  borderRadius: "10px",
-  padding: "0 16px",
+  borderRadius: "14px",
+  padding: "10px 18px",
+  fontWeight: "600",
   cursor: "pointer",
+  transition: "0.2s",
 }));
 
 const FileBtn = styled("button")(() => ({
-  background: "transparent",
-  color: "#333",
-  border: "none",
+  background: "#e6f7fc",
+  color: "#0077b6",
+  border: "1px solid #caf0f8",
+  borderRadius: "12px",
+  padding: "8px 12px",
   cursor: "pointer",
   fontSize: "18px",
 }));
 
 const PreviewBox = styled("div")(() => ({
-  padding: "10px",
+  padding: "12px",
   background: "#ffffff",
-  color: "#222",
-  borderTop: "1px solid #ddd",
+  borderTop: "1px solid #caf0f8",
 }));
 
 const Uploading = styled("div")(() => ({
-  color: "#333",
-  padding: "6px 10px",
+  padding: "8px 12px",
+  color: "#0077b6",
+  fontWeight: "600",
 }));
 
 const IncomingBox = styled("div")(() => ({
-  color: "#222",
-  background: "#fff3cd",
-  padding: "10px",
-  borderBottom: "1px solid #ffe69c",
+  background: "#e6f7fc",
+  color: "#023047",
+  padding: "12px",
+  borderBottom: "1px solid #caf0f8",
 }));
 
 const Empty = styled("p")(() => ({
-  color: "#777",
+  color: "#6c757d",
+  textAlign: "center",
+  marginTop: "40px",
 }));
 
 const CallBtn = styled("button")(() => ({
-  background: "#2e7d32",
-  color: "white",
+  background: "#005f91",
+  color: "#ffffff",
   border: "none",
-  borderRadius: "10px",
-  padding: "8px 14px",
+  borderRadius: "12px",
+  padding: "10px 16px",
+  fontWeight: "600",
   cursor: "pointer",
 }));
 

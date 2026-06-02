@@ -23,7 +23,7 @@ const Chatbot = ({ allUserFiles }) => {
     async (e) => {
       e.preventDefault();
 
-      if (!input.trim()) return;
+      if (!input.trim() || loading) return;
 
       const userMessage = input.trim();
 
@@ -66,7 +66,7 @@ const Chatbot = ({ allUserFiles }) => {
         setLoading(false);
       }
     },
-    [input, getIdToken, allUserFiles]
+    [input, loading, getIdToken, allUserFiles]
   );
 
   if (darkModeLoading) {
@@ -77,102 +77,272 @@ const Chatbot = ({ allUserFiles }) => {
     <div
       className={`chatbot ${darkMode ? "dark-mode" : "light-mode"}`}
       style={{
-        padding: "10px",
-        borderRadius: "8px",
         height: "100%",
+        minHeight: "520px",
         display: "flex",
         flexDirection: "column",
+        borderRadius: "20px",
+        overflow: "hidden",
+        background: darkMode
+          ? "linear-gradient(180deg, #071923 0%, #0b2635 100%)"
+          : "linear-gradient(180deg, #ffffff 0%, #f8fdff 100%)",
+        border: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+        boxShadow: darkMode
+          ? "0 12px 30px rgba(0,0,0,0.35)"
+          : "0 12px 30px rgba(0,119,182,0.15)",
       }}
     >
+      {/* HEADER */}
+      <div
+        style={{
+          padding: "16px 18px",
+          background: "#0077b6",
+          color: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "18px",
+              fontWeight: "700",
+            }}
+          >
+            AI Assistant
+          </div>
+
+          <div
+            style={{
+              fontSize: "13px",
+              opacity: 0.9,
+              marginTop: "2px",
+            }}
+          >
+            Ask about your files and storage
+          </div>
+        </div>
+
+        <div
+          style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "50%",
+            background: "#caf0f8",
+            color: "#0077b6",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "22px",
+            fontWeight: "700",
+          }}
+        >
+          AI
+        </div>
+      </div>
+
+      {/* MESSAGES */}
       <div
         style={{
           flex: 1,
           overflowY: "auto",
-          marginBottom: "10px",
+          padding: "18px",
+          background: darkMode ? "#071923" : "#f8fdff",
         }}
       >
-        {messages.map((message, index) => (
+        {messages.length === 0 && (
           <div
-            key={index}
             style={{
-              textAlign: message.sender === "user" ? "right" : "left",
+              height: "100%",
+              minHeight: "300px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              color: darkMode ? "#b8dce8" : "#6c757d",
+              padding: "20px",
             }}
           >
-            <p
+            <div>
+              <div
+                style={{
+                  fontSize: "42px",
+                  marginBottom: "12px",
+                }}
+              >
+                💬
+              </div>
+
+              <div
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "700",
+                  color: darkMode ? "#ffffff" : "#023047",
+                  marginBottom: "6px",
+                }}
+              >
+                Start a conversation
+              </div>
+
+              <div
+                style={{
+                  fontSize: "14px",
+                  maxWidth: "280px",
+                }}
+              >
+                Ask the assistant to summarize files, suggest names, or search
+                your stored content.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {messages.map((message, index) => {
+          const isUser = message.sender === "user";
+
+          return (
+            <div
+              key={index}
               style={{
-                backgroundColor:
-                  message.sender === "user"
-                    ? darkMode
-                      ? "#264a8a"
-                      : "#d1e7ff"
-                    : darkMode
-                    ? "#333"
-                    : "#f0f0f0",
-                padding: "8px",
-                borderRadius: "8px",
-                display: "inline-block",
-                maxWidth: "80%",
-                color: darkMode ? "#eee" : "#222",
-                wordWrap: "break-word",
-                overflowWrap: "anywhere",
-                whiteSpace: "pre-wrap",
+                display: "flex",
+                justifyContent: isUser ? "flex-end" : "flex-start",
+                marginBottom: "14px",
               }}
             >
-              {message.text}
-            </p>
-          </div>
-        ))}
+              <div
+                style={{
+                  maxWidth: "78%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: isUser ? "flex-end" : "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: darkMode ? "#90cce3" : "#0077b6",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {isUser ? "You" : "Assistant"}
+                </span>
+
+                <p
+                  style={{
+                    margin: 0,
+                    background: isUser
+                      ? "#0077b6"
+                      : darkMode
+                      ? "#12384c"
+                      : "#ffffff",
+                    color: isUser
+                      ? "#ffffff"
+                      : darkMode
+                      ? "#eaf8fc"
+                      : "#023047",
+                    padding: "12px 15px",
+                    borderRadius: isUser
+                      ? "18px 18px 4px 18px"
+                      : "18px 18px 18px 4px",
+                    border: isUser
+                      ? "1px solid #0077b6"
+                      : darkMode
+                      ? "1px solid #16425b"
+                      : "1px solid #caf0f8",
+                    boxShadow: isUser
+                      ? "0 6px 18px rgba(0,119,182,0.25)"
+                      : darkMode
+                      ? "0 6px 16px rgba(0,0,0,0.25)"
+                      : "0 6px 16px rgba(0,119,182,0.08)",
+                    wordWrap: "break-word",
+                    overflowWrap: "anywhere",
+                    whiteSpace: "pre-wrap",
+                    lineHeight: "1.5",
+                    fontSize: "14px",
+                  }}
+                >
+                  {message.text}
+                </p>
+              </div>
+            </div>
+          );
+        })}
 
         {loading && (
-          <div style={{ textAlign: "left", marginTop: "10px" }}>
-            <p
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              marginBottom: "14px",
+            }}
+          >
+            <div
               style={{
-                backgroundColor: darkMode ? "#333" : "#f0f0f0",
-                padding: "8px",
-                borderRadius: "8px",
-                display: "inline-block",
-                color: darkMode ? "#eee" : "#222",
+                background: darkMode ? "#12384c" : "#ffffff",
+                color: darkMode ? "#eaf8fc" : "#023047",
+                padding: "12px 15px",
+                borderRadius: "18px 18px 18px 4px",
+                border: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+                boxShadow: darkMode
+                  ? "0 6px 16px rgba(0,0,0,0.25)"
+                  : "0 6px 16px rgba(0,119,182,0.08)",
+                fontSize: "14px",
               }}
             >
               Thinking...
-            </p>
+            </div>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
+      {/* INPUT */}
       <form
         onSubmit={handleSubmit}
         style={{
           display: "flex",
           alignItems: "center",
+          gap: "10px",
+          padding: "14px",
+          background: darkMode ? "#0b2635" : "#ffffff",
+          borderTop: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
         }}
       >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message"
-          className="form-control"
+          placeholder="Ask something about your files..."
           style={{
             flex: 1,
-            borderRadius: "8px",
-            border: darkMode ? "1px solid #555" : "1px solid #ddd",
-            backgroundColor: darkMode ? "#333" : "#fff",
-            color: darkMode ? "#eee" : "#222",
-            padding: "8px",
+            borderRadius: "999px",
+            border: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+            background: darkMode ? "#071923" : "#f8fdff",
+            color: darkMode ? "#ffffff" : "#023047",
+            padding: "12px 16px",
+            outline: "none",
+            fontSize: "14px",
           }}
         />
 
         <button
           type="submit"
-          className="btn btn-primary"
-          disabled={loading}
+          disabled={loading || !input.trim()}
           style={{
-            marginLeft: "8px",
-            padding: "8px 12px",
-            borderRadius: "8px",
+            padding: "12px 18px",
+            borderRadius: "999px",
+            border: "none",
+            background: loading || !input.trim() ? "#90cce3" : "#0077b6",
+            color: "#ffffff",
+            fontWeight: "700",
+            cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+            boxShadow:
+              loading || !input.trim()
+                ? "none"
+                : "0 6px 16px rgba(0,119,182,0.28)",
           }}
         >
           Send
