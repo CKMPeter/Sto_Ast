@@ -440,3 +440,62 @@ input::placeholder {
 }
 
 /* Add any more styles for dark mode here */
+/* Responsive auth page */
+@media (max-width: 768px) {
+  body {
+    overflow-y: auto;
+  }
+
+  .fullPage {
+    width: 100vw;
+    min-height: 100vh;
+    height: auto;
+    display: block;
+    overflow-x: hidden;
+    transform: none !important;
+  }
+
+  .textBox {
+    display: none;
+  }
+
+  .logIn,
+  .signUp {
+    width: 100vw;
+    min-height: 100vh;
+    height: auto;
+    margin-left: 0;
+    transform: none !important;
+    position: static;
+    z-index: 1;
+    padding: 20px 12px;
+  }
+
+  .signUp {
+    display: none;
+  }
+
+  .logIn {
+    display: flex;
+  }
+
+  .signUp.slide_left {
+    display: flex;
+  }
+
+  .logIn.slide_left {
+    display: none;
+  }
+
+  .slide_left,
+  .slide_left_1,
+  .slide_right,
+  .slide_right_1 {
+    transform: none !important;
+  }
+
+  .mainText h1 {
+    font-size: 2rem;
+    letter-spacing: 3px;
+  }
+}

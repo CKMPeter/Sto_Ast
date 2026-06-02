@@ -19,7 +19,7 @@ function AppWrapper() {
   const { currentUser } = useAuth();
 
 
-  // ✅ FIX: apply theme globally (NO overwrite)
+  // FIX: apply theme globally (NO overwrite)
   useEffect(() => {
     document.body.classList.toggle("dark-mode", darkMode);
     document.body.classList.toggle("light-mode", !darkMode);

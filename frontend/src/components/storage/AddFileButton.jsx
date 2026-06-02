@@ -2,7 +2,6 @@ import React, { useCallback, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
-// import { ROOT_FOLDER } from "../../hooks/storageHook/useFolder";
 import { Button, Modal, Form, Alert, Col, Row } from "react-bootstrap";
 import { useDarkMode } from "../../hooks/useDarkMode";
 
@@ -15,18 +14,23 @@ import {
 
 export default function AddFileButton({ currentFolder, onAdd }) {
   const { currentUser, getIdToken } = useAuth();
+
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [open, setOpen] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
   const [file, setFile] = useState(null);
   const [currentName, setCurrentName] = useState("");
   const [aiReName, setAiReName] = useState("");
   const [reName, setReName] = useState("");
   const [preview, setPreview] = useState("");
+
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
   const [isFetchingAIPreview, setIsFetchingAIPreview] = useState(false);
+
   const { darkMode } = useDarkMode();
 
   const fetchAI = useCallback(
@@ -44,7 +48,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
         return null;
       }
     },
-    [getIdToken, file],
+    [getIdToken, file]
   );
 
   useEffect(() => {
@@ -57,23 +61,19 @@ export default function AddFileButton({ currentFolder, onAdd }) {
       try {
         const base64Content = await fileToBase64(file);
 
-        const aiRenameResult = await fetchAI(
-          base64Content,
-          "rename",
-          file.type.startsWith("image/"),
-        );
+        const isImage = file.type.startsWith("image/");
+
+        const aiRenameResult = await fetchAI(base64Content, "rename", isImage);
+
         if (aiRenameResult && typeof aiRenameResult === "string") {
-          let newName = sanitizeFileName(aiRenameResult.trim());
+          const newName = sanitizeFileName(aiRenameResult.trim());
           setAiReName(newName);
         } else {
           setError("AI rename failed or returned invalid result");
         }
 
-        const aiPreviewResult = await fetchAI(
-          base64Content,
-          "preview",
-          file.type.startsWith("image/"),
-        );
+        const aiPreviewResult = await fetchAI(base64Content, "preview", isImage);
+
         if (aiPreviewResult && typeof aiPreviewResult === "string") {
           setPreview(aiPreviewResult.trim());
         } else {
@@ -92,13 +92,14 @@ export default function AddFileButton({ currentFolder, onAdd }) {
   }, [open, file, fetchAI]);
 
   useEffect(() => {
-    if (error || success) {
-      const timer = setTimeout(() => {
-        setError("");
-        setSuccess("");
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!error && !success) return;
+
+    const timer = setTimeout(() => {
+      setError("");
+      setSuccess("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, [error, success]);
 
   function openModal() {
@@ -121,8 +122,9 @@ export default function AddFileButton({ currentFolder, onAdd }) {
   }
 
   async function handleUpload(e) {
-    const file = e.target.files[0];
-    if (!file) {
+    const selectedFile = e.target.files[0];
+
+    if (!selectedFile) {
       setError("No file selected.");
       setSuccess("");
       setFile(null);
@@ -133,41 +135,28 @@ export default function AddFileButton({ currentFolder, onAdd }) {
     setReName("");
     setAiReName("");
     setPreview("");
-    setFile(file);
-    setCurrentName(file.name);
+    setError("");
+    setSuccess("");
+
+    setFile(selectedFile);
+    setCurrentName(selectedFile.name);
   }
 
   async function handleRename(ai = false) {
+    if (!file) return;
+
     if (!aiReName && !reName) {
-      alert("Please provide a name using AI rename or custom rename.");
+      setError("Please provide a name using AI rename or custom rename.");
       return;
     }
-    const name = ai
-      ? aiReName
-      : reName + file.name.slice(file.name.lastIndexOf("."));
+
+    const extension = file.name.includes(".")
+      ? file.name.slice(file.name.lastIndexOf("."))
+      : "";
+
+    const name = ai ? aiReName : sanitizeFileName(reName) + extension;
+
     setCurrentName(name);
-  }
-
-  function sanitizeFileName(fileName) {
-    return fileName.replace(/[^a-zA-Z0-9_.-]/g, "_");
-  }
-
-  function getFilePathSegments(currentFolder) {
-    return currentFolder === ROOT_FOLDER
-      ? currentFolder.path.map((folder) => folder.id)
-      : [...currentFolder.path.map((folder) => folder.id), currentFolder.id];
-  }
-
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64String = reader.result.split(",")[1];
-        resolve(base64String);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
   }
 
   async function handleSubmit(e) {
@@ -197,7 +186,10 @@ export default function AddFileButton({ currentFolder, onAdd }) {
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
 
+      setSuccess("File uploaded successfully.");
+
       setOpen(false);
+
       if (onAdd) onAdd();
     } catch (error) {
       setError(`Upload failed: ${error.message || "An error occurred"}`);
@@ -216,21 +208,22 @@ export default function AddFileButton({ currentFolder, onAdd }) {
   }
 
   return (
-    <div className="d-flex align-items-center justify-content-between flex-wrap">
-      <div className="d-flex align-items-center flex-grow-1">
+    <div style={styleSheet.wrapper}>
+      <div style={styleSheet.innerWrapper}>
         <Button
           onClick={openModal}
-          variant="outline-success"
+          variant={darkMode ? "outline-light" : "outline-primary"}
           size="sm"
-          style={{ marginRight: "5px" }}
+          style={styleSheet.openButton}
         >
-          <FontAwesomeIcon icon={faFileArrowUp} style={{ fontSize: "2rem" }} />
+          <FontAwesomeIcon icon={faFileArrowUp} style={styleSheet.openIcon} />
         </Button>
 
         <Modal
           show={open}
           onHide={closeModal}
-          dialogClassName="custom-modal"
+          size="lg"
+          centered
           contentClassName={darkMode ? "bg-dark text-light" : ""}
         >
           <Form onSubmit={handleSubmit}>
@@ -244,75 +237,86 @@ export default function AddFileButton({ currentFolder, onAdd }) {
               {error && (
                 <Alert variant={darkMode ? "dark" : "danger"}>{error}</Alert>
               )}
+
               {success && (
                 <Alert variant={darkMode ? "dark" : "success"}>{success}</Alert>
               )}
 
-              <Form.Group>
+              <Form.Group style={styleSheet.formGroup}>
                 <Form.Label>Upload File</Form.Label>
                 <Form.Control
                   type="file"
                   onChange={handleUpload}
                   required
                   style={{
-                    marginTop: "10px",
+                    ...styleSheet.input,
                     backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
-                    color: darkMode ? "#fff" : "#000",
+                    color: darkMode ? "#ffffff" : "#000000",
                   }}
                 />
               </Form.Group>
 
               {file && (
-                <Form.Label className="form-label">
+                <Form.Label style={styleSheet.currentName}>
                   New File Name: {currentName || file.name}
                 </Form.Label>
               )}
 
-              <Row>
-                <Col md="auto">
-                  <Form.Group>
+              <Row style={styleSheet.renameRow}>
+                <Col xs={12} md={6}>
+                  <Form.Group style={styleSheet.formGroup}>
                     <Form.Label>AI Rename</Form.Label>
+
                     <Form.Control
                       type="text"
                       value={aiReName}
-                      placeholder="AI will suggest a name..."
+                      placeholder={
+                        isFetchingAIRename
+                          ? "AI is generating name..."
+                          : "AI will suggest a name..."
+                      }
                       readOnly
                       style={{
+                        ...styleSheet.input,
                         backgroundColor: darkMode ? "#2a2a2a" : "#f8f9fa",
-                        color: darkMode ? "#ccc" : "#000",
+                        color: darkMode ? "#cccccc" : "#000000",
                       }}
                     />
+
                     <Button
                       variant="outline-primary"
                       onClick={() => handleRename(true)}
-                      disabled={!file || isFetchingAIRename}
-                      style={{ marginTop: "10px" }}
+                      disabled={!file || isFetchingAIRename || !aiReName}
+                      style={styleSheet.actionButton}
                     >
                       Use AI Rename
                     </Button>
                   </Form.Group>
                 </Col>
 
-                <Col md="auto" offset={1}>
-                  <Form.Group>
+                <Col xs={12} md={6}>
+                  <Form.Group style={styleSheet.formGroup}>
                     <Form.Label>Custom Rename</Form.Label>
+
                     <Form.Control
                       type="text"
                       value={reName}
                       placeholder="Enter custom name"
                       onChange={(e) => setReName(e.target.value)}
                       style={{
+                        ...styleSheet.input,
                         backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
-                        color: darkMode ? "#fff" : "#000",
+                        color: darkMode ? "#ffffff" : "#000000",
                       }}
                       disabled={!file}
                     />
+
                     <Button
                       variant="outline-primary"
                       type="button"
-                      onClick={() => handleRename()}
-                      disabled={!reName}
-                      style={{ marginTop: "10px" }}
+                      onClick={() => handleRename(false)}
+                      disabled={!file || !reName}
+                      style={styleSheet.actionButton}
                     >
                       Use Custom Name
                     </Button>
@@ -320,29 +324,27 @@ export default function AddFileButton({ currentFolder, onAdd }) {
                 </Col>
               </Row>
 
-              <Form.Group>
+              <Form.Group style={styleSheet.formGroup}>
                 <Form.Label>File Preview</Form.Label>
+
                 <div
-                  className="form-control"
                   style={{
+                    ...styleSheet.previewBox,
                     backgroundColor: darkMode ? "#2a2a2a" : "#f8f9fa",
+                    borderColor: darkMode ? "#555555" : "#dee2e6",
                   }}
                 >
                   {isFetchingAIPreview ? (
-                    <p>Loading preview...</p>
+                    <p style={styleSheet.previewLoading}>Loading preview...</p>
                   ) : (
                     <textarea
                       value={preview}
                       readOnly
-                      style={{
-                        width: "100%",
-                        height: "100px",
-                        resize: "none",
-                        backgroundColor: "transparent",
-                        border: "none",
-                        color: darkMode ? "#fff" : "#000",
-                      }}
                       placeholder="No preview available"
+                      style={{
+                        ...styleSheet.previewTextArea,
+                        color: darkMode ? "#ffffff" : "#000000",
+                      }}
                     />
                   )}
                 </div>
@@ -351,42 +353,30 @@ export default function AddFileButton({ currentFolder, onAdd }) {
 
             <Modal.Footer>
               {isUploading && (
-                <div style={{ marginTop: "10px", width: "100%" }}>
-                  <div
-                    style={{
-                      width: "100%",
-                      backgroundColor: "#f3f3f3",
-                      borderRadius: "4px",
-                    }}
-                  >
+                <div style={styleSheet.progressWrapper}>
+                  <div style={styleSheet.progressContainer}>
                     <div
                       style={{
+                        ...styleSheet.progressBar,
                         width: `${uploadProgress}%`,
-                        height: "10px",
-                        backgroundColor: "#4caf50",
-                        borderRadius: "4px",
-                        transition: "width 0.2s",
                       }}
-                    ></div>
+                    />
                   </div>
-                  <p
-                    style={{
-                      fontSize: "0.9rem",
-                      margin: "5px 0 0",
-                      color: "#bbb",
-                    }}
-                  >
+
+                  <p style={styleSheet.progressText}>
                     {uploadProgress}% uploaded
                   </p>
                 </div>
               )}
+
               <Button variant="secondary" onClick={closeModal}>
                 Close
               </Button>
+
               <Button
                 variant="success"
                 type="submit"
-                disabled={!file || !aiReName}
+                disabled={!file || isUploading || !currentName}
               >
                 Add File
               </Button>
@@ -397,3 +387,95 @@ export default function AddFileButton({ currentFolder, onAdd }) {
     </div>
   );
 }
+
+const styleSheet = {
+  wrapper: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    zIndex: 3000,
+  },
+
+  innerWrapper: {
+    display: "flex",
+    alignItems: "center",
+    flexGrow: 1,
+  },
+
+  openButton: {
+    marginRight: "5px",
+    borderColor: "#0077b6",
+    color: "#0077b6",
+  },
+
+  openIcon: {
+    fontSize: "2rem",
+  },
+
+  formGroup: {
+    marginBottom: "1rem",
+  },
+
+  input: {
+    marginTop: "10px",
+  },
+
+  currentName: {
+    marginTop: "0.75rem",
+    fontWeight: "600",
+    wordBreak: "break-word",
+  },
+
+  renameRow: {
+    rowGap: "1rem",
+  },
+
+  actionButton: {
+    marginTop: "10px",
+  },
+
+  previewBox: {
+    border: "1px solid",
+    borderRadius: "0.375rem",
+    padding: "0.75rem",
+  },
+
+  previewLoading: {
+    margin: 0,
+  },
+
+  previewTextArea: {
+    width: "100%",
+    height: "100px",
+    resize: "none",
+    backgroundColor: "transparent",
+    border: "none",
+    outline: "none",
+  },
+
+  progressWrapper: {
+    marginTop: "10px",
+    width: "100%",
+  },
+
+  progressContainer: {
+    width: "100%",
+    backgroundColor: "#f3f3f3",
+    borderRadius: "4px",
+    overflow: "hidden",
+  },
+
+  progressBar: {
+    height: "10px",
+    backgroundColor: "#0077b6",
+    borderRadius: "4px",
+    transition: "width 0.2s",
+  },
+
+  progressText: {
+    fontSize: "0.9rem",
+    margin: "5px 0 0",
+    color: "#6c757d",
+  },
+};

@@ -117,19 +117,14 @@ export default function Folder({ folder, onChange }) {
         className="text-truncate w-100 invert-hover"
         onContextMenu={handleRightClick}
         style={{
-          fontWeight: "bold",
-          textAlign: "left",
+          ...styleSheet.folderButton,
+          ...(darkMode ? styleSheet.folderButtonDark : styleSheet.folderButtonLight),
         }}
       >
-        <FontAwesomeIcon
-          icon={faFolder}
-          style={{
-            marginRight: 6,
-            color: "inherit",
-          }}
-        />
+        <FontAwesomeIcon icon={faFolder} style={styleSheet.folderIcon} />
 
         <span
+          style={styleSheet.folderName}
           dangerouslySetInnerHTML={{
             __html: folder.highlightedName || folder.name || "Unnamed Folder",
           }}
@@ -146,7 +141,7 @@ export default function Folder({ folder, onChange }) {
 
           <Dropdown.Divider />
 
-          <div className="d-flex gap-2">
+          <div style={styleSheet.modalButtonGroup}>
             <Button variant="secondary" onClick={showSecondModal}>
               Rename
             </Button>
@@ -193,3 +188,41 @@ export default function Folder({ folder, onChange }) {
     </>
   );
 }
+
+const styleSheet = {
+  folderButton: {
+    fontWeight: "bold",
+    textAlign: "left",
+    borderRadius: "12px",
+    padding: "10px 12px",
+    maxWidth: "100%",
+    overflow: "hidden",
+  },
+
+  folderButtonLight: {
+    backgroundColor: "#ffffff",
+    borderColor: "#6eaecf",
+    color: "#023e5a",
+  },
+
+  folderButtonDark: {
+    backgroundColor: "#121212",
+    borderColor: "#6eaecf",
+    color: "#ffffff",
+  },
+
+  folderIcon: {
+    marginRight: 6,
+    color: "inherit",
+  },
+
+  folderName: {
+    verticalAlign: "middle",
+  },
+
+  modalButtonGroup: {
+    display: "flex",
+    gap: "0.5rem",
+    flexWrap: "wrap",
+  },
+};
