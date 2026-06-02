@@ -32,15 +32,10 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 
     return Object.entries(counts)
       .filter(([, value]) => value > 0)
-      .map(([name, value]) => ({
-        name,
-        value,
-      }));
+      .map(([name, value]) => ({ name, value }));
   }, [subtasks]);
 
   const burndownData = useMemo(() => {
-    if (!subtasks.length) return [];
-
     const sorted = [...subtasks]
       .filter((task) => Number(task.timeLogged || 0) > 0)
       .sort((a, b) => {
@@ -56,12 +51,7 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 
     let remaining = totalTimeLogged;
 
-    const data = [
-      {
-        date: "Start",
-        remaining,
-      },
-    ];
+    const data = [{ date: "Start", remaining }];
 
     sorted.forEach((task) => {
       remaining -= Number(task.timeLogged || 0);
@@ -80,54 +70,80 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
   }, [subtasks]);
 
   return (
-    <Modal show={show} onHide={onClose} size="lg" centered>
+    <Modal show={show} onHide={onClose} centered size="xl">
       <Modal.Header closeButton>
         <Modal.Title>Task Analytics</Modal.Title>
       </Modal.Header>
 
-      <Modal.Body>
-        <h5>Status Pie Chart</h5>
+      <Modal.Body style={{ minHeight: "400px", height: "70vh", gap: "2rem" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "20px",
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <div style={styles.chartBox}>
+            <h5>Status Pie Chart</h5>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={pieData}
-              dataKey="value"
-              nameKey="name"
-              outerRadius={100}
-              label
-            >
-              {pieData.map((entry, index) => (
-                <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
+            {pieData.length > 0 ? (
+              <div style={styles.chartArea}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                      label
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell
+                          key={entry.name}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
 
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p>No task status data available.</p>
+            )}
+          </div>
 
-        <hr />
+          <div style={styles.chartBox}>
+            <h5>Burndown Chart</h5>
 
-        <h5>Burndown Chart</h5>
+            {burndownData.length > 1 ? (
+              <div style={styles.chartArea}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={burndownData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
 
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={burndownData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            <Legend />
-
-            <Line
-              type="monotone"
-              dataKey="remaining"
-              name="Remaining logged time (min)"
-              stroke="#dc3545"
-              strokeWidth={3}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+                    <Line
+                      type="monotone"
+                      dataKey="remaining"
+                      name="Remaining logged time (min)"
+                      stroke="#dc3545"
+                      strokeWidth={3}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p>No time logged data available.</p>
+            )}
+          </div>
+        </div>
       </Modal.Body>
 
       <Modal.Footer>
@@ -138,3 +154,17 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
     </Modal>
   );
 }
+
+const styles = {
+  chartBox: {
+    flex: 1,
+    minWidth: 0,
+    height: "100%",
+  },
+
+  chartArea: {
+    width: "100%",
+    height: "calc(100% - 40px)",
+    minHeight: "300px",
+  },
+};
