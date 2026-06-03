@@ -6,10 +6,11 @@ import React, { useEffect, useState } from "react";
 export default function TaskComponent({
   task,
   onDragStart,
+  darkMode,
 }) {
   const [isMobile, setIsMobile] =
     useState(window.innerWidth <= 768);
-
+  
   useEffect(() => {
     function handleResize() {
       setIsMobile(
@@ -32,9 +33,9 @@ export default function TaskComponent({
   return (
     <div
       style={{
-        ...styleSheet.taskComponent,
+        ...styleSheet(darkMode).taskComponent,
         ...(isMobile
-          ? styleSheet.taskComponentMobile
+          ? styleSheet(darkMode).taskComponentMobile
           : {}),
       }}
       draggable={!isMobile}
@@ -42,18 +43,18 @@ export default function TaskComponent({
         onDragStart?.(task)
       }
     >
-      <h3 style={styleSheet.title}>
+      <h3 style={styleSheet(darkMode).title}>
         {task.name}
       </h3>
 
-      <p style={styleSheet.text}>
+      <p style={styleSheet(darkMode).text}>
         Assignee:{" "}
         {task.assignedTo ||
           "Unassigned"}
       </p>
 
       {task.status && (
-        <p style={styleSheet.status}>
+        <p style={styleSheet(darkMode).status}>
           Status: {task.status}
         </p>
       )}
@@ -62,19 +63,19 @@ export default function TaskComponent({
         undefined && (
         <div
           style={
-            styleSheet.progressContainer
+            styleSheet(darkMode).progressContainer
           }
         >
           <div
             style={{
-              ...styleSheet.progressBar,
+              ...styleSheet(darkMode).progressBar,
               width: `${task.progress}%`,
             }}
           />
 
           <span
             style={
-              styleSheet.progressText
+              styleSheet(darkMode).progressText
             }
           >
             {task.progress}%
@@ -85,13 +86,13 @@ export default function TaskComponent({
   );
 }
 
-const styleSheet = {
+const styleSheet = (darkMode) => ({
   taskComponent: {
     border: "1px solid #caf0f8",
     padding: "12px",
     margin: "10px 0",
     borderRadius: "10px",
-    backgroundColor: "#ffffff",
+    backgroundColor: darkMode ? "#343a40" : "#ffffff",
     cursor: "grab",
     boxShadow:
       "0 4px 12px rgba(0,119,182,0.08)",
@@ -108,20 +109,20 @@ const styleSheet = {
   title: {
     margin: "0 0 8px 0",
     fontSize: "1rem",
-    color: "#023047",
+    color: darkMode ? "#f1f1f1" : "#023047",
   },
 
   text: {
     margin: "4px 0",
     fontSize: "0.9rem",
-    color: "#555",
+    color: darkMode ? "#adb5bd" : "#555",
   },
 
   status: {
     margin: "4px 0",
     fontSize: "0.85rem",
     fontWeight: "bold",
-    color: "#0077b6",
+    color: darkMode ? "#0077b6" : "#0077b6",
   },
 
   progressContainer: {
@@ -148,6 +149,6 @@ const styleSheet = {
       "translate(-50%, -50%)",
     fontSize: "0.75rem",
     fontWeight: "bold",
-    color: "#fff",
+    color: darkMode ? "#fff" : "#000",
   },
-};
+});

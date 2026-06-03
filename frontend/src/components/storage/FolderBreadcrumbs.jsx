@@ -7,8 +7,8 @@ import {
   getBreadcrumbLink,
 } from "../../services/storageService/breadcrumbService";
 
-export default function FolderBreadcrumbs({ currentFolder }) {
-  const { darkMode, loading } = useDarkMode();
+export default function FolderBreadcrumbs({ currentFolder, darkMode }) {
+  const { loading } = useDarkMode();
 
   if (loading) return null;
 

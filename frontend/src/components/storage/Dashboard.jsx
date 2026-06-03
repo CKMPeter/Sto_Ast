@@ -218,11 +218,11 @@ export default function Dashboard() {
             className="d-flex align-items-center flex-grow-1 flex-wrap gap-2"
             style={isMobile ? styleSheet.actionsMobile : {}}
           >
-            <FolderBreadcrumbs currentFolder={folder} />
+            <FolderBreadcrumbs currentFolder={folder} darkMode={darkMode} />
 
-            <AddFolderButton currentFolder={folder} />
+            <AddFolderButton currentFolder={folder} darkMode={darkMode} />
 
-            <AddFileButton currentFolder={folder} onAdd={triggerRefresh} />
+            <AddFileButton currentFolder={folder} onAdd={triggerRefresh} darkMode={darkMode} />
 
             <Form.Control
               type="text"
@@ -274,7 +274,7 @@ export default function Dashboard() {
                   ...(isMobile ? styleSheet.itemMobile : {}),
                 }}
               >
-                <Folder folder={folderInstance} />
+                <Folder folder={folderInstance} darkMode={darkMode} />
               </div>
             );
           })}
@@ -299,6 +299,7 @@ export default function Dashboard() {
                   highlightedName: highlightText(child.name, searchQuery),
                 }}
                 onChange={triggerRefresh}
+                darkMode={darkMode}
               />
 
               {isSearching && child.readablePath && (
@@ -327,7 +328,7 @@ export default function Dashboard() {
               ...(isMobile ? styleSheet.chatbotMobile : {}),
             }}
           >
-            <Chatbot allUserFiles={filesWithFullPath} />
+            <Chatbot allUserFiles={filesWithFullPath} darkMode={darkMode} />
           </div>
         )}
       </Container>

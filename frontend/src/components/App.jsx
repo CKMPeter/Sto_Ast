@@ -25,7 +25,7 @@ function AppWrapper() {
     document.body.classList.toggle("light-mode", !darkMode);
   }, [darkMode]);
 
-  if (loading) return <LoadingPage />;
+  if (loading) return <LoadingPage darkMode={darkMode} />;
 
   return (
     <div className="app">
@@ -35,7 +35,7 @@ function AppWrapper() {
           path="/"
           element={
             <PrivateRoute>
-              <Dashboard toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
+              <Dashboard />
             </PrivateRoute>
           }
         />
@@ -43,7 +43,7 @@ function AppWrapper() {
           path="/folder/:folderId"
           element={
             <PrivateRoute>
-              <Dashboard toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
+              <Dashboard />
             </PrivateRoute>
           }
         />

@@ -56,31 +56,30 @@ export function useDarkMode() {
     setDarkMode(newValue);
     localStorage.setItem("darkMode", JSON.stringify(newValue));
 
-    if (!currentUser) return;
+    if (currentUser) {
+      try {
+        const token = await currentUser.getIdToken(true);
 
-    try {
-      const token = await currentUser.getIdToken(true);
+        const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            darkMode: newValue,
+          }),
+        });
 
-      const res = await fetch(`${getBackendUrl()}/api/user/theme`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          darkMode: newValue,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Update failed");
-    } catch (error) {
-      console.error("Error updating dark mode:", error);
-
-      setDarkMode(!newValue);
-      localStorage.setItem("darkMode", JSON.stringify(!newValue));
+        if (!res.ok) throw new Error("Update failed");
+      } catch (error) {
+        console.error("Error updating dark mode:", error);
+      }
     }
-  };
 
+    window.location.reload();
+  };
+  
   return {
     darkMode,
     toggleDarkMode,

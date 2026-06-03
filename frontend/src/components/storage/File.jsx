@@ -19,7 +19,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Modal, Button, Form, Row, Col, Badge, Spinner } from "react-bootstrap";
 
 import { useAuth } from "../../contexts/AuthContext";
-import { useDarkMode } from "../../hooks/useDarkMode";
 import { FileClass } from "../../classes/storageClass/FileClass";
 
 import {
@@ -30,9 +29,8 @@ import {
   runAIFileService,
 } from "../../services/storageService/fileActionService";
 
-export default function File({ file, onChange }) {
+export default function File({ file, onChange, darkMode }) {
   const { currentUser, getIdToken } = useAuth();
-  const { darkMode } = useDarkMode();
 
   const fileObj = useMemo(
     () => new FileClass({ ...file, user: currentUser }),

@@ -6,24 +6,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { TaskLog } from "./TaskLog";
 import { v4 as uuidv4 } from "uuid";
 
-// import {
-//   fetchMainTasksService,
-//   fetchSubTasksService,
-//   createMainTaskService,
-//   createSubTaskService,
-//   updateMainTaskService,
-//   updateSubTaskService,
-//   deleteMainTaskService,
-//   deleteSubTaskService,
-//   fetchTaskLogsService,
-//   createTaskUsingAIService,
-//   fetchGroupTasksService,
-//   addTaskToGroupService,
-//   fetchGroupMembersService,
-//   addSubTaskTimeLogService,
-//   updateScheduleService,
-// } from "./services/taskService"
-
 import {
   fetchGroupTasksService,
   fetchGroupMembersService,
@@ -37,6 +19,8 @@ import { useTasks } from "../../hooks/taskHook/useTask";
 import { useAITask } from "../../hooks/taskHook/useAITask";
 import { useSchedule } from "../../hooks/taskHook/useSchedule";
 import TaskChartModal from "./TaskChartModal";
+
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 import { FaPlus, FaRobot } from "react-icons/fa";
 
@@ -128,6 +112,9 @@ export default function Task() {
 
   // Task Chart Modal
   const [isShowingChart, setIsShowingChart] = useState(false);
+
+  const { darkMode } = useDarkMode();
+  const theme = darkStyles(darkMode);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -373,7 +360,10 @@ export default function Task() {
 
   const renderColumn = (status) => (
     <div
-      style={styleSheet.taskBox}
+      style={{
+        ...styleSheet.taskBox,
+        ...theme.card,
+      }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={() => handleDrop(status)}
     >
@@ -395,7 +385,7 @@ export default function Task() {
               });
             }}
           >
-            <TaskComponent task={task} onDragStart={setDraggedTask} />
+            <TaskComponent task={task} onDragStart={setDraggedTask} darkMode={darkMode} />
 
             {/* <button
               onClick={() => deleteSubTask(task.id)}
@@ -409,7 +399,7 @@ export default function Task() {
   );
 
   return (
-    <div>
+    <div style={darkStyles.page}>
       <NavbarComponent />
 
       <h1 style={{ paddingLeft: "20px" }}>Task</h1>
@@ -467,7 +457,12 @@ export default function Task() {
             </button>
           </div>
 
-        <div style={{...styleSheet.taskListContainer, ...(isMobile ? styleSheet.taskListContainerMobile : {})}}>
+          <div
+            style={{
+              ...styleSheet.taskListContainer,
+              ...(isMobile ? styleSheet.taskListContainerMobile : {}),
+            }}
+          >
             {mainTasks.map((task) => (
               <div
                 key={task.id}
@@ -486,8 +481,13 @@ export default function Task() {
                   width: "100%",
                 }}
               >
-                <div style={styleSheet.mainTaskItem}>
-                  <TaskListComponent tasks={[task]} />
+                <div
+                  style={{
+                    ...styleSheet.mainTaskItem,
+                    color: darkMode ? "#f1f1f1" : "#000",
+                  }}
+                >
+                  <TaskListComponent tasks={[task]} darkMode={darkMode} />
 
                   <div
                     style={{
@@ -502,18 +502,25 @@ export default function Task() {
                           openedMenuId === task.id ? null : task.id,
                         );
                       }}
-                      style={styleSheet.menuButton}
+                      style={{ ...styleSheet.menuButton, ...theme.input }}
                     >
                       ⋮
                     </button>
 
                     {openedMenuId === task.id && (
                       <div
-                        style={styleSheet.popupMenu}
+                        style={{
+                          ...styleSheet.popupMenu,
+                          ...theme.menu,
+                        }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
-                          style={styleSheet.popupMenuItem}
+                          style={{
+                            ...styleSheet.popupMenuItem,
+                            // color: darkMode ? "#fff" : "#000",
+                            ...theme.input,
+                          }}
                           onClick={() => {
                             setEditingTask({
                               ...task,
@@ -529,6 +536,7 @@ export default function Task() {
                         <button
                           style={{
                             ...styleSheet.popupMenuItem,
+                            ...theme.input,
                             color: "red",
                           }}
                           onClick={() => {
@@ -608,7 +616,12 @@ export default function Task() {
             </div>
           </div>
         ) : (
-          <div style={styleSheet.placeholderContainer}>
+          <div
+            style={{
+              ...styleSheet.placeholderContainer,
+              backgroundColor: darkMode ? "#121212" : "#fff",
+            }}
+          >
             <img
               src="./Sto_Ast_Logo_Title.png"
               alt=""
@@ -621,27 +634,38 @@ export default function Task() {
         )}
 
         {/* RIGHT SIDE */}
-        {mainTaskSelected && <TaskLog taskLog={taskLog} />}
+        {mainTaskSelected && <TaskLog taskLog={taskLog} darkMode={darkMode} />}
       </div>
 
       {/* CREATE MAIN TASK MODAL */}
       {isCreatingMainTask && (
         <div style={styleSheet.modalOverlay}>
-          <div style={styleSheet.modalContainer}>
+          <div
+            style={{
+              ...styleSheet.modalContainer,
+              ...theme.modal,
+            }}
+          >
             <h2>Create Main Task</h2>
             <input
               type="text"
               placeholder="Main task name"
               value={mainTaskName}
               onChange={(e) => setMainTaskName(e.target.value)}
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <input
               type="date"
               value={mainTaskExpireAt}
               onChange={(e) => setMainTaskExpireAt(e.target.value)}
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <input
@@ -649,7 +673,7 @@ export default function Task() {
               placeholder="description (optional)"
               value={mainTaskDescription}
               onChange={(e) => setMainTaskDescription(e.target.value)}
-              style={{ ...styleSheet.input, height: "80px", resize: "none" }}
+              style={{ ...styleSheet.input, height: "80px", resize: "none", ...theme.input }}
             />
 
             <div
@@ -686,7 +710,12 @@ export default function Task() {
       {/* CREATE SUB TASK MODAL */}
       {isCreatingSubTask && (
         <div style={styleSheet.modalOverlay}>
-          <div style={styleSheet.modalContainer}>
+          <div
+            style={{
+              ...styleSheet.modalContainer,
+              ...darkStyles.modal,
+            }}
+          >
             <h2>Create Sub Task</h2>
 
             <input
@@ -694,7 +723,10 @@ export default function Task() {
               placeholder="Sub task name"
               value={subTaskName}
               onChange={(e) => setSubTaskName(e.target.value)}
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <input
@@ -702,7 +734,7 @@ export default function Task() {
               placeholder="Description (optional)"
               value={editSubTaskDescription}
               onChange={(e) => setEditSubTaskDescription(e.target.value)}
-              style={{ ...styleSheet.input, height: "80px", resize: "none" }}
+              style={{ ...styleSheet.input, height: "80px", resize: "none", ...theme.input }}
             />
 
             <div
@@ -738,7 +770,12 @@ export default function Task() {
       {/* CREATE USING AI MODAL */}
       {isCreatingUsingAI && (
         <div style={styleSheet.modalOverlay}>
-          <div style={styleSheet.modalContainer}>
+          <div
+            style={{
+              ...styleSheet.modalContainer,
+              ...theme.modal,
+            }}
+          >
             <h2>Create Task Using AI</h2>
 
             {!isGeneratingTask ? (
@@ -746,7 +783,10 @@ export default function Task() {
                 <input
                   type="text"
                   placeholder="Describe the task you want to create"
-                  style={styleSheet.input}
+                  style={{
+                    ...styleSheet.input,
+                    ...theme.input,
+                  }}
                   value={aiDescription}
                   onChange={(e) => setAiDescription(e.target.value)}
                 />
@@ -775,6 +815,7 @@ export default function Task() {
                     ...styleSheet.button,
                     backgroundColor: "#6c757d",
                     marginLeft: "10px",
+                    ...theme.input,
                   }}
                 >
                   Close
@@ -793,12 +834,15 @@ export default function Task() {
                         alignItems: "center",
                         marginBottom: "12px",
                         gap: "10px",
+                        ...theme.card,
                       }}
                     >
                       <span
                         style={{
                           fontSize: "20px",
                           width: "24px",
+                          color: step.done ? "#28a745" : "#ffc107",
+                          ...theme.input,
                         }}
                       >
                         {step.done ? "✅" : "⏳"}
@@ -813,10 +857,16 @@ export default function Task() {
           </div>
         </div>
       )}
+
       {/* EDIT MODAL */}
       {editingTask && (
         <div style={styleSheet.modalOverlay}>
-          <div style={styleSheet.modalContainer}>
+          <div
+            style={{
+              ...styleSheet.modalContainer,
+              ...theme.modal,
+            }}
+          >
             <h2>Edit Task</h2>
 
             <input
@@ -829,7 +879,10 @@ export default function Task() {
                   name: e.target.value,
                 })
               }
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <select
@@ -844,7 +897,7 @@ export default function Task() {
                   group: selectedGroup,
                 });
               }}
-              style={{ ...styleSheet.select, marginBottom: "20px" }}
+              style={{ ...styleSheet.select, marginBottom: "20px", ...theme.input }}
             >
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
@@ -857,7 +910,10 @@ export default function Task() {
               type="date"
               value={mainTaskExpireAt}
               onChange={(e) => setMainTaskExpireAt(e.target.value)}
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <input
@@ -865,7 +921,7 @@ export default function Task() {
               placeholder="description (optional)"
               value={mainTaskDescription}
               onChange={(e) => setMainTaskDescription(e.target.value)}
-              style={{ ...styleSheet.input, height: "80px", resize: "none" }}
+              style={{ ...styleSheet.input, height: "80px", resize: "none", ...theme.input }}
             />
 
             <div
@@ -901,17 +957,19 @@ export default function Task() {
             position: "fixed",
             top: subTaskContextMenu.mouseY,
             left: subTaskContextMenu.mouseX,
-            background: "white",
-            border: "1px solid #ccc",
+            background: darkMode ? "#1e1e1e" : "#fff",
+            border: darkMode ? "1px solid #444" : "1px solid #ccc",
+            color: darkMode ? "#fff" : "#000",
             borderRadius: "8px",
             boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
             zIndex: 9999,
             minWidth: "150px",
+            ...theme.modal,
           }}
         >
           {/* time log button */}
           <button
-            style={styleSheet.subTaskContextMenuItem}
+            style={{ ...styleSheet.subTaskContextMenuItem, ...theme.input }}
             onClick={() => {
               setSelectedSubTask(subTaskContextMenu.task);
               setIsLoggingTime(true);
@@ -923,7 +981,7 @@ export default function Task() {
 
           {/* edit button */}
           <button
-            style={styleSheet.subTaskContextMenuItem}
+            style={{ ...styleSheet.subTaskContextMenuItem, ...theme.input }}
             onClick={() => {
               setEditingSubTask(subTaskContextMenu.task);
 
@@ -943,6 +1001,7 @@ export default function Task() {
           <button
             style={{
               ...styleSheet.subTaskContextMenuItem,
+              ...theme.input,
               color: "red",
             }}
             onClick={() => {
@@ -959,7 +1018,12 @@ export default function Task() {
       {/* EDIT SUB TASK MODAL */}
       {editingSubTask && (
         <div style={styleSheet.modalOverlay}>
-          <div style={styleSheet.modalContainer}>
+          <div
+            style={{
+              ...styleSheet.modalContainer,
+              ...theme.modal,
+            }}
+          >
             <h2>Edit Sub Task</h2>
 
             <input
@@ -967,13 +1031,19 @@ export default function Task() {
               placeholder="Sub task name"
               value={editSubTaskName}
               onChange={(e) => setEditSubTaskName(e.target.value)}
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <select
               value={editSubTaskStatus}
               onChange={(e) => setEditSubTaskStatus(e.target.value)}
-              style={styleSheet.select}
+              style={{
+                ...styleSheet.select,
+                ...theme.input,
+              }}
             >
               <option value="To do">To do</option>
               <option value="In Progress">In Progress</option>
@@ -983,7 +1053,10 @@ export default function Task() {
             <select
               value={editSubTaskAssignedTo}
               onChange={(e) => setEditSubTaskAssignedTo(e.target.value)}
-              style={styleSheet.select}
+              style={{
+                ...styleSheet.select,
+                ...theme.input,
+              }}
             >
               <option value="">Select Member</option>
               {groupMembers.map((member) => (
@@ -1022,7 +1095,12 @@ export default function Task() {
       {/* TIME LOG MODAL */}
       {isLoggingTime && selectedSubTask && (
         <div style={styleSheet.modalOverlay}>
-          <div style={styleSheet.modalContainer}>
+          <div
+            style={{
+              ...styleSheet.modalContainer,
+              ...theme.modal,
+            }}
+          >
             <h2>Log Time</h2>
 
             <p>
@@ -1038,7 +1116,10 @@ export default function Task() {
               placeholder="Hours to add"
               value={timeToLog}
               onChange={(e) => setTimeToLog(e.target.value)}
-              style={styleSheet.input}
+              style={{
+                ...styleSheet.input,
+                ...theme.input,
+              }}
             />
 
             <div
@@ -1098,7 +1179,7 @@ const styleSheet = {
     display: "flex",
     flexDirection: "column",
   },
-  
+
   taskListContainerMobile: {
     flexDirection: "row",
     overflowX: "auto",
@@ -1158,15 +1239,21 @@ const styleSheet = {
     maxHeight: "50vh",
     overflowY: "auto",
     flexShrink: 0,
+    scrollbarWidth: "thin",
+    scrollbarColor: "#495057 transparent",
   },
 
   leftContainer: {
     width: "20%",
     padding: "10px",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#495057 transparent",
   },
 
   leftContainerMobile: {
     width: "100%",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#495057 transparent",
   },
 
   rightContainer: {
@@ -1259,3 +1346,39 @@ const styleSheet = {
     borderRadius: "5px",
   },
 };
+const darkStyles = (darkMode) => ({
+  page: {
+    backgroundColor: darkMode ? "#121212" : "#ffffff",
+    color: darkMode ? "#f1f1f1" : "#000000",
+    minHeight: "100vh",
+  },
+
+  card: {
+    backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
+    color: darkMode ? "#f1f1f1" : "#000000",
+    border: darkMode
+      ? "1px solid #333"
+      : "1px solid #caf0f8",
+  },
+
+  modal: {
+    backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
+    color: darkMode ? "#f1f1f1" : "#000000",
+  },
+
+  input: {
+    backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
+    color: darkMode ? "#ffffff" : "#000000",
+    border: darkMode
+      ? "1px solid #444"
+      : "1px solid #ccc",
+  },
+
+  menu: {
+    backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
+    color: darkMode ? "#ffffff" : "#000000",
+    border: darkMode
+      ? "1px solid #444"
+      : "1px solid #ccc",
+  },
+});

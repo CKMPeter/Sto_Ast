@@ -6,14 +6,13 @@ import { Link } from "react-router-dom";
 
 import { FolderClass } from "../../classes/storageClass/FolderClass";
 import { useAuth } from "../../contexts/AuthContext";
-import { useDarkMode } from "../../hooks/useDarkMode";
 
 import {
   renameFolderService,
   deleteFolderService,
 } from "../../services/storageService/folderActionService";
 
-export default function Folder({ folder, onChange }) {
+export default function Folder({ folder, onChange, darkMode }) {
   const [showModals, setShowModals] = useState({
     first: false,
     second: false,
@@ -23,7 +22,6 @@ export default function Folder({ folder, onChange }) {
   const [error, setError] = useState("");
 
   const { getIdToken } = useAuth();
-  const { darkMode } = useDarkMode();
 
   if (!folder || !(folder instanceof FolderClass)) return null;
 

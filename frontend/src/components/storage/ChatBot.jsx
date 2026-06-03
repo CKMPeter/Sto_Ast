@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useDarkMode } from "../../hooks/useDarkMode";
 import { runChatbotService } from "../../services/storageService/chatbotService";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
-const Chatbot = ({ allUserFiles }) => {
+const Chatbot = ({ allUserFiles, darkMode }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { getIdToken } = useAuth();
-  const { darkMode, loading: darkModeLoading } = useDarkMode();
+  
+  const { loading: darkModeLoading } = useDarkMode();
 
   const messagesEndRef = useRef(null);
 

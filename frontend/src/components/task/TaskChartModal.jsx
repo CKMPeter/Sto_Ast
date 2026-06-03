@@ -14,10 +14,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import { useDarkMode } from "../../hooks/useDarkMode";
+
 const COLORS = ["#0077b6", "#005f92", "#48a6d9", "#d62828"];
 
 export default function TaskChartModal({ show, onClose, subtasks = [] }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  const { darkMode } = useDarkMode();
 
   useEffect(() => {
     function handleResize() {
@@ -102,29 +106,33 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 
       <Modal.Body
         style={{
-          ...styles.modalBody,
-          ...(isMobile ? styles.modalBodyMobile : {}),
+          ...styles(darkMode).modalBody,
+          ...(isMobile ? styles(darkMode).modalBodyMobile : {}),
+          backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
+          color: darkMode ? "#ffffff" : "#000000",
         }}
       >
         <div
           style={{
-            ...styles.chartLayout,
-            ...(isMobile ? styles.chartLayoutMobile : {}),
+            ...styles(darkMode).chartLayout,
+            ...(isMobile ? styles(darkMode).chartLayoutMobile : {}),
           }}
         >
           <div
             style={{
-              ...styles.chartBox,
-              ...(isMobile ? styles.chartBoxMobile : {}),
+              ...styles(darkMode).chartBox,
+              ...(isMobile ? styles(darkMode).chartBoxMobile : {}),
+              backgroundColor: darkMode ? "#3a3a3a" : "#f8f9fa",
+              color: darkMode ? "#ffffff" : "#000000",
             }}
           >
-            <h5 style={styles.chartTitle}>Status Pie Chart</h5>
+            <h5 style={styles(darkMode).chartTitle}>Status Pie Chart</h5>
 
             {pieData.length > 0 ? (
               <div
                 style={{
-                  ...styles.chartArea,
-                  ...(isMobile ? styles.chartAreaMobile : {}),
+                  ...styles(darkMode).chartArea,
+                  ...(isMobile ? styles(darkMode).chartAreaMobile : {}),
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
@@ -156,17 +164,19 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
 
           <div
             style={{
-              ...styles.chartBox,
-              ...(isMobile ? styles.chartBoxMobile : {}),
+              ...styles(darkMode).chartBox,
+              ...(isMobile ? styles(darkMode).chartBoxMobile : {}),
+              backgroundColor: darkMode ? "#3a3a3a" : "#f8f9fa",
+              color: darkMode ? "#ffffff" : "#000000",
             }}
           >
-            <h5 style={styles.chartTitle}>Burndown Chart</h5>
+            <h5 style={styles(darkMode).chartTitle}>Burndown Chart</h5>
 
             {burndownData.length > 1 ? (
               <div
                 style={{
-                  ...styles.chartArea,
-                  ...(isMobile ? styles.chartAreaMobile : {}),
+                  ...styles(darkMode).chartArea,
+                  ...(isMobile ? styles(darkMode).chartAreaMobile : {}),
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
@@ -194,7 +204,7 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p style={styles.emptyText}>No time logged data available.</p>
+              <p style={styles(darkMode).emptyText}>No time logged data available.</p>
             )}
           </div>
         </div>
@@ -209,7 +219,7 @@ export default function TaskChartModal({ show, onClose, subtasks = [] }) {
   );
 }
 
-const styles = {
+const styles = (darkMode) => ({
   modalBody: {
     minHeight: "400px",
     height: "70vh",
@@ -241,7 +251,8 @@ const styles = {
     padding: "10px",
     border: "1px solid #caf0f8",
     borderRadius: "14px",
-    backgroundColor: "#ffffff",
+    backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
+    color: darkMode ? "#ffffff" : "#000000",
   },
 
   chartBoxMobile: {
@@ -250,7 +261,7 @@ const styles = {
   },
 
   chartTitle: {
-    color: "#023047",
+    color: darkMode ? "#ffffff" : "#023047",
     fontWeight: "700",
     marginBottom: "10px",
   },
@@ -267,7 +278,7 @@ const styles = {
   },
 
   emptyText: {
-    color: "#6c757d",
+    color: darkMode ? "#adb5bd" : "#6c757d",
     marginTop: "20px",
   },
-};
+});

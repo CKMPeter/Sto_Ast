@@ -3,7 +3,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { Button, Modal, Form, Alert, Col, Row } from "react-bootstrap";
-import { useDarkMode } from "../../hooks/useDarkMode";
 
 import {
   fileToBase64,
@@ -12,7 +11,7 @@ import {
   uploadFileService,
 } from "../../services/storageService/fileService";
 
-export default function AddFileButton({ currentFolder, onAdd }) {
+export default function AddFileButton({ currentFolder, onAdd, darkMode }) {
   const { currentUser, getIdToken } = useAuth();
 
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -31,7 +30,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
   const [isFetchingAIPreview, setIsFetchingAIPreview] = useState(false);
 
-  const { darkMode } = useDarkMode();
+  const [isHoveringUpload, setIsHoveringUpload] = useState(false);
 
   const fetchAI = useCallback(
     async (base64Input, task, isImage = true) => {
@@ -48,7 +47,7 @@ export default function AddFileButton({ currentFolder, onAdd }) {
         return null;
       }
     },
-    [getIdToken, file]
+    [getIdToken, file],
   );
 
   useEffect(() => {
@@ -72,7 +71,11 @@ export default function AddFileButton({ currentFolder, onAdd }) {
           setError("AI rename failed or returned invalid result");
         }
 
-        const aiPreviewResult = await fetchAI(base64Content, "preview", isImage);
+        const aiPreviewResult = await fetchAI(
+          base64Content,
+          "preview",
+          isImage,
+        );
 
         if (aiPreviewResult && typeof aiPreviewResult === "string") {
           setPreview(aiPreviewResult.trim());
@@ -214,7 +217,29 @@ export default function AddFileButton({ currentFolder, onAdd }) {
           onClick={openModal}
           variant={darkMode ? "outline-light" : "outline-primary"}
           size="sm"
-          style={styleSheet.openButton}
+          onMouseEnter={() => setIsHoveringUpload(true)}
+          onMouseLeave={() => setIsHoveringUpload(false)}
+          style={{
+            ...styleSheet.openButton,
+            borderColor: darkMode ? "#f8f9fa" : "#0077b6",
+            color: isHoveringUpload
+              ? "#ffffff"
+              : darkMode
+                ? "#f8f9fa"
+                : "#0077b6",
+            backgroundColor: isHoveringUpload
+              ? darkMode
+                ? "#0077b6"
+                : "#0077b6"
+              : "transparent",
+            transform: isHoveringUpload
+              ? "translateY(-2px) scale(1.05)"
+              : "none",
+            boxShadow: isHoveringUpload
+              ? "0 6px 14px rgba(0, 119, 182, 0.35)"
+              : "none",
+            transition: "all 0.2s ease",
+          }}
         >
           <FontAwesomeIcon icon={faFileArrowUp} style={styleSheet.openIcon} />
         </Button>
@@ -405,8 +430,9 @@ const styleSheet = {
 
   openButton: {
     marginRight: "5px",
-    borderColor: "#0077b6",
-    color: "#0077b6",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderRadius: "10px",
   },
 
   openIcon: {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export default function TaskListComponent({ tasks }) {
+export default function TaskListComponent({ tasks, darkMode }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -31,29 +31,29 @@ export default function TaskListComponent({ tasks }) {
   };
 
   return (
-    <div style={styleSheet.container}>
+    <div style={styleSheet(darkMode).container}>
       {tasks.map((task) => (
         <div
           key={task.id || task.name}
           style={{
-            ...styleSheet.card,
-            ...(isMobile ? styleSheet.cardMobile : {}),
+            ...styleSheet(darkMode).card,
+            ...(isMobile ? styleSheet(darkMode).cardMobile : {}),
           }}
         >
-          <h3 style={styleSheet.title}>{task.name}</h3>
+          <h3 style={styleSheet(darkMode).title}>{task.name}</h3>
 
-          <p style={styleSheet.text}>Group: {task.group?.name || "No Group"}</p>
+          <p style={styleSheet(darkMode).text}>Group: {task.group?.name || "No Group"}</p>
 
-          <p style={styleSheet.text}>Progress: {task.progress || 0}%</p>
+          <p style={styleSheet(darkMode).text}>Progress: {task.progress || 0}%</p>
 
-          <p style={styleSheet.text}>Expire At: {formatDate(task.expireAt)}</p>
+          <p style={styleSheet(darkMode).text}>Expire At: {formatDate(task.expireAt)}</p>
         </div>
       ))}
     </div>
   );
 }
 
-const styleSheet = {
+const styleSheet = (darkMode) => ({
   container: {
     width: "100%",
   },
@@ -64,7 +64,7 @@ const styleSheet = {
     border: "1px solid #caf0f8",
     borderRadius: "10px",
     width: "200px",
-    backgroundColor: "#ffffff",
+    backgroundColor: darkMode ? "#343a40" : "#ffffff",
     boxShadow: "0 4px 12px rgba(0,119,182,0.08)",
     wordBreak: "break-word",
   },
@@ -77,12 +77,12 @@ const styleSheet = {
   title: {
     fontSize: "1.1rem",
     marginBottom: "8px",
-    color: "#023047",
+    color: darkMode ? "#f1f1f1" : "#023047",
   },
 
   text: {
     margin: "4px 0",
     fontSize: "0.9rem",
-    color: "#555",
+    color: darkMode ? "#adb5bd" : "#555",
   },
-};
+});

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export function TaskLog({ taskLog }) {
+export function TaskLog({ taskLog, darkMode }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -15,16 +15,16 @@ export function TaskLog({ taskLog }) {
   return (
     <div
       style={{
-        ...styleSheet.taskLogContainer,
-        ...(isMobile ? styleSheet.taskLogContainerMobile : {}),
+        ...styleSheet(darkMode).taskLogContainer,
+        ...(isMobile ? styleSheet(darkMode).taskLogContainerMobile : {}),
       }}
     >
-      <h2 style={styleSheet.title}>Task Log</h2>
+      <h2 style={styleSheet(darkMode).title}>Task Log</h2>
 
       {taskLog.length > 0 ? (
-        <ul style={styleSheet.list}>
+        <ul style={styleSheet(darkMode).list}>
           {taskLog.map((log, index) => (
-            <li key={log.id || index} style={styleSheet.logItem}>
+            <li key={log.id || index} style={styleSheet(darkMode).logItem}>
               <div>
                 <strong>{log.action}</strong>
               </div>
@@ -54,16 +54,18 @@ export function TaskLog({ taskLog }) {
   );
 }
 
-const styleSheet = {
+const styleSheet = (darkMode) => ({
   taskLogContainer: {
     padding: "20px",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
     borderRadius: "10px",
     border: "1px solid #caf0f8",
     height: "400px",
     overflowY: "auto",
     width: "80%",
-    flexShrink: 0,
+    // flexShrink: 0,
+    scrollbarWidth: "thin",
+    scrollbarColor: "#495057 transparent",
   },
 
   taskLogContainerMobile: {
@@ -75,7 +77,7 @@ const styleSheet = {
   title: {
     fontSize: "1.4rem",
     marginBottom: "12px",
-    color: "#023047",
+    color: darkMode ? "#f1f1f1" : "#023047",
   },
 
   list: {
@@ -87,7 +89,7 @@ const styleSheet = {
   logItem: {
     padding: "10px",
     marginBottom: "10px",
-    backgroundColor: "#ffffff",
+    backgroundColor: darkMode ? "#495057" : "#ffffff",
     border: "1px solid #caf0f8",
     borderRadius: "8px",
     wordBreak: "break-word",
@@ -96,11 +98,11 @@ const styleSheet = {
   date: {
     marginTop: "5px",
     fontSize: "12px",
-    color: "#666",
+    color: darkMode ? "#adb5bd" : "#666",
   },
 
   emptyText: {
     color: "#6c757d",
     margin: 0,
   },
-};
+});

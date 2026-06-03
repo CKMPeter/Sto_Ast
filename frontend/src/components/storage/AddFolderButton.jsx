@@ -3,16 +3,16 @@ import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolderPlus } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../../contexts/AuthContext";
-import { useDarkMode } from "../../hooks/useDarkMode";
 import { createFolderService } from "../../services/storageService/folderService";
 
-export default function AddFolderButton({ currentFolder, onAdd }) {
+export default function AddFolderButton({ currentFolder, onAdd, darkMode }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
 
   const { currentUser } = useAuth();
-  const { darkMode } = useDarkMode();
+
+  const [isHoveringFolder, setIsHoveringFolder] = useState(false);
 
   function openModal() {
     setOpen(true);
@@ -49,7 +49,23 @@ export default function AddFolderButton({ currentFolder, onAdd }) {
         onClick={openModal}
         variant={darkMode ? "outline-light" : "outline-primary"}
         size="sm"
-        style={styleSheet.openButton}
+        onMouseEnter={() => setIsHoveringFolder(true)}
+        onMouseLeave={() => setIsHoveringFolder(false)}
+        style={{
+          ...styleSheet.openButton,
+          borderColor: darkMode ? "#f8f9fa" : "#0077b6",
+          color: isHoveringFolder
+            ? "#ffffff"
+            : darkMode
+              ? "#f8f9fa"
+              : "#0077b6",
+          backgroundColor: isHoveringFolder ? "#0077b6" : "transparent",
+          transform: isHoveringFolder ? "translateY(-2px) scale(1.05)" : "none",
+          boxShadow: isHoveringFolder
+            ? "0 6px 14px rgba(0,119,182,0.35)"
+            : "none",
+          transition: "all 0.2s ease",
+        }}
       >
         <FontAwesomeIcon icon={faFolderPlus} style={styleSheet.openIcon} />
       </Button>
@@ -70,7 +86,9 @@ export default function AddFolderButton({ currentFolder, onAdd }) {
           </Modal.Header>
 
           <Modal.Body>
-            {error && <Alert variant={darkMode ? "dark" : "danger"}>{error}</Alert>}
+            {error && (
+              <Alert variant={darkMode ? "dark" : "danger"}>{error}</Alert>
+            )}
 
             <Form.Group>
               <Form.Label>Folder Name</Form.Label>
@@ -108,8 +126,9 @@ export default function AddFolderButton({ currentFolder, onAdd }) {
 const styleSheet = {
   openButton: {
     marginRight: "5px",
-    borderColor: "#0077b6",
-    color: "#0077b6",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderRadius: "10px",
   },
 
   openIcon: {
