@@ -6,6 +6,7 @@ import CenteredContainer from "./CenteredContainer";
 import "../../index.css";
 import { faG, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 export default function Login() {
   const emailRef = useRef();
@@ -24,6 +25,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState(false);
+
+  const {darkMode} = useDarkMode();
 
   const navigate = useNavigate();
 
@@ -103,9 +106,9 @@ export default function Login() {
   return (
     <div className="fullPage">
       <div ref={signUpRef} className="signUp authPanel">
-        <CenteredContainer>
+        <CenteredContainer >
           <Card className="authCard">
-            <Card.Body>
+            <Card.Body style={{color: darkMode ? "#fff" : "#000", backgroundColor: darkMode ? "#343a40" : "#fff"}}>
               <h2 className="text-center mb-4 fw-bold authTitle">
                 <FontAwesomeIcon icon={faUser} className="authIcon" />
                 <br />
@@ -114,7 +117,7 @@ export default function Login() {
 
               {error && <Alert variant="danger">{error}</Alert>}
 
-              <Form onSubmit={handleSignUp}>
+              <Form onSubmit={handleSignUp} style={{color: darkMode ? "#fff" : "#000", backgroundColor: darkMode ? "#343a40" : "#fff"}}>
                 <Form.Group id="signup-email" className="mb-3">
                   <Form.Label className="fw-bold text-secondary">
                     Email
@@ -165,9 +168,9 @@ export default function Login() {
       </div>
 
       <div ref={loginRef} className="logIn authPanel">
-        <CenteredContainer>
+        <CenteredContainer >
           <Card className="authCard">
-            <Card.Body>
+            <Card.Body style={{color: darkMode ? "#fff" : "#000", backgroundColor: darkMode ? "#343a40" : "#fff"}}>
               <h2 className="text-center mb-4 fw-bold authTitle">
                 <FontAwesomeIcon icon={faUser} className="authIcon" />
                 <br />
@@ -176,7 +179,7 @@ export default function Login() {
 
               {error && <Alert variant="danger">{error}</Alert>}
 
-              <Form onSubmit={handleSubmit}>
+              <Form onSubmit={handleSubmit} style={{color: darkMode ? "#fff" : "#000", backgroundColor: darkMode ? "#343a40" : "#fff"}}>
                 <Form.Group id="login-email" className="mb-3">
                   <Form.Label className="fw-bold text-secondary">
                     Email
