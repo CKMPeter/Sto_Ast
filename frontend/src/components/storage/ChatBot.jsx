@@ -241,6 +241,8 @@ const styleSheet = {
     flexDirection: "column",
     borderRadius: "20px",
     overflow: "hidden",
+    position: "relative",
+    zIndex: 5000,
   },
 
   chatbotDark: {

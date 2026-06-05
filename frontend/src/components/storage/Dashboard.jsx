@@ -59,7 +59,7 @@ export default function Dashboard() {
     const parts = text.split(regex);
 
     return parts.map((part, i) =>
-      regex.test(part) ? <mark key={i}>{part}</mark> : part
+      regex.test(part) ? <mark key={i}>{part}</mark> : part,
     );
   };
 
@@ -166,7 +166,9 @@ export default function Dashboard() {
   ]);
 
   const visibleFolders = useMemo(() => {
-    const sourceFolders = isSearching ? allUserFolders || [] : childFolders || [];
+    const sourceFolders = isSearching
+      ? allUserFolders || []
+      : childFolders || [];
 
     return sourceFolders.filter((folder) => {
       const matchesCurrentFolder =
@@ -222,7 +224,11 @@ export default function Dashboard() {
 
             <AddFolderButton currentFolder={folder} darkMode={darkMode} />
 
-            <AddFileButton currentFolder={folder} onAdd={triggerRefresh} darkMode={darkMode} />
+            <AddFileButton
+              currentFolder={folder}
+              onAdd={triggerRefresh}
+              darkMode={darkMode}
+            />
 
             <Form.Control
               type="text"
@@ -262,7 +268,7 @@ export default function Dashboard() {
 
             folderInstance.highlightedName = highlightText(
               child.name,
-              searchQuery
+              searchQuery,
             );
 
             return (
@@ -316,7 +322,13 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <button onClick={toggleChatbot} style={styleSheet.chatButton}>
+        <button
+          onClick={toggleChatbot}
+          style={{
+            ...styleSheet.chatButton,
+            ...(showChatbot ? styleSheet.chatButtonOpen : {}),
+          }}
+        >
           {showChatbot ? "✖" : "💬"}
         </button>
 
@@ -434,6 +446,12 @@ const styleSheet = {
     cursor: "pointer",
     zIndex: 2000,
     fontSize: "22px",
+  },
+
+  chatButtonOpen: {
+   marginBottom: "0",
+    right: "38px",
+    zIndex: 2001,
   },
 
   chatbot: {

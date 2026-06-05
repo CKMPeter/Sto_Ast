@@ -419,7 +419,7 @@ const styleSheet = {
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    zIndex: 3000,
+    zIndex: 1,
   },
 
   innerWrapper: {
