@@ -1,48 +1,54 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { realtimeDatabase } from "../../config/firebase";
-import { ref, onValue, off } from "firebase/database";
+
+const BACKEND_URL =
+  import.meta.env.VITE_APP_BACKEND_URL || "https://localhost:5000";
 
 export function useScheduleRealtime() {
-  const { currentUser } = useAuth(); // ✅ MUST BE TOP LEVEL
+  const { currentUser, getIdToken } = useAuth();
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
     if (!currentUser) return;
 
-    const queueRef = ref(
-      realtimeDatabase,
-      `users/${currentUser.uid}/scheduleQueue`
-    );
+    const fetchEvents = async () => {
+      try {
+        const token = await getIdToken();
 
-    const unsubscribe = onValue(queueRef, (snapshot) => {
-      const data = snapshot.val();
+        const response = await fetch(
+          `${BACKEND_URL}/api/notifications/${currentUser.uid}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-      if (!data) {
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            `Request failed: ${response.status} ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+
+        setEvents(data.events || []);
+      } catch (error) {
+        console.error(
+          "Failed to fetch schedule notifications:",
+          error
+        );
         setEvents([]);
-        return;
       }
+    };
 
-      const allEvents = [];
+    fetchEvents();
 
-      Object.entries(data).forEach(([date, schedules]) => {
-        Object.entries(schedules).forEach(([id, value]) => {
-          allEvents.push({
-            id,
-            date,
-            title: value.title,
-            start: value.start,
-            duration: value.duration
-          });
-        });
-      });
+    const interval = setInterval(fetchEvents, 5000);
 
-      console.log(" REALTIME EVENTS:", allEvents);
-      setEvents(allEvents);
-    });
-
-    return () => off(queueRef);
-  }, [currentUser]);
+    return () => clearInterval(interval);
+  }, [currentUser, getIdToken]);
 
   return events;
 }

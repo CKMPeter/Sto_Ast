@@ -81,6 +81,11 @@ const {
   getGroupMembers,
 } = require("./controllers/GroupController");
 
+const {
+  getScheduleNotifications,
+} = require("./controllers/NotificationController");
+
+
 // ─── Call Controllers (1-on-1 và Group) ──────────────────────────────────────
 const CallController = require("./controllers/CallController");
 const CallGroupController = require("./controllers/CallGroupController");
@@ -130,6 +135,9 @@ app.post("/api/schedules", addSchedule);
 app.get("/api/schedules", fetchSchedulesByDate);
 app.put("/api/schedules/:scheduleId", updateSchedule);
 app.delete("/api/schedules/:scheduleId", deleteSchedule);
+
+// ─── Schedule Notifications API ──────────────────────────────────────────────
+app.get("/api/notifications/:userId", getScheduleNotifications);
 
 // ─── Friends API ──────────────────────────────────────────────────────────────
 app.get("/api/users/:userid/friends", getFriends);
