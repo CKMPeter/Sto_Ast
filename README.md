@@ -3,6 +3,7 @@
 
 Author: Cao Khải Minh </br>
 This guide walks you through the steps to create a Multi Purpose application using **Node.js**, **React**, **Firebase** (for authentication and storage), and an **AI-powered chatbot**.
+Teammate: [Đào Trung Kiên](https://github.com/DoomDayKross)
 
 ### Features:
 - Provide a easy to use interface.
@@ -19,6 +20,8 @@ Before starting, ensure you have the following installed:
 - **Node.js** (Latest LTS version)
 - **npm** (Package manager)
 - **Firebase account** (for authentication and file storage)
+- **Gemini acccount**
+- **OpenAI account**
 - **Code editor** like VSCode
 - **React** (for front-end development)
 - **@google/generative-AI** (for AI related content)
@@ -33,24 +36,25 @@ Before starting, ensure you have the following installed:
 1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
 2. In your Firebase project:
    - Enable **Firebase Authentication** and set up your preferred sign-in method (e.g., Email/Password).
-   - Enable **Firebase Readtime Database** for file uploads.
-3. Install Firebase SDK in your project:
-```bash
-   npm install firebase
-```
-4. Initialize Firebase in your Node.js backend and React app by creating a `firebase.js` file.
+   - Enable **Firebase Readtime Database** for user and chat/call function to work.
+   - Enable **Firebase Firestore** for file storage, task and schedule to work.
+4. Select your project.
+5. Click Project Settings.
+6. Open the Service Accounts tab.
+7. Click Generate New Private Key.
 
 
 ### Step 2: Gitclone the repository:
 - The usual code is fine.
 
-### Step 3: Get your Gemini API Key and Create .env file:
+### Step 3: Get your Gemini and OpenAI API Key and Create .env file:
 ### How to Get Gemini API Key
 
-Gemini is a cryptocurrency exchange platform that allows you to interact with their platform programmatically using API keys. Follow the steps below to obtain your Gemini API key.
+Gemini and OpenAI is a AI platform that allows you to interact with their platform programmatically using API keys. Follow the steps below to obtain your Gemini API key.
 
 #### Prerequisites
 - A Gemini account (If you don’t have one, you can create it at [Gemini](https://www.gemini.com/)).
+- A OpenAI account (If you don’t have one, you can create it at [OpenAI](https://platform.openai.com)) (pay option, but there is a way to use it for free check the OpenAI's Disclaimer).
 
 #### Steps to Get Gemini API Key:
 
@@ -75,27 +79,74 @@ Gemini is a cryptocurrency exchange platform that allows you to interact with th
 5. **Generate the API Key:**
    - After configuring the permissions, click **Generate API Key**.
    - Gemini will generate an API key (the **API Key** and **API Secret**). Copy them and save them securely as you will not be able to retrieve the secret key again.
+  
+#### Steps to Get Gemini API Key:
+1. **Log in to Your OpenAI Account:**
+   - Visit [OpenAI](https://platform.openai.com) and log in with your credentials.
+  
+2. **Navigate to create a new project if not prompted:**
+   - In the bottom left of the screen click on your avata, then select **Profile Settings**.
+3. **Navigate to Project:**
+   - On the side menu click **Project** </br>
+   - Or you can use [this link](https://platform.openai.com/settings/organization/projects).
+   - Then click **Create** a project name **Sto_Ast**
+   
+4. **Create API key:**
+   - Click **Back To Project** click on **API Keys** on the side bar, then click **Create New Secret Key**.
+   - Keep on **You** tab and enter the name of your key and select the the Project you just created, then click create.
+   - After that you should have the Key.
+   
 
-6. **Create an .env file in both the my-react-app and server folder:**
+5. **Add Credit To Your Key:**
+   - For this approach to work you needs to add credit to your API Key.
+   - Use [this link](https://platform.openai.com/settings/organization/billing/overview) to go to the billing page.
+  
+##### Disclaimer #####
+- There is an alternative free approach but i do not reccomend it, it will expired in one month after created.
+- This is the Flow of what you need to do
+```
+github -> Settings -> developer setting -> Personal Access Token -> Fine-grained Token -> Generate-> Copy the Token
+```
+#### Create an .env file in both the my-react-app and server folder:
 In my-react-app/.env:
 ```bash
 https = true
 SSL_CRT_FILE = cert.pem
 SSL_KEY_FILE = key.pem
-REACT_APP_FIREBASE_API_KEY = [your-api-key]
-REACT_APP_FIREBASE_AUTH_DOMAIN = [your-api-key]
-REACT_APP_FIREBASE_PROJECT_ID = [your-api-key]
-REACT_APP_FIREBASE_STORAGE_BUCKET = [your-api-key]
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID = [your-api-key]
-REACT_APP_FIREBASE_APP_ID = [your-api-key]
-REACT_APP_FIREBASE_DATABASE_URL = [your-api-key]
+
+VITE_APP_BACKEND_URL=https://localhost:5000
+VITE_APP_FRONTEND_URL=https://localhost:3000
+
+VITE_APP_FIREBASE_API_KEY=[your-api-key]
+VITE_APP_FIREBASE_AUTH_DOMAIN=[your-api-key]
+VITE_APP_FIREBASE_PROJECT_ID=[your-api-key]
+VITE_APP_FIREBASE_STORAGE_BUCKET=[your-api-key]
+VITE_APP_FIREBASE_MESSAGING_SENDER_ID=[your-api-key]
+VITE_APP_FIREBASE_APP_ID=[your-api-key]
+VITE_APP_FIREBASE_DATABASE_URL=[your-api-key]
 ```
-In server/.env:
+In server/.env (use the file from step 1 to fill in this .env):
 ```bash
 https = true
 SSL_CRT_FILE = cert.pem
 SSL_KEY_FILE = key.pem
 REACT_APP_GEMINI_API_KEY = [your-api-key]
+FRONTEND_URL = https://localhost:3000
+BACKEND_URL = https://localhost:5000
+
+PROJECT_ID=[your-api-key]
+PRIVATE_KEY_ID=[your-api-key]
+PRIVATE_KEY=[your-api-key]
+CLIENT_EMAIL=[your-api-key]
+CLIENT_ID=[your-api-key]
+AUTH_URI=[your-api-key]
+TOKEN_URI=[your-api-key]
+AUTH_PROVIDER_X509_CERT_URL=[your-api-key]
+CLIENT_X509_CERT_URL=[your-api-key]
+UNIVERSE_DOMAIN=[your-api-key]
+
+FIREBASE_DATABASE_URL=[your-api-key]
+FIREBASE_STORAGE_BUCKET=[your-api-key]
 ```
 ### Step 4: Set up the enviroment:
 Navigate into the my-react-app & server to install:
@@ -113,9 +164,13 @@ mkcert -install
 mkcert -cert-file cert.pem -key-file key.pem localhost
 ```
 ### Step 6: Run the web:
-int both server and my-react-app folder:
+in frontend run:
+```bash
+npm run dev
+```
+
+in backend run:
 ```bash
 npm run start
 ```
-
 
