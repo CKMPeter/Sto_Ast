@@ -118,35 +118,37 @@ VITE_APP_BACKEND_URL=https://localhost:5000
 VITE_APP_FRONTEND_URL=https://localhost:3000
 
 VITE_APP_FIREBASE_API_KEY=[your-api-key]
-VITE_APP_FIREBASE_AUTH_DOMAIN=[your-api-key]
-VITE_APP_FIREBASE_PROJECT_ID=[your-api-key]
-VITE_APP_FIREBASE_STORAGE_BUCKET=[your-api-key]
-VITE_APP_FIREBASE_MESSAGING_SENDER_ID=[your-api-key]
-VITE_APP_FIREBASE_APP_ID=[your-api-key]
-VITE_APP_FIREBASE_DATABASE_URL=[your-api-key]
+VITE_APP_FIREBASE_AUTH_DOMAIN=[your-auth-domain]
+VITE_APP_FIREBASE_PROJECT_ID=[your-project-id]
+VITE_APP_FIREBASE_STORAGE_BUCKET=[your-storage-bucket]
+VITE_APP_FIREBASE_MESSAGING_SENDER_ID=[your-sender-id]
+VITE_APP_FIREBASE_APP_ID=[your-app-id]
+VITE_APP_FIREBASE_DATABASE_URL=[your-database-url]
 ```
 In server/.env (use the file from step 1 to fill in this .env):
 ```bash
-https = true
-SSL_CRT_FILE = cert.pem
-SSL_KEY_FILE = key.pem
-REACT_APP_GEMINI_API_KEY = [your-api-key]
-FRONTEND_URL = https://localhost:3000
-BACKEND_URL = https://localhost:5000
+HTTPS=true
+SSL_CRT_FILE=cert.pem
+SSL_KEY_FILE=key.pem
 
-PROJECT_ID=[your-api-key]
-PRIVATE_KEY_ID=[your-api-key]
-PRIVATE_KEY=[your-api-key]
-CLIENT_EMAIL=[your-api-key]
-CLIENT_ID=[your-api-key]
-AUTH_URI=[your-api-key]
-TOKEN_URI=[your-api-key]
-AUTH_PROVIDER_X509_CERT_URL=[your-api-key]
-CLIENT_X509_CERT_URL=[your-api-key]
-UNIVERSE_DOMAIN=[your-api-key]
+REACT_APP_GEMINI_API_KEY=[your-gemini-api-key]
 
-FIREBASE_DATABASE_URL=[your-api-key]
-FIREBASE_STORAGE_BUCKET=[your-api-key]
+FRONTEND_URL=https://localhost:3000
+BACKEND_URL=https://localhost:5000
+
+PROJECT_ID=[your-project-id]
+PRIVATE_KEY_ID=[your-private-key-id]
+PRIVATE_KEY=[your-private-key]
+CLIENT_EMAIL=[your-client-email]
+CLIENT_ID=[your-client-id]
+AUTH_URI=[your-auth-uri]
+TOKEN_URI=[your-token-uri]
+AUTH_PROVIDER_X509_CERT_URL=[your-auth-provider-cert-url]
+CLIENT_X509_CERT_URL=[your-client-cert-url]
+UNIVERSE_DOMAIN=[your-universe-domain]
+
+FIREBASE_DATABASE_URL=[your-database-url]
+FIREBASE_STORAGE_BUCKET=[your-storage-bucket]
 ```
 ### Step 4: Set up the enviroment:
 Navigate into the my-react-app & server to install:
