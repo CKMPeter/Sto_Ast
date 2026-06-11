@@ -40,19 +40,38 @@ export default function FriendsList({ userId, onSelect, selectedUserId }) {
           }}
         >
           {/* AVATAR */}
-          <img
-            src={
-              friend.photoURL ||
-              "https://via.placeholder.com/40"
-            }
-            alt="avatar"
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              objectFit: "cover",
-            }}
-          />
+          {friend.photoURL ? (
+            <img
+              src={friend.photoURL}
+              alt="avatar"
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                background: "#0077b6",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: "700",
+                fontSize: "16px",
+                flexShrink: 0,
+              }}
+            >
+              {(friend.name || friend.email || "?")[0].toUpperCase()}
+            </div>
+          )}
 
           {/* NAME */}
           <div>

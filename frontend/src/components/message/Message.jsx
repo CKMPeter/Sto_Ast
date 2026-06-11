@@ -413,12 +413,10 @@ export function Message() {
                       <Bubble isMe={isMe} darkMode={darkMode}>
                         {msg.text && <div>{msg.text}</div>}
 
-                        {msg.type === "voice" && msg.voiceDataUrl && (
-                          <audio
-                            controls
-                            src={msg.voiceDataUrl}
-                            style={styleSheet.audio}
-                          />
+                        {msg.type === "voice" && (
+                          msg.voiceDataUrl
+                            ? <audio controls src={msg.voiceDataUrl} style={styleSheet.audio} />
+                            : <span style={{ fontSize: "12px", opacity: 0.7 }}>🎤 Voice message (không thể phát)</span>
                         )}
 
                         {msg.fileUrl && msg.fileType?.startsWith("image") && (

@@ -31,10 +31,9 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId, 
       const data = snapshot.val();
       if (!data) return setMessages([]);
 
-      const list = Object.entries(data).map(([id, value]) => ({
-        id,
-        ...value,
-      }));
+      const list = Object.entries(data)
+        .map(([id, value]) => ({ id, ...value }))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
       setMessages(list);
     });
@@ -53,14 +52,13 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId, 
     });
   };
 
-  // FILE (FIXED)
+  // FILE
   const sendFile = async (file) => {
     if (!chatId || !file) return;
 
     try {
       setUploading(true);
 
-      // 🚨 LIMIT FILE SIZE (Firestore limit)
       if (file.size > 800 * 1024) {
         alert("File quá lớn (>800KB). Không thể gửi.");
         setUploading(false);
@@ -71,7 +69,7 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId, 
 
       await push(ref(db, `messages/${chatId}`), {
         type: "file",
-        fileUrl: dataUrl, // base64
+        fileUrl: dataUrl,
         fileName: file.name,
         fileType: file.type,
         senderId: currentUserId,
@@ -86,12 +84,19 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId, 
     }
   };
 
-  //VOICE
+  // VOICE
   const sendVoiceMessage = async (blob, durationMs = null) => {
     if (!chatId || !blob) return;
 
     try {
       setUploading(true);
+
+      // Kiểm tra size: giới hạn 500KB cho voice
+      if (blob.size > 500 * 1024) {
+        alert("Tin nhắn thoại quá dài (>500KB). Vui lòng ghi ngắn hơn.");
+        setUploading(false);
+        return;
+      }
 
       const dataUrl = await blobToDataURL(blob);
 
@@ -106,6 +111,7 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId, 
       });
     } catch (err) {
       console.error(err);
+      alert("Gửi voice thất bại. Vui lòng thử lại.");
     } finally {
       setUploading(false);
     }
