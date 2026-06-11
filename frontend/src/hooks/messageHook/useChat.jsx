@@ -11,7 +11,7 @@ function blobToDataURL(blob) {
   });
 }
 
-export default function useChat(currentUserId, selectedUserId, selectedGroupId) {
+export default function useChat(currentUserId, selectedUserId, selectedGroupId, senderName) {
   const db = getDatabase();
   const [messages, setMessages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -48,6 +48,7 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId) 
       type: "text",
       text,
       senderId: currentUserId,
+      senderName: senderName || currentUserId,
       createdAt: Date.now(),
     });
   };
@@ -74,6 +75,7 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId) 
         fileName: file.name,
         fileType: file.type,
         senderId: currentUserId,
+        senderName: senderName || currentUserId,
         createdAt: Date.now(),
       });
 
@@ -99,6 +101,7 @@ export default function useChat(currentUserId, selectedUserId, selectedGroupId) 
         voiceType: blob.type || "audio/webm",
         voiceDuration: durationMs,
         senderId: currentUserId,
+        senderName: senderName || currentUserId,
         createdAt: Date.now(),
       });
     } catch (err) {

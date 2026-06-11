@@ -70,7 +70,7 @@ export function Message() {
     sendFile,
     sendVoiceMessage,
     uploading,
-  } = useChat(currentUser?.uid, selectedUserId, selectedGroupId);
+  } = useChat(currentUser?.uid, selectedUserId, selectedGroupId, currentUser?.displayName || currentUser?.email);
 
   const selectedFriend = friends.find((f) => f.uid === selectedUserId);
 
@@ -388,34 +388,60 @@ export function Message() {
             {selectedUserId || selectedGroupId ? (
               messages.map((msg) => {
                 const isMe = msg.senderId === currentUser.uid;
+                const timeLabel = msg.createdAt
+                  ? new Date(msg.createdAt).toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "";
+
+                // Tra tên người gửi từ members của group (fallback về senderName, rồi senderId)
+                const memberMap = selectedGroup?.members
+                  ? Object.fromEntries(selectedGroup.members.map((m) => [m.uid, m.name || m.email]))
+                  : {};
+                const displayName = msg.senderName || memberMap[msg.senderId] || msg.senderId;
 
                 return (
                   <Row key={msg.id} isMe={isMe}>
-                    <Bubble isMe={isMe} darkMode={darkMode}>
-                      {msg.text && <div>{msg.text}</div>}
-
-                      {msg.type === "voice" && msg.voiceDataUrl && (
-                        <audio
-                          controls
-                          src={msg.voiceDataUrl}
-                          style={styleSheet.audio}
-                        />
+                    <div style={{ maxWidth: "65%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                      {/* Tên người gửi: chỉ hiện trong group chat và không phải tin của mình */}
+                      {selectedGroupId && !isMe && (
+                        <span style={styleSheet.senderName}>
+                          {displayName}
+                        </span>
                       )}
+                      <Bubble isMe={isMe} darkMode={darkMode}>
+                        {msg.text && <div>{msg.text}</div>}
 
-                      {msg.fileUrl && msg.fileType?.startsWith("image") && (
-                        <img
-                          src={msg.fileUrl}
-                          alt="shared-file"
-                          style={styleSheet.imageMessage}
-                        />
-                      )}
+                        {msg.type === "voice" && msg.voiceDataUrl && (
+                          <audio
+                            controls
+                            src={msg.voiceDataUrl}
+                            style={styleSheet.audio}
+                          />
+                        )}
 
-                      {msg.fileUrl && !msg.fileType?.startsWith("image") && (
-                        <a href={msg.fileUrl} target="_blank" rel="noreferrer">
-                          📎 {msg.fileName}
-                        </a>
+                        {msg.fileUrl && msg.fileType?.startsWith("image") && (
+                          <img
+                            src={msg.fileUrl}
+                            alt="shared-file"
+                            style={styleSheet.imageMessage}
+                          />
+                        )}
+
+                        {msg.fileUrl && !msg.fileType?.startsWith("image") && (
+                          <a href={msg.fileUrl} target="_blank" rel="noreferrer">
+                            📎 {msg.fileName}
+                          </a>
+                        )}
+                      </Bubble>
+                      {/* Thời gian */}
+                      {timeLabel && (
+                        <span style={styleSheet.timestamp(darkMode)}>
+                          {timeLabel}
+                        </span>
                       )}
-                    </Bubble>
+                    </div>
                   </Row>
                 );
               })
@@ -705,6 +731,22 @@ const styleSheet = {
     maxWidth: "220px",
   },
 
+  senderName: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#0077b6",
+    marginBottom: "3px",
+    paddingLeft: "4px",
+  },
+
+  timestamp: (darkMode) => ({
+    fontSize: "11px",
+    color: darkMode ? "#7ab8cc" : "#90aab8",
+    marginTop: "3px",
+    paddingRight: "4px",
+    paddingLeft: "4px",
+  }),
+
   imageMessage: {
     maxWidth: "100%",
     width: "220px",
@@ -832,6 +874,7 @@ const Row = styled("div")(({ isMe }) => ({
   display: "flex",
   justifyContent: isMe ? "flex-end" : "flex-start",
   marginBottom: "10px",
+  width: "100%",
 }));
 
 const Bubble = styled("div")(({ isMe, darkMode }) => ({
@@ -839,7 +882,7 @@ const Bubble = styled("div")(({ isMe, darkMode }) => ({
   color: isMe ? "#ffffff" : darkMode ? "#eaf8fc" : "#023047",
   padding: "12px 16px",
   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-  maxWidth: "65%",
+  maxWidth: "100%",
   wordBreak: "break-word",
   border: isMe
     ? "1px solid #0077b6"
@@ -848,7 +891,7 @@ const Bubble = styled("div")(({ isMe, darkMode }) => ({
       : "1px solid #caf0f8",
 
   "@media (max-width: 768px)": {
-    maxWidth: "90%",
+    maxWidth: "100%",
   },
 }));
 
