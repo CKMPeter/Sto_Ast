@@ -327,6 +327,7 @@ export function Message() {
               }
             }}
             selectedUserId={selectedUserId}
+            darkMode={darkMode}
           />
 
           <div

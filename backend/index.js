@@ -12,7 +12,7 @@ const envPath = fs.existsSync(envLocalPath)
 require("dotenv").config({ path: envPath });
 
 // ─── Import Controllers ────────────────────────────────────────────────────────
-const { aiAnalyse, chatWithBot } = require("./controllers/GeminiAIController");
+// const { aiAnalyse, chatWithBot } = require("./controllers/GeminiAIController");
 const { updateUser } = require("./controllers/UserController");
 const {
   createFolder,
@@ -37,6 +37,7 @@ const {
   aiRename,
   aiPreview,
   createMainTaskAI,
+  chatWithBot,
 } = require("./controllers/openAIController");
 const {
   getDarkMode,
@@ -85,7 +86,6 @@ const {
   getScheduleNotifications,
 } = require("./controllers/NotificationController");
 
-
 // ─── Call Controllers (1-on-1 và Group) ──────────────────────────────────────
 const CallController = require("./controllers/CallController");
 const CallGroupController = require("./controllers/CallGroupController");
@@ -105,7 +105,7 @@ app.put("/api/user/theme", setDarkMode);
 app.put("/api/user", updateUser);
 
 // ─── AI API ───────────────────────────────────────────────────────────────────
-app.post("/api/ai", aiAnalyse);
+//app.post("/api/ai", aiAnalyse);
 app.post("/api/aiRename", aiRename);
 app.post("/api/aiPreview", aiPreview);
 app.post("/api/chatbot", chatWithBot);
@@ -178,27 +178,66 @@ app.get("/api/groups/:groupId/members", getGroupMembers);
 // ─── 1-on-1 Call API ──────────────────────────────────────────────────────────
 // Signaling REST endpoints (fallback / server-side cleanup)
 // Logic WebRTC chính vẫn chạy qua Firebase client SDK (useCall.js)
-app.post("/api/calls/offer",            CallController.sendOffer.bind(CallController));
-app.post("/api/calls/answer",           CallController.sendAnswer.bind(CallController));
-app.post("/api/calls/ice",              CallController.sendIceCandidate.bind(CallController));
-app.post("/api/calls/signal",           CallController.sendSignal.bind(CallController));
-app.get("/api/calls/:userId/offer",     CallController.getOffer.bind(CallController));
-app.delete("/api/calls/:userId",        CallController.clearCallData.bind(CallController));
+app.post("/api/calls/offer", CallController.sendOffer.bind(CallController));
+app.post("/api/calls/answer", CallController.sendAnswer.bind(CallController));
+app.post(
+  "/api/calls/ice",
+  CallController.sendIceCandidate.bind(CallController),
+);
+app.post("/api/calls/signal", CallController.sendSignal.bind(CallController));
+app.get(
+  "/api/calls/:userId/offer",
+  CallController.getOffer.bind(CallController),
+);
+app.delete(
+  "/api/calls/:userId",
+  CallController.clearCallData.bind(CallController),
+);
 
 // ─── Group Call API ───────────────────────────────────────────────────────────
 // Invite
-app.post("/api/group-calls/invite",                 CallGroupController.sendGroupInvite.bind(CallGroupController));
-app.get("/api/group-calls/invite/:groupId",         CallGroupController.getGroupInvite.bind(CallGroupController));
-app.delete("/api/group-calls/invite/:groupId",      CallGroupController.removeGroupInvite.bind(CallGroupController));
+app.post(
+  "/api/group-calls/invite",
+  CallGroupController.sendGroupInvite.bind(CallGroupController),
+);
+app.get(
+  "/api/group-calls/invite/:groupId",
+  CallGroupController.getGroupInvite.bind(CallGroupController),
+);
+app.delete(
+  "/api/group-calls/invite/:groupId",
+  CallGroupController.removeGroupInvite.bind(CallGroupController),
+);
 // Per-pair signaling
-app.post("/api/group-calls/offer",                  CallGroupController.sendOffer.bind(CallGroupController));
-app.post("/api/group-calls/answer",                 CallGroupController.sendAnswer.bind(CallGroupController));
-app.post("/api/group-calls/ice",                    CallGroupController.sendIceCandidate.bind(CallGroupController));
-app.post("/api/group-calls/signal",                 CallGroupController.sendSignal.bind(CallGroupController));
+app.post(
+  "/api/group-calls/offer",
+  CallGroupController.sendOffer.bind(CallGroupController),
+);
+app.post(
+  "/api/group-calls/answer",
+  CallGroupController.sendAnswer.bind(CallGroupController),
+);
+app.post(
+  "/api/group-calls/ice",
+  CallGroupController.sendIceCandidate.bind(CallGroupController),
+);
+app.post(
+  "/api/group-calls/signal",
+  CallGroupController.sendSignal.bind(CallGroupController),
+);
 // Leave / End
-app.post("/api/group-calls/leave",                  CallGroupController.leaveGroupCall.bind(CallGroupController));
-app.post("/api/group-calls/end",                    CallGroupController.endGroupCall.bind(CallGroupController));
-app.delete("/api/group-calls/room",                 CallGroupController.removeRoomData.bind(CallGroupController));
+app.post(
+  "/api/group-calls/leave",
+  CallGroupController.leaveGroupCall.bind(CallGroupController),
+);
+app.post(
+  "/api/group-calls/end",
+  CallGroupController.endGroupCall.bind(CallGroupController),
+);
+app.delete(
+  "/api/group-calls/room",
+  CallGroupController.removeRoomData.bind(CallGroupController),
+);
 
 // ─── HTTPS / HTTP Server ──────────────────────────────────────────────────────
 if (process.env.HTTPS === "true") {

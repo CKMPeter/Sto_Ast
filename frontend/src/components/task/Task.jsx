@@ -57,6 +57,7 @@ export default function Task() {
   const [mainTaskName, setMainTaskName] = useState("");
   const [subTaskName, setSubTaskName] = useState("");
   const [subTaskDescription, setSubTaskDescription] = useState("");
+  // const [tasks, setTasks] = useState([])
 
   // state for dragging sub task
   const [draggedTask, setDraggedTask] = useState(null);
@@ -354,6 +355,21 @@ export default function Task() {
     };
   }, []);
 
+  const handleDrop = async (status) => {
+    if (!draggedTask || !selectedTaskId) return;
+
+    try {
+      await updateSubTask(selectedTaskId, draggedTask.id, {
+        status,
+      });
+
+      await fetchSubTasks(selectedTaskId);
+
+      setDraggedTask(null);
+    } catch (error) {
+      console.error("Drop update error:", error);
+    }
+  };
   // =========================
   // RENDER COLUMN
   // =========================
@@ -365,7 +381,10 @@ export default function Task() {
         ...theme.card,
       }}
       onDragOver={(e) => e.preventDefault()}
-      onDrop={() => handleDrop(status)}
+      onDrop={(e) => {
+        e.preventDefault();
+        handleDrop(status);
+      }}
     >
       <h4>{status}</h4>
 
@@ -385,7 +404,11 @@ export default function Task() {
               });
             }}
           >
-            <TaskComponent task={task} onDragStart={setDraggedTask} darkMode={darkMode} />
+            <TaskComponent
+              task={task}
+              onDragStart={setDraggedTask}
+              darkMode={darkMode}
+            />
 
             {/* <button
               onClick={() => deleteSubTask(task.id)}
@@ -673,7 +696,12 @@ export default function Task() {
               placeholder="description (optional)"
               value={mainTaskDescription}
               onChange={(e) => setMainTaskDescription(e.target.value)}
-              style={{ ...styleSheet.input, height: "80px", resize: "none", ...theme.input }}
+              style={{
+                ...styleSheet.input,
+                height: "80px",
+                resize: "none",
+                ...theme.input,
+              }}
             />
 
             <div
@@ -734,7 +762,12 @@ export default function Task() {
               placeholder="Description (optional)"
               value={editSubTaskDescription}
               onChange={(e) => setEditSubTaskDescription(e.target.value)}
-              style={{ ...styleSheet.input, height: "80px", resize: "none", ...theme.input }}
+              style={{
+                ...styleSheet.input,
+                height: "80px",
+                resize: "none",
+                ...theme.input,
+              }}
             />
 
             <div
@@ -897,7 +930,11 @@ export default function Task() {
                   group: selectedGroup,
                 });
               }}
-              style={{ ...styleSheet.select, marginBottom: "20px", ...theme.input }}
+              style={{
+                ...styleSheet.select,
+                marginBottom: "20px",
+                ...theme.input,
+              }}
             >
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
@@ -921,7 +958,12 @@ export default function Task() {
               placeholder="description (optional)"
               value={mainTaskDescription}
               onChange={(e) => setMainTaskDescription(e.target.value)}
-              style={{ ...styleSheet.input, height: "80px", resize: "none", ...theme.input }}
+              style={{
+                ...styleSheet.input,
+                height: "80px",
+                resize: "none",
+                ...theme.input,
+              }}
             />
 
             <div
@@ -1356,9 +1398,7 @@ const darkStyles = (darkMode) => ({
   card: {
     backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
     color: darkMode ? "#f1f1f1" : "#000000",
-    border: darkMode
-      ? "1px solid #333"
-      : "1px solid #caf0f8",
+    border: darkMode ? "1px solid #333" : "1px solid #caf0f8",
   },
 
   modal: {
@@ -1369,16 +1409,12 @@ const darkStyles = (darkMode) => ({
   input: {
     backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
     color: darkMode ? "#ffffff" : "#000000",
-    border: darkMode
-      ? "1px solid #444"
-      : "1px solid #ccc",
+    border: darkMode ? "1px solid #444" : "1px solid #ccc",
   },
 
   menu: {
     backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
     color: darkMode ? "#ffffff" : "#000000",
-    border: darkMode
-      ? "1px solid #444"
-      : "1px solid #ccc",
+    border: darkMode ? "1px solid #444" : "1px solid #ccc",
   },
 });

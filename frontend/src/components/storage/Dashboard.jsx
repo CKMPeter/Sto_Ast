@@ -95,39 +95,40 @@ export default function Dashboard() {
     return normalize(path).includes(normalize(cleanSearchQuery));
   };
 
+  const getFolderReadablePath = (folderId, folderMap) => {
+    if (!folderId || folderId === "null") return ["root"];
+
+    const path = [];
+    let currentId = folderId;
+
+    while (currentId && currentId !== "null") {
+      const folder = folderMap[currentId];
+      if (!folder) break;
+
+      path.unshift(folder.name);
+      currentId = folder.parentId;
+    }
+
+    return ["root", ...path];
+  };
+
   const filesWithFullPath = useMemo(() => {
     if (!Array.isArray(allUserFiles)) return [];
 
-    const folderNameMap = {};
+    const folderMap = {};
 
     if (Array.isArray(allUserFolders)) {
       allUserFolders.forEach((folder) => {
-        folderNameMap[folder.id] = folder.name;
+        folderMap[folder.id] = folder;
       });
     }
 
     return allUserFiles.map((file) => {
-      const pathSegments =
-        typeof file.path === "string" && file.path.length > 0
-          ? file.path.split("/")
-          : [];
-
-      const readablePath = pathSegments.map((segment) => {
-        if (segment === "null" || segment === null) return "root";
-        return folderNameMap[segment] || segment;
-      });
-
-      if (readablePath[0] !== "root") {
-        readablePath.unshift("root");
-      }
-
-      if (file.name && readablePath[readablePath.length - 1] !== file.name) {
-        readablePath.push(file.name);
-      }
+      const folderPath = getFolderReadablePath(file.folderId, folderMap);
 
       return {
         ...file,
-        readablePath: readablePath.join("/"),
+        readablePath: [...folderPath, file.name].join("/"),
       };
     });
   }, [allUserFiles, allUserFolders]);
@@ -449,7 +450,7 @@ const styleSheet = {
   },
 
   chatButtonOpen: {
-   marginBottom: "0",
+    marginBottom: "0",
     right: "38px",
     zIndex: 2001,
   },

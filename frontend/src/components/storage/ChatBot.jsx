@@ -9,7 +9,7 @@ const Chatbot = ({ allUserFiles, darkMode }) => {
   const [loading, setLoading] = useState(false);
 
   const { getIdToken } = useAuth();
-  
+
   const { loading: darkModeLoading } = useDarkMode();
 
   const messagesEndRef = useRef(null);
@@ -39,17 +39,65 @@ const Chatbot = ({ allUserFiles, darkMode }) => {
       setLoading(true);
       setInput("");
 
+      console.log(allUserFiles);
+
       try {
         const aiResponse = await runChatbotService({
           input: userMessage,
           getIdToken,
-          allUserFiles,
+          allUserFiles: allUserFiles || [],
         });
+
+        const formatBotResponse = (response) => {
+          if (!response) return "No response.";
+
+          if (typeof response === "string") return response;
+
+          if (Array.isArray(response)) {
+            return response
+              .map((item) => {
+                if (typeof item === "string") return item;
+                return item.readablePath || item.name || JSON.stringify(item);
+              })
+              .join("\n");
+          }
+
+          if (
+            response.type === "search" ||
+            response.type === "search_ai_nearest"
+          ) {
+            if (!response.result || response.result.length === 0) {
+              return "No matching files found.";
+            }
+
+            return response.result
+              .map((file) => {
+                if (typeof file === "string") return file;
+                return file.readablePath || file.name || JSON.stringify(file);
+              })
+              .join("\n");
+          }
+
+          if (typeof response.result === "string") {
+            return response.result;
+          }
+
+          if (Array.isArray(response.result)) {
+            return response.result
+              .map((item) => {
+                if (typeof item === "string") return item;
+                return item.readablePath || item.name || JSON.stringify(item);
+              })
+              .join("\n");
+          }
+
+          return JSON.stringify(response, null, 2);
+        };
 
         setMessages((prev) => [
           ...prev,
           {
-            text: aiResponse,
+            text: formatBotResponse(aiResponse),
             sender: "bot",
           },
         ]);
@@ -67,7 +115,7 @@ const Chatbot = ({ allUserFiles, darkMode }) => {
         setLoading(false);
       }
     },
-    [input, loading, getIdToken, allUserFiles]
+    [input, loading, getIdToken, allUserFiles],
   );
 
   if (darkModeLoading) return null;
@@ -156,8 +204,8 @@ const Chatbot = ({ allUserFiles, darkMode }) => {
                     ...(isUser
                       ? styleSheet.userBubble
                       : darkMode
-                      ? styleSheet.botBubbleDark
-                      : styleSheet.botBubbleLight),
+                        ? styleSheet.botBubbleDark
+                        : styleSheet.botBubbleLight),
                     borderRadius: isUser
                       ? "18px 18px 4px 18px"
                       : "18px 18px 18px 4px",

@@ -22,12 +22,27 @@ module.exports = {
     if (!input) return res.status(400).json({ error: "Input required" });
 
     try {
-      const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = client.getGenerativeModel({
+        model: "gemini-2.0-flash",
+      });
+
       const result = await model.generateContent(input);
       const response = await result.response;
+
       res.json({ result: await response.text() });
     } catch (error) {
       console.error("Chatbot error:", error.message);
+
+      if (
+        error.message?.includes("429") ||
+        error.message?.toLowerCase().includes("quota")
+      ) {
+        return res.status(429).json({
+          error:
+            "Gemini quota exceeded. Please wait or check API billing/quota.",
+        });
+      }
+
       res.status(500).json({ error: "Chatbot failed" });
     }
   },
@@ -38,7 +53,7 @@ const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function runAI(input, task, isImage = false, mimeType = "image/jpeg") {
   const model = client.getGenerativeModel({
-    model: isImage ? "gemini-pro-vision" : "gemini-1.5-flash",
+    model: isImage ? "gemini-pro-vision" : "gemini-2.0-flash",
   });
 
   const prompt = isImage
@@ -46,8 +61,8 @@ async function runAI(input, task, isImage = false, mimeType = "image/jpeg") {
       ? "Describe the image."
       : "Identify objects in the image."
     : task === "summarize"
-    ? `${input}\nSummarize.`
-    : `${input}\nExtract keywords.`;
+      ? `${input}\nSummarize.`
+      : `${input}\nExtract keywords.`;
 
   try {
     if (isImage) {
@@ -62,8 +77,10 @@ async function runAI(input, task, isImage = false, mimeType = "image/jpeg") {
       return response.response.text();
     }
   } catch (error) {
-    console.error("Error in runAI:", error.response?.data || error.message || error);
+    console.error(
+      "Error in runAI:",
+      error.response?.data || error.message || error,
+    );
     throw error;
   }
 }
-

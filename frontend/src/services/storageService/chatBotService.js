@@ -52,6 +52,11 @@ export async function runChatbotService({
     },
     body: JSON.stringify({
       input: fullPrompt,
+      files: allUserFiles.map((file) => ({
+        name: file.name,
+        readablePath: file.readablePath,
+        preview: file.preview,
+      })),
     }),
   });
 

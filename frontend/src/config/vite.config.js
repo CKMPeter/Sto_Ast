@@ -13,6 +13,16 @@ export default defineConfig({
       cert: fs.readFileSync("../frontend/src/cert/cert.pem"),
     },
 
+    // hmr: {
+    //   protocol: "wss",
+    //   host: "plastic-tri-scanned-exactly.trycloudflare.com ",
+    //   clientPort: 443,
+    // },
+
+    // allowedHosts: [
+    //   "plastic-tri-scanned-exactly.trycloudflare.com ",
+    // ],
+
     proxy: {
       "/api": {
         target: "https://localhost:5000",
