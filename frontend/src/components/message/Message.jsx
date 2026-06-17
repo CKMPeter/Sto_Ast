@@ -12,6 +12,20 @@ import { styled } from "@mui/material/styles";
 import useCallGroup from "../../webrtc/useCallGroup";
 import CallModalGroup from "./CallModalGroup";
 
+import {
+  FaUserPlus,
+  FaUsers,
+  FaVideo,
+  FaPaperclip,
+  FaMicrophone,
+  FaStop,
+  FaPaperPlane,
+  FaFile,
+  FaCheckCircle,
+  FaRegCircle,
+  FaTimes,
+} from "react-icons/fa";
+
 import { useDarkMode } from "../../hooks/useDarkMode";
 
 export function Message() {
@@ -70,7 +84,12 @@ export function Message() {
     sendFile,
     sendVoiceMessage,
     uploading,
-  } = useChat(currentUser?.uid, selectedUserId, selectedGroupId, currentUser?.displayName || currentUser?.email);
+  } = useChat(
+    currentUser?.uid,
+    selectedUserId,
+    selectedGroupId,
+    currentUser?.displayName || currentUser?.email,
+  );
 
   const selectedFriend = friends.find((f) => f.uid === selectedUserId);
 
@@ -297,7 +316,12 @@ export function Message() {
               style={styleSheet.flexButton(darkMode)}
               onClick={() => setShowCreateGroup(true)}
             >
-              + Group
+              <FaUsers
+                style={{
+                  fontSize: "25px",
+                  color: darkMode ? "#ffffff" : "#0077b6",
+                }}
+              />
             </button>
 
             <button
@@ -305,7 +329,12 @@ export function Message() {
               style={styleSheet.flexButton(darkMode)}
               onClick={() => setShowAddFriend(true)}
             >
-              + Add
+              <FaUserPlus
+                style={{
+                  fontSize: "25px",
+                  color: darkMode ? "#ffffff" : "#0077b6",
+                }}
+              />
             </button>
           </div>
 
@@ -347,7 +376,15 @@ export function Message() {
                 }}
                 style={styleSheet.groupItem(selectedGroupId === g.id, darkMode)}
               >
-                👥 {g.name}
+                <FaUsers
+                  style={{
+                    fontSize: "30px",
+                    color: darkMode ? "#ffffff" : "#0077b6",
+                    marginBottom: "3px",
+                    paddingRight: "5px",
+                  }}
+                />
+                {g.name}
               </div>
             ))}
           </div>
@@ -358,20 +395,29 @@ export function Message() {
           <Header darkMode={darkMode}>
             <div>
               {selectedGroup
-                ? `👥 ${selectedGroup.name}`
+                ? ` ${selectedGroup.name}`
                 : selectedFriend
                   ? selectedFriend.email
                   : "Select a conversation"}
             </div>
 
             {selectedGroupId && (
-              <CallBtn darkMode={darkMode} onClick={() => startGroupCall(selectedGroup)}>
-                👥 Call Group
+              <CallBtn
+                darkMode={darkMode}
+                onClick={() => startGroupCall(selectedGroup)}
+              >
+                <FaVideo
+                  style={{
+                    fontSize: "25px",
+                    color: darkMode ? "#ffffff" : "#0077b6",
+                  }}
+                />
               </CallBtn>
             )}
 
             {selectedUserId && (
-              <CallBtn darkMode={darkMode}
+              <CallBtn
+                darkMode={darkMode}
                 onClick={() =>
                   startCall(
                     selectedUserId,
@@ -379,7 +425,12 @@ export function Message() {
                   )
                 }
               >
-                📹 Call
+                <FaVideo
+                  style={{
+                    fontSize: "25px",
+                    color: darkMode ? "#ffffff" : "#0077b6",
+                  }}
+                />
               </CallBtn>
             )}
           </Header>
@@ -398,27 +449,51 @@ export function Message() {
 
                 // Tra tên người gửi từ members của group (fallback về senderName, rồi senderId)
                 const memberMap = selectedGroup?.members
-                  ? Object.fromEntries(selectedGroup.members.map((m) => [m.uid, m.name || m.email]))
+                  ? Object.fromEntries(
+                      selectedGroup.members.map((m) => [
+                        m.uid,
+                        m.name || m.email,
+                      ]),
+                    )
                   : {};
-                const displayName = msg.senderName || memberMap[msg.senderId] || msg.senderId;
+                const displayName =
+                  msg.senderName || memberMap[msg.senderId] || msg.senderId;
 
                 return (
                   <Row key={msg.id} isMe={isMe}>
-                    <div style={{ maxWidth: "65%", display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                    <div
+                      style={{
+                        maxWidth: "65%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: isMe ? "flex-end" : "flex-start",
+                      }}
+                    >
                       {/* Tên người gửi: chỉ hiện trong group chat và không phải tin của mình */}
                       {selectedGroupId && !isMe && (
-                        <span style={styleSheet.senderName}>
-                          {displayName}
-                        </span>
+                        <span style={styleSheet.senderName}>{displayName}</span>
                       )}
                       <Bubble isMe={isMe} darkMode={darkMode}>
                         {msg.text && <div>{msg.text}</div>}
 
-                        {msg.type === "voice" && (
-                          msg.voiceDataUrl
-                            ? <audio controls src={msg.voiceDataUrl} style={styleSheet.audio} />
-                            : <span style={{ fontSize: "12px", opacity: 0.7 }}>🎤 Voice message (không thể phát)</span>
-                        )}
+                        {msg.type === "voice" &&
+                          (msg.voiceDataUrl ? (
+                            <audio
+                              controls
+                              src={msg.voiceDataUrl}
+                              style={styleSheet.audio}
+                            />
+                          ) : (
+                            <span style={{ fontSize: "12px", opacity: 0.7 }}>
+                              <FaMicrophone
+                                style={{
+                                  fontSize: "25px",
+                                  color: darkMode ? "#ffffff" : "#0077b6",
+                                }}
+                              />{" "}
+                              Voice message (không thể phát)
+                            </span>
+                          ))}
 
                         {msg.fileUrl && msg.fileType?.startsWith("image") && (
                           <img
@@ -429,8 +504,18 @@ export function Message() {
                         )}
 
                         {msg.fileUrl && !msg.fileType?.startsWith("image") && (
-                          <a href={msg.fileUrl} target="_blank" rel="noreferrer">
-                            📎 {msg.fileName}
+                          <a
+                            href={msg.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <FaPaperclip
+                              style={{
+                                fontSize: "25px",
+                                color: darkMode ? "#ffffff" : "#0077b6",
+                              }}
+                            />{" "}
+                            {msg.fileName}
                           </a>
                         )}
                       </Bubble>
@@ -474,8 +559,16 @@ export function Message() {
 
           {/* FOOTER */}
           <Footer darkMode={darkMode}>
-            <FileBtn darkMode={darkMode} onClick={() => fileInputRef.current.click()}>
-              📎
+            <FileBtn
+              darkMode={darkMode}
+              onClick={() => fileInputRef.current.click()}
+            >
+              <FaPaperclip
+                style={{
+                  fontSize: "20px",
+                  color: darkMode ? "#ffffff" : "#0077b6",
+                }}
+              />
             </FileBtn>
 
             <input
@@ -490,7 +583,16 @@ export function Message() {
               onClick={isRecording ? stopRecording : startRecording}
               style={styleSheet.recordButton(isRecording, darkMode)}
             >
-              {isRecording ? "⏹" : "🎤"}
+              {isRecording ? (
+                "⏹"
+              ) : (
+                <FaMicrophone
+                  style={{
+                    fontSize: "20px",
+                    color: darkMode ? "#ffffff" : "#0077b6",
+                  }}
+                />
+              )}
             </button>
 
             <Input
@@ -502,7 +604,12 @@ export function Message() {
             />
 
             <SendBtn darkMode={darkMode} onClick={handleSend}>
-              Send
+              <FaPaperPlane
+                style={{
+                  fontSize: "20px",
+                  color: darkMode ? "#ffffff" : "#0077b6",
+                }}
+              />
             </SendBtn>
           </Footer>
         </ChatArea>
@@ -686,6 +793,29 @@ export function Message() {
   );
 }
 
+const COLORS = {
+  lightBg: "#f8fdff",
+  lightSurface: "#ffffff",
+  lightAccentSoft: "#e6f7fc",
+  lightBorder: "#caf0f8",
+  lightText: "#023047",
+  lightMuted: "#6c757d",
+
+  darkBg: "#121212",
+  darkSurface: "#1a1a1a",
+  darkCard: "#202020",
+  darkHover: "#2a2a2a",
+  darkBorder: "#2d2d2d",
+  darkText: "#ffffff",
+  darkMuted: "#b8dce8",
+
+  primary: "#0077b6",
+  primaryHover: "#0096c7",
+  danger: "#d62828",
+  dangerHover: "#ef4444",
+  success: "#28a745",
+};
+
 const styleSheet = {
   buttonArea: {
     display: "flex",
@@ -694,35 +824,48 @@ const styleSheet = {
     flexWrap: "wrap",
   },
 
-  flexButton: {
+  flexButton: (darkMode) => ({
     flex: 1,
-    background: "#0077b6",
-    color: "#ffffff",
-    border: "none",
+    background: darkMode ? COLORS.darkCard : COLORS.primary,
+    color: COLORS.darkText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.primary}`,
     borderRadius: "12px",
     padding: "10px",
     fontWeight: "600",
     cursor: "pointer",
-  },
+    transition: "all 0.2s ease",
+  }),
 
   groupsContainer: {
     marginTop: "15px",
-    color: "#023047",
   },
 
   groupItem: (selected, darkMode) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
     padding: "10px 12px",
     borderRadius: "12px",
     marginTop: "6px",
     cursor: "pointer",
-    transition: "0.2s",
-    background: selected ? "#0077b6" : darkMode ? "#12384c" : "#ffffff",
-    color: selected ? "#ffffff" : darkMode ? "#eaf8fc" : "#023047",
-    border: selected
-      ? "none"
+    transition: "all 0.2s ease",
+    background: selected
+      ? COLORS.primary
       : darkMode
-        ? "1px solid #16425b"
-        : "1px solid #caf0f8",
+        ? COLORS.darkSurface
+        : COLORS.lightSurface,
+    color: selected
+      ? COLORS.darkText
+      : darkMode
+        ? COLORS.darkText
+        : COLORS.lightText,
+    border: selected
+      ? `1px solid ${COLORS.primary}`
+      : darkMode
+        ? `1px solid ${COLORS.darkBorder}`
+        : `1px solid ${COLORS.lightBorder}`,
   }),
 
   audio: {
@@ -733,14 +876,14 @@ const styleSheet = {
   senderName: {
     fontSize: "12px",
     fontWeight: "600",
-    color: "#0077b6",
+    color: COLORS.primary,
     marginBottom: "3px",
     paddingLeft: "4px",
   },
 
   timestamp: (darkMode) => ({
     fontSize: "11px",
-    color: darkMode ? "#7ab8cc" : "#90aab8",
+    color: darkMode ? COLORS.darkMuted : "#90aab8",
     marginTop: "3px",
     paddingRight: "4px",
     paddingLeft: "4px",
@@ -758,50 +901,62 @@ const styleSheet = {
     borderRadius: "12px",
   },
 
-  recordButton: (recording) => ({
-    background: recording ? "#d62828" : "#e6f7fc",
-    color: recording ? "#ffffff" : "#0077b6",
-    border: recording ? "1px solid #d62828" : "1px solid #caf0f8",
-    borderRadius: "12px",
-    padding: "8px 12px",
-    cursor: "pointer",
+  icon: (darkMode) => ({
+    color: darkMode ? COLORS.darkText : COLORS.primary,
   }),
 
-  flexButton: (darkMode) => ({
-    flex: 1,
-    background: darkMode ? "#12384c" : "#0077b6",
-    color: "#ffffff",
-    border: darkMode ? "1px solid #16425b" : "1px solid #0077b6",
-    borderRadius: "12px",
-    padding: "10px",
-    fontWeight: "600",
-    cursor: "pointer",
-  }),
+  iconWhite: {
+    color: COLORS.darkText,
+  },
 
   recordButton: (recording, darkMode) => ({
-    background: recording ? "#d62828" : darkMode ? "#12384c" : "#e6f7fc",
-
-    color: recording ? "#ffffff" : darkMode ? "#eaf8fc" : "#0077b6",
-
-    border: recording
-      ? "1px solid #d62828"
+    background: recording
+      ? COLORS.danger
       : darkMode
-        ? "1px solid #16425b"
-        : "1px solid #caf0f8",
-
+        ? COLORS.darkCard
+        : COLORS.lightAccentSoft,
+    color: recording
+      ? COLORS.darkText
+      : darkMode
+        ? COLORS.darkText
+        : COLORS.primary,
+    border: recording
+      ? `1px solid ${COLORS.danger}`
+      : darkMode
+        ? `1px solid ${COLORS.darkBorder}`
+        : `1px solid ${COLORS.lightBorder}`,
     borderRadius: "12px",
     padding: "8px 12px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  }),
+
+  previewActionButton: (darkMode) => ({
+    border: `1px solid ${COLORS.primary}`,
+    borderRadius: "10px",
+    padding: "8px 12px",
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    cursor: "pointer",
+    fontWeight: 600,
+  }),
+
+  previewCloseButton: (darkMode) => ({
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+    borderRadius: "10px",
+    padding: "8px 12px",
+    background: darkMode ? COLORS.darkCard : COLORS.lightAccentSoft,
+    color: darkMode ? COLORS.darkText : COLORS.primary,
     cursor: "pointer",
   }),
 };
-/* STYLES */
 
 const Container = styled("div")(({ darkMode }) => ({
   display: "flex",
   height: "calc(100vh - 64px)",
-  background: darkMode
-    ? "linear-gradient(135deg, #071923 0%, #0b2635 100%)"
-    : "linear-gradient(135deg, #f8fdff 0%, #e6f7fc 100%)",
+  background: darkMode ? COLORS.darkBg : COLORS.lightBg,
 
   "@media (max-width: 768px)": {
     flexDirection: "column",
@@ -813,11 +968,13 @@ const Container = styled("div")(({ darkMode }) => ({
 const Sidebar = styled("div")(({ darkMode }) => ({
   width: "280px",
   padding: "16px",
-  background: darkMode ? "#0b2635" : "#ffffff",
-  color: darkMode ? "#ffffff" : "#023047",
-  borderRight: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  borderRight: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
   boxShadow: darkMode
-    ? "2px 0 10px rgba(0,0,0,0.3)"
+    ? "2px 0 10px rgba(0,0,0,0.35)"
     : "2px 0 10px rgba(0,119,182,0.08)",
   overflowY: "auto",
 
@@ -825,7 +982,9 @@ const Sidebar = styled("div")(({ darkMode }) => ({
     width: "100%",
     maxHeight: "250px",
     borderRight: "none",
-    borderBottom: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+    borderBottom: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
   },
 }));
 
@@ -833,7 +992,7 @@ const ChatArea = styled("div")(({ darkMode }) => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  background: darkMode ? "#071923" : "#f8fdff",
+  background: darkMode ? COLORS.darkBg : COLORS.lightBg,
   height: "88vh",
 
   "@media (max-width: 768px)": {
@@ -849,9 +1008,11 @@ const Header = styled("div")(({ darkMode }) => ({
   alignItems: "center",
   gap: "10px",
   flexWrap: "wrap",
-  background: darkMode ? "#0b2635" : "#ffffff",
-  color: darkMode ? "#ffffff" : "#023047",
-  borderBottom: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  borderBottom: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
 
   "@media (max-width: 768px)": {
     flexDirection: "column",
@@ -864,9 +1025,7 @@ const ChatBody = styled("div")(({ darkMode }) => ({
   flex: 1,
   overflowY: "auto",
   padding: "20px",
-  background: darkMode
-    ? "linear-gradient(180deg,#071923 0%,#0b2635 100%)"
-    : "linear-gradient(180deg,#f8fdff 0%,#eefaff 100%)",
+  background: darkMode ? COLORS.darkBg : COLORS.lightBg,
 }));
 
 const Row = styled("div")(({ isMe }) => ({
@@ -877,17 +1036,25 @@ const Row = styled("div")(({ isMe }) => ({
 }));
 
 const Bubble = styled("div")(({ isMe, darkMode }) => ({
-  background: isMe ? "#0077b6" : darkMode ? "#12384c" : "#ffffff",
-  color: isMe ? "#ffffff" : darkMode ? "#eaf8fc" : "#023047",
+  background: isMe
+    ? COLORS.primary
+    : darkMode
+      ? COLORS.darkCard
+      : COLORS.lightSurface,
+  color: isMe
+    ? COLORS.darkText
+    : darkMode
+      ? COLORS.darkText
+      : COLORS.lightText,
   padding: "12px 16px",
   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
   maxWidth: "100%",
   wordBreak: "break-word",
   border: isMe
-    ? "1px solid #0077b6"
+    ? `1px solid ${COLORS.primary}`
     : darkMode
-      ? "1px solid #16425b"
-      : "1px solid #caf0f8",
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
 
   "@media (max-width: 768px)": {
     maxWidth: "100%",
@@ -899,8 +1066,10 @@ const Footer = styled("div")(({ darkMode }) => ({
   alignItems: "center",
   gap: "10px",
   padding: "14px",
-  background: darkMode ? "#0b2635" : "#ffffff",
-  borderTop: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  borderTop: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
 
   "@media (max-width: 768px)": {
     flexWrap: "wrap",
@@ -912,10 +1081,21 @@ const Input = styled("input")(({ darkMode }) => ({
   minWidth: 0,
   padding: "12px 16px",
   borderRadius: "25px",
-  border: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
-  background: darkMode ? "#071923" : "#f8fdff",
-  color: darkMode ? "#ffffff" : "#023047",
+  border: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
+  background: darkMode ? COLORS.darkCard : COLORS.lightBg,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
   outline: "none",
+
+  "&::placeholder": {
+    color: darkMode ? COLORS.darkMuted : COLORS.lightMuted,
+  },
+
+  "&:focus": {
+    borderColor: COLORS.primary,
+    boxShadow: `0 0 0 3px ${darkMode ? "rgba(0,119,182,0.22)" : "rgba(0,119,182,0.15)"}`,
+  },
 
   "@media (max-width: 768px)": {
     width: "100%",
@@ -923,77 +1103,88 @@ const Input = styled("input")(({ darkMode }) => ({
   },
 }));
 
-const SendBtn = styled("button")(({ darkMode }) => ({
-  background: darkMode ? "#12384c" : "#0077b6",
-
-  color: "#ffffff",
-
-  border: darkMode ? "1px solid #16425b" : "none",
-
+const SendBtn = styled("button")(() => ({
+  background: COLORS.primary,
+  color: COLORS.darkText,
+  border: `1px solid ${COLORS.primary}`,
   borderRadius: "14px",
   padding: "10px 18px",
   fontWeight: "600",
   cursor: "pointer",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    background: COLORS.primaryHover,
+    borderColor: COLORS.primaryHover,
+    transform: "translateY(-1px)",
+  },
 }));
 
 const FileBtn = styled("button")(({ darkMode }) => ({
-  background: darkMode
-    ? "#12384c"
-    : "#e6f7fc",
-
-  color: darkMode
-    ? "#eaf8fc"
-    : "#0077b6",
-
+  background: darkMode ? COLORS.darkCard : COLORS.lightAccentSoft,
+  color: darkMode ? COLORS.darkText : COLORS.primary,
   border: darkMode
-    ? "1px solid #16425b"
-    : "1px solid #caf0f8",
-
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
   borderRadius: "12px",
   padding: "8px 12px",
   cursor: "pointer",
   fontSize: "18px",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    background: darkMode ? COLORS.darkHover : "#d8f3ff",
+    borderColor: COLORS.primary,
+  },
 }));
 
 const PreviewBox = styled("div")(({ darkMode }) => ({
   padding: "12px",
-  background: darkMode ? "#0b2635" : "#ffffff",
-  color: darkMode ? "#ffffff" : "#023047",
-  borderTop: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  borderTop: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
 }));
 
-const Uploading = styled("div")(() => ({
+const Uploading = styled("div")(({ darkMode }) => ({
   padding: "8px 12px",
-  color: "#0077b6",
+  color: COLORS.primary,
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
   fontWeight: "600",
 }));
 
-const IncomingBox = styled("div")(() => ({
-  background: "#e6f7fc",
-  color: "#023047",
+const IncomingBox = styled("div")(({ darkMode }) => ({
+  background: darkMode ? COLORS.darkCard : COLORS.lightAccentSoft,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
   padding: "12px",
-  borderBottom: "1px solid #caf0f8",
+  borderBottom: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
 }));
 
 const Empty = styled("p")(({ darkMode }) => ({
-  color: darkMode ? "#b8dce8" : "#6c757d",
+  color: darkMode ? COLORS.darkMuted : COLORS.lightMuted,
   textAlign: "center",
   marginTop: "40px",
 }));
 
 const CallBtn = styled("button")(({ darkMode }) => ({
-  background: darkMode
-    ? "#12384c"
-    : "#005f91",
-
-  color: "#fff",
-
-  border: darkMode
-    ? "1px solid #16425b"
-    : "none",
-
+  background: darkMode ? COLORS.darkCard : "#005f91",
+  color: COLORS.darkText,
+  border: darkMode ? `1px solid ${COLORS.darkBorder}` : "none",
   borderRadius: "12px",
   padding: "10px 16px",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    background: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
 
   "@media (max-width: 768px)": {
     width: "100%",
@@ -1004,11 +1195,12 @@ const modalStyles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.4)",
+    background: "rgba(0,0,0,0.65)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
+    backdropFilter: "blur(3px)",
   },
 
   modal: {
@@ -1016,10 +1208,12 @@ const modalStyles = {
     maxWidth: "450px",
     maxHeight: "80vh",
     overflowY: "auto",
-    background: "#fff",
+    background: COLORS.darkSurface,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
     borderRadius: "16px",
     padding: "20px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
   },
 
   searchRow: {
@@ -1032,17 +1226,20 @@ const modalStyles = {
     flex: 1,
     padding: "10px",
     borderRadius: "10px",
-    border: "1px solid #ccc",
+    background: COLORS.darkCard,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
     outline: "none",
   },
 
   searchButton: {
-    border: "none",
+    border: `1px solid ${COLORS.primary}`,
     borderRadius: "10px",
     padding: "10px 14px",
-    background: "#1976d2",
-    color: "white",
+    background: COLORS.primary,
+    color: COLORS.darkText,
     cursor: "pointer",
+    fontWeight: 600,
   },
 
   results: {
@@ -1056,39 +1253,41 @@ const modalStyles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "12px",
-    border: "1px solid #eee",
+    border: `1px solid ${COLORS.darkBorder}`,
     borderRadius: "12px",
-    background: "#fafafa",
+    background: COLORS.darkCard,
   },
 
   userName: {
     fontWeight: 600,
-    color: "#222",
+    color: COLORS.darkText,
   },
 
   userEmail: {
     fontSize: "14px",
-    color: "#666",
+    color: COLORS.darkMuted,
   },
 
   addButton: {
-    background: "#2e7d32",
-    color: "white",
+    background: COLORS.success,
+    color: COLORS.darkText,
     border: "none",
     borderRadius: "8px",
     padding: "8px 12px",
     cursor: "pointer",
+    fontWeight: 600,
   },
 
   closeButton: {
     marginTop: "18px",
     width: "100%",
-    border: "none",
+    border: `1px solid ${COLORS.danger}`,
     borderRadius: "10px",
     padding: "10px",
-    background: "#e53935",
-    color: "white",
+    background: COLORS.danger,
+    color: COLORS.darkText,
     cursor: "pointer",
+    fontWeight: 600,
   },
 };
 
@@ -1104,7 +1303,7 @@ const groupStyles = {
 
   label: {
     fontWeight: 600,
-    color: "#222",
+    color: COLORS.darkText,
     marginBottom: "8px",
   },
 
@@ -1114,20 +1313,23 @@ const groupStyles = {
     alignItems: "center",
     padding: "12px",
     borderRadius: "12px",
-    border: selected ? "2px solid #1976d2" : "1px solid #ddd",
-    background: selected ? "#e3f2fd" : "#fafafa",
+    border: selected
+      ? `2px solid ${COLORS.primary}`
+      : `1px solid ${COLORS.darkBorder}`,
+    background: selected ? "rgba(0,119,182,0.18)" : COLORS.darkCard,
+    color: COLORS.darkText,
     cursor: "pointer",
     transition: "0.2s",
   }),
 
   memberName: {
     fontWeight: 600,
-    color: "#222",
+    color: COLORS.darkText,
   },
 
   memberEmail: {
     fontSize: "14px",
-    color: "#666",
+    color: COLORS.darkMuted,
   },
 
   actions: {
@@ -1137,22 +1339,22 @@ const groupStyles = {
 
   createButton: {
     flex: 1,
-    border: "none",
+    border: `1px solid ${COLORS.primary}`,
     borderRadius: "10px",
     padding: "12px",
-    background: "#1976d2",
-    color: "white",
+    background: COLORS.primary,
+    color: COLORS.darkText,
     cursor: "pointer",
     fontWeight: 600,
   },
 
   cancelButton: {
     flex: 1,
-    border: "none",
+    border: `1px solid ${COLORS.danger}`,
     borderRadius: "10px",
     padding: "12px",
-    background: "#e53935",
-    color: "white",
+    background: COLORS.danger,
+    color: COLORS.darkText,
     cursor: "pointer",
     fontWeight: 600,
   },

@@ -22,7 +22,9 @@ import TaskChartModal from "./TaskChartModal";
 
 import { useDarkMode } from "../../hooks/useDarkMode";
 
-import { FaPlus, FaRobot } from "react-icons/fa";
+import { FaPlus, FaRobot, FaCheckCircle, FaChartLine } from "react-icons/fa";
+
+import { MdPending } from "react-icons/md";
 
 export default function Task() {
   const { currentUser, getIdToken } = useAuth();
@@ -184,34 +186,62 @@ export default function Task() {
       console.error(error);
     }
   };
+
   const handleUpdateMainTask = async () => {
     if (!editingTask) return;
 
     try {
       const visibility = [
-        currentUser.uid, // owner
+        currentUser.uid,
         ...(editingTask.group?.members || []).map((member) => member.uid),
       ];
 
-      const nExpireAt = mainTaskExpireAt
-        ? new Date(mainTaskExpireAt).toISOString()
-        : null;
+      const uniqueVisibility = [...new Set(visibility)];
 
-      const oldExpireAt = editingTask.expireAt
-        ? new Date(editingTask.expireAt).toISOString()
-        : null;
+      const toISODateOrNull = (value) => {
+        if (!value) return null;
 
-      let newScheduleId = editingTask.scheduleId;
+        const date = new Date(value);
+
+        if (isNaN(date.getTime())) return null;
+
+        return date.toISOString();
+      };
+
+      const nExpireAt = toISODateOrNull(mainTaskExpireAt);
+      const oldExpireAt = toISODateOrNull(editingTask.expireAt);
+
+      let newScheduleIds = editingTask.scheduleIds || {};
+
       if (nExpireAt !== oldExpireAt) {
-        console.log("Expire date changed, updating schedule...");
-        deleteScheduleService(getIdToken, editingTask.scheduleId);
-        newScheduleId = await updateSchedule(
-          `Task: ${editingTask.name}`,
-          mainTaskExpireAt || new Date().toISOString().split("T")[0],
-          9 * 60,
-          currentUser.uid,
+        console.log(
+          "Expire date changed, updating schedules for all members...",
         );
+
+        // delete old schedules
+        await Promise.all(
+          Object.values(newScheduleIds)
+            .filter(Boolean)
+            .map((scheduleId) => deleteScheduleService(getIdToken, scheduleId)),
+        );
+
+        // create new schedules for owner + members
+        const scheduleEntries = await Promise.all(
+          uniqueVisibility.map(async (uid) => {
+            const scheduleId = await updateSchedule(
+              `Task: ${editingTask.name}`,
+              mainTaskExpireAt || new Date().toISOString().split("T")[0],
+              9 * 60,
+              uid,
+            );
+
+            return [uid, scheduleId];
+          }),
+        );
+
+        newScheduleIds = Object.fromEntries(scheduleEntries);
       }
+
       const data = await updateMainTask(editingTask.id, {
         name: editingTask.name,
         group: editingTask.group,
@@ -219,8 +249,8 @@ export default function Task() {
           ? new Date(mainTaskExpireAt).toISOString()
           : null,
         description: mainTaskDescription,
-        visibility: visibility,
-        scheduleId: newScheduleId || editingTask.scheduleId,
+        visibility,
+        scheduleIds: newScheduleIds,
       });
 
       if (data.success) {
@@ -230,6 +260,7 @@ export default function Task() {
       console.error(error);
     }
   };
+
   const handleUpdateSubTask = async () => {
     if (!editingSubTask) return;
 
@@ -355,6 +386,17 @@ export default function Task() {
     };
   }, []);
 
+  // Set expire date in the edit modal when editingTask changes
+  useEffect(() => {
+    if (!editingTask) return;
+
+    setMainTaskExpireAt(
+      editingTask.expireAt
+        ? new Date(editingTask.expireAt).toISOString().split("T")[0]
+        : "",
+    );
+  }, [editingTask]);
+
   const handleDrop = async (status) => {
     if (!draggedTask || !selectedTaskId) return;
 
@@ -446,11 +488,17 @@ export default function Task() {
               onClick={() => setIsCreatingMainTask(true)}
               style={{
                 ...styleSheet.button,
-                marginLeft: "10px",
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 12px",
-                backgroundColor: "#0077b6",
+                // marginLeft: "10px",
+                // display: "flex",
+                // alignItems: "center",
+                // padding: "6px 12px",
+              }}
+              onMouseEnter={(e) => {
+                Object.assign(e.currentTarget.style, styleSheet.buttonHover);
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.primary;
+                e.currentTarget.style.borderColor = COLORS.primary;
               }}
             >
               <FaPlus
@@ -465,10 +513,17 @@ export default function Task() {
               style={{
                 ...styleSheet.button,
                 marginLeft: "10px",
-                display: "flex",
-                alignItems: "center",
-                padding: "6px 12px",
-                backgroundColor: "#0077b6",
+                // display: "flex",
+                // alignItems: "center",
+                //padding: "6px 12px",
+                // backgroundColor: "#0077b6",
+              }}
+              onMouseEnter={(e) => {
+                Object.assign(e.currentTarget.style, styleSheet.buttonHover);
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.primary;
+                e.currentTarget.style.borderColor = COLORS.primary;
               }}
             >
               <FaRobot
@@ -593,10 +648,17 @@ export default function Task() {
                 onClick={() => setIsCreatingSubTask(true)}
                 style={{
                   ...styleSheet.button,
-                  backgroundColor: "#0077b6",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "6px 12px",
+                  // backgroundColor: "#0077b6",
+                  // display: "flex",
+                  // alignItems: "center",
+                  // padding: "6px 12px",
+                }}
+                onMouseEnter={(e) => {
+                  Object.assign(e.currentTarget.style, styleSheet.buttonHover);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.primary;
+                  e.currentTarget.style.borderColor = COLORS.primary;
                 }}
               >
                 <FaPlus
@@ -611,10 +673,21 @@ export default function Task() {
                 onClick={() => setIsShowingChart(true)}
                 style={{
                   ...styleSheet.button,
-                  backgroundColor: "#0077b6",
+                  // backgroundColor: "#0077b6",
+                }}
+                onMouseEnter={(e) => {
+                  Object.assign(e.currentTarget.style, styleSheet.buttonHover);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.primary;
+                  e.currentTarget.style.borderColor = COLORS.primary;
                 }}
               >
-                View Charts
+                <FaChartLine
+                  style={{
+                    fontSize: "25px",
+                  }}
+                />
               </button>
             </div>
 
@@ -646,7 +719,11 @@ export default function Task() {
             }}
           >
             <img
-              src="./Sto_Ast_Logo_Title.png"
+              src={
+                darkMode
+                  ? "./Sto_Ast_Logo_Title_Dark.png"
+                  : "./Sto_Ast_Logo_Title.png"
+              }
               alt=""
               style={{
                 height: "50%",
@@ -855,37 +932,116 @@ export default function Task() {
                 </button>
               </>
             ) : (
-              <>
-                <p>🤖 AI is generating your task structure...</p>
+              <div
+                style={{
+                  ...theme.card,
+                  padding: "24px",
+                  borderRadius: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #0077b6, #00b4d8)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontSize: "18px",
+                    }}
+                  >
+                    <FaRobot />
+                  </div>
 
-                <div style={{ marginTop: "20px" }}>
+                  <div>
+                    <h5
+                      style={{
+                        margin: 0,
+                        fontWeight: 600,
+                      }}
+                    >
+                      AI Task Planner
+                    </h5>
+
+                    <small
+                      style={{
+                        opacity: 0.7,
+                      }}
+                    >
+                      Generating task structure...
+                    </small>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                  }}
+                >
                   {aiSteps.map((step) => (
                     <div
                       key={step.id}
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        marginBottom: "12px",
-                        gap: "10px",
-                        ...theme.card,
+                        gap: "14px",
+                        padding: "14px 16px",
+                        borderRadius: "12px",
+                        background: step.done
+                          ? "rgba(40,167,69,0.12)"
+                          : "rgba(255,193,7,0.08)",
+                        border: step.done
+                          ? "1px solid rgba(40,167,69,0.3)"
+                          : "1px solid rgba(255,193,7,0.25)",
+                        transition: "all 0.25s ease",
                       }}
                     >
-                      <span
+                      <div
                         style={{
-                          fontSize: "20px",
-                          width: "24px",
-                          color: step.done ? "#28a745" : "#ffc107",
-                          ...theme.input,
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: step.done ? "#28a745" : "#ffc107",
+                          color: "#fff",
+                          fontSize: "14px",
+                          flexShrink: 0,
                         }}
                       >
-                        {step.done ? "✅" : "⏳"}
-                      </span>
+                        {step.done ? <FaCheckCircle /> : <MdPending />}
+                      </div>
 
-                      <span>{step.name}</span>
+                      <div
+                        style={{
+                          flex: 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 500,
+                          }}
+                        >
+                          {step.name}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -962,6 +1118,7 @@ export default function Task() {
                 ...styleSheet.input,
                 height: "80px",
                 resize: "none",
+                marginTop: "10px",
                 ...theme.input,
               }}
             />
@@ -974,6 +1131,15 @@ export default function Task() {
                 gap: "10px",
               }}
             >
+              <button
+                onClick={() => setMainTaskExpireAt("")}
+                style={{
+                  ...styleSheet.button,
+                  backgroundColor: "#6c757d",
+                }}
+              >
+                Clear Expire Date
+              </button>
               <button
                 onClick={() => setEditingTask(null)}
                 style={{
@@ -1202,11 +1368,33 @@ export default function Task() {
     </div>
   );
 }
+const COLORS = {
+  lightBg: "#f8fdff",
+  lightSurface: "#ffffff",
+  lightAccent: "#e6f7fc",
+  lightBorder: "#caf0f8",
+  lightText: "#023047",
+  lightMuted: "#6c757d",
+
+  darkBg: "#121212",
+  darkSurface: "#1a1a1a",
+  darkCard: "#202020",
+  darkHover: "#2a2a2a",
+  darkBorder: "#2d2d2d",
+  darkText: "#ffffff",
+  darkMuted: "#b8dce8",
+
+  primary: "#0077b6",
+  primaryHover: "#0096c7",
+  danger: "#d62828",
+  success: "#28a745",
+};
 
 const styleSheet = {
   pageLayout: {
     display: "flex",
     width: "100%",
+    minHeight: "100vh",
   },
 
   pageLayoutMobile: {
@@ -1220,6 +1408,8 @@ const styleSheet = {
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
+    scrollbarWidth: "thin",
+    scrollbarColor: `${COLORS.darkBorder} transparent`,
   },
 
   taskListContainerMobile: {
@@ -1245,57 +1435,83 @@ const styleSheet = {
   },
 
   input: {
-    padding: "8px",
+    padding: "10px 12px",
     marginRight: "10px",
     marginBottom: "10px",
-    border: "1px solid #ccc",
-    borderRadius: "4px",
+    borderRadius: "10px",
     width: "100%",
+    outline: "none",
+    transition: "all 0.2s ease",
   },
 
   select: {
-    padding: "8px",
-    border: "1px solid #ccc",
-    borderRadius: "4px",
+    padding: "10px 12px",
+    borderRadius: "10px",
     width: "100%",
     marginTop: "10px",
+    outline: "none",
+    transition: "all 0.2s ease",
   },
 
   button: {
-    padding: "8px 16px",
-    backgroundColor: "#0077b6",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
+    padding: "10px 16px",
+    backgroundColor: COLORS.primary,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.primary}`,
+    borderRadius: "10px",
     cursor: "pointer",
+    fontWeight: "600",
+    transition: "all 0.2s ease",
+  },
+
+  buttonHover: {
+    backgroundColor: COLORS.primaryHover,
+    borderColor: COLORS.primaryHover,
+  },
+
+  secondaryButton: {
+    padding: "10px 16px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "600",
+    transition: "all 0.2s ease",
+  },
+
+  dangerButton: {
+    padding: "10px 16px",
+    backgroundColor: COLORS.danger,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.danger}`,
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "600",
+    transition: "all 0.2s ease",
   },
 
   taskBox: {
     minWidth: "260px",
     width: "33.33%",
     minHeight: "260px",
-    border: "1px solid #caf0f8",
-    borderRadius: "10px",
-    backgroundColor: "#fff",
-    padding: "10px",
+    borderRadius: "14px",
+    padding: "14px",
     maxHeight: "50vh",
     overflowY: "auto",
     flexShrink: 0,
     scrollbarWidth: "thin",
-    scrollbarColor: "#495057 transparent",
+    scrollbarColor: `${COLORS.darkBorder} transparent`,
   },
 
   leftContainer: {
     width: "20%",
     padding: "10px",
     scrollbarWidth: "thin",
-    scrollbarColor: "#495057 transparent",
+    scrollbarColor: `${COLORS.darkBorder} transparent`,
   },
 
   leftContainerMobile: {
     width: "100%",
     scrollbarWidth: "thin",
-    scrollbarColor: "#495057 transparent",
+    scrollbarColor: `${COLORS.darkBorder} transparent`,
   },
 
   rightContainer: {
@@ -1308,7 +1524,7 @@ const styleSheet = {
   },
 
   placeholderContainer: {
-    borderRadius: "5px",
+    borderRadius: "14px",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -1322,10 +1538,16 @@ const styleSheet = {
     justifyContent: "space-between",
     marginBottom: "10px",
     gap: "10px",
+    borderRadius: "12px",
+    padding: "10px",
+    transition: "all 0.2s ease",
   },
 
   subTaskItem: {
     marginBottom: "10px",
+    borderRadius: "12px",
+    padding: "10px",
+    transition: "all 0.2s ease",
   },
 
   menuButton: {
@@ -1333,33 +1555,36 @@ const styleSheet = {
     border: "none",
     cursor: "pointer",
     fontSize: "20px",
+    color: "inherit",
   },
 
   popupMenu: {
     position: "absolute",
     top: "30px",
     right: "0",
-    backgroundColor: "#fff",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+    borderRadius: "10px",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.25)",
     zIndex: 10,
-    minWidth: "120px",
+    minWidth: "140px",
+    overflow: "hidden",
   },
 
   popupMenuItem: {
     width: "100%",
-    padding: "10px",
+    padding: "10px 12px",
     border: "none",
     background: "transparent",
+    color: "inherit",
     textAlign: "left",
     cursor: "pointer",
+    transition: "all 0.2s ease",
   },
 
   modalOverlay: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.65)",
+    backdropFilter: "blur(3px)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -1368,53 +1593,106 @@ const styleSheet = {
   },
 
   modalContainer: {
-    backgroundColor: "#fff",
     padding: "20px",
-    borderRadius: "10px",
+    borderRadius: "16px",
     width: "100%",
     maxWidth: "420px",
     maxHeight: "90vh",
     overflowY: "auto",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
   },
 
   subTaskContextMenuItem: {
     width: "100%",
-    padding: "10px",
+    padding: "10px 12px",
     border: "none",
-    background: "white",
+    background: "transparent",
+    color: "inherit",
     textAlign: "left",
     cursor: "pointer",
-    borderRadius: "5px",
+    borderRadius: "8px",
+    transition: "all 0.2s ease",
   },
 };
+
 const darkStyles = (darkMode) => ({
   page: {
-    backgroundColor: darkMode ? "#121212" : "#ffffff",
-    color: darkMode ? "#f1f1f1" : "#000000",
+    backgroundColor: darkMode ? COLORS.darkBg : COLORS.lightBg,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
     minHeight: "100vh",
   },
 
   card: {
-    backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
-    color: darkMode ? "#f1f1f1" : "#000000",
-    border: darkMode ? "1px solid #333" : "1px solid #caf0f8",
+    backgroundColor: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+    boxShadow: darkMode
+      ? "0 8px 24px rgba(0,0,0,0.25)"
+      : "0 8px 22px rgba(0,119,182,0.08)",
+  },
+
+  taskCard: {
+    backgroundColor: darkMode ? COLORS.darkCard : COLORS.lightSurface,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+  },
+
+  hoverCard: {
+    backgroundColor: darkMode ? COLORS.darkHover : COLORS.lightAccent,
   },
 
   modal: {
-    backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
-    color: darkMode ? "#f1f1f1" : "#000000",
+    backgroundColor: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
   },
 
   input: {
-    backgroundColor: darkMode ? "#2a2a2a" : "#ffffff",
-    color: darkMode ? "#ffffff" : "#000000",
-    border: darkMode ? "1px solid #444" : "1px solid #ccc",
+    backgroundColor: darkMode ? COLORS.darkCard : COLORS.lightSurface,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+  },
+
+  select: {
+    backgroundColor: darkMode ? COLORS.darkCard : COLORS.lightSurface,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
   },
 
   menu: {
-    backgroundColor: darkMode ? "#1e1e1e" : "#ffffff",
-    color: darkMode ? "#ffffff" : "#000000",
-    border: darkMode ? "1px solid #444" : "1px solid #ccc",
+    backgroundColor: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+    color: darkMode ? COLORS.darkText : COLORS.lightText,
+    border: darkMode ? `1px solid ${COLORS.darkBorder}` : `1px solid #ccc`,
+  },
+
+  menuItemHover: {
+    backgroundColor: darkMode ? COLORS.darkHover : COLORS.lightAccent,
+  },
+
+  secondaryButton: {
+    backgroundColor: darkMode ? COLORS.darkCard : COLORS.lightAccent,
+    color: darkMode ? COLORS.darkText : COLORS.primary,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+  },
+
+  secondaryButtonHover: {
+    backgroundColor: darkMode ? COLORS.darkHover : "#d8f3ff",
+    borderColor: COLORS.primary,
+  },
+
+  mutedText: {
+    color: darkMode ? COLORS.darkMuted : COLORS.lightMuted,
   },
 });

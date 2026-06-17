@@ -14,6 +14,8 @@ import {
   getEventCount,
 } from "../../services/scheduleService/scheduleService";
 
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+
 export default function Schedule() {
   const todayDate = new Date();
 
@@ -106,15 +108,29 @@ export default function Schedule() {
               : styleSheet.monthNavigateLight),
           }}
           onClick={prevMonth}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkHover
+              : "#d8f3ff";
+            e.currentTarget.style.borderColor = COLORS.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkCard
+              : COLORS.lightSurface;
+            e.currentTarget.style.borderColor = darkMode
+              ? COLORS.darkBorder
+              : COLORS.lightBorder;
+          }}
         >
-          &lt; Back
+          <FaArrowLeft />
         </button>
 
         <h2
           style={{
             ...styleSheet.title,
+            ...(darkMode ? styleSheet.titleDark : styleSheet.titleLight),
             ...(isMobile ? styleSheet.titleMobile : {}),
-            color: darkMode ? "#ffffff" : "#023047",
           }}
           onClick={dropDownMonthSelection}
         >
@@ -129,8 +145,22 @@ export default function Schedule() {
               : styleSheet.monthNavigateLight),
           }}
           onClick={nextMonth}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkHover
+              : "#d8f3ff";
+            e.currentTarget.style.borderColor = COLORS.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkCard
+              : COLORS.lightSurface;
+            e.currentTarget.style.borderColor = darkMode
+              ? COLORS.darkBorder
+              : COLORS.lightBorder;
+          }}
         >
-          Next &gt;
+          <FaArrowRight />
         </button>
       </div>
 
@@ -184,26 +214,28 @@ export default function Schedule() {
                       style={{
                         ...styleSheet.dateContainer,
                         ...(isMobile ? styleSheet.dateContainerMobile : {}),
-                        backgroundColor: isToday
-                          ? "#0077b6"
-                          : hasEvent
-                            ? darkMode
-                              ? "#12384c"
-                              : "#e3f2fd"
-                            : darkMode
-                              ? "#071923"
-                              : "transparent",
-                        color: isToday
-                          ? "#ffffff"
-                          : darkMode
-                            ? "#eaf8fc"
-                            : "#023047",
-                        border: darkMode
-                          ? "1px solid #16425b"
-                          : "1px solid #e6f7fc",
+                        ...(darkMode
+                          ? styleSheet.dateContainerDark
+                          : styleSheet.dateContainerLight),
+
+                        ...(isToday
+                          ? darkMode
+                            ? styleSheet.dateContainerTodayDark
+                            : styleSheet.dateContainerTodayLight
+                          : {}),
+
+                        ...(hasEvent && !isToday
+                          ? {
+                              background: darkMode
+                                ? "rgba(0,119,182,0.12)"
+                                : "#e3f2fd",
+                            }
+                          : {}),
+
+                        opacity: isCurrentMonth ? 1 : 0.25,
                         cursor: isCurrentMonth ? "pointer" : "default",
                       }}
-                      onClick={() => isCurrentMonth && openSchedule(day)} 
+                      onClick={() => isCurrentMonth && openSchedule(day)}
                     >
                       {isCurrentMonth ? day : ""}
 
@@ -326,23 +358,44 @@ function getFullDayName(shortName) {
   return names[shortName];
 }
 
+const COLORS = {
+  lightBg: "#f8fdff",
+  lightSurface: "#ffffff",
+  lightAccent: "#e6f7fc",
+  lightBorder: "#caf0f8",
+  lightText: "#023047",
+  lightMuted: "#6c757d",
+
+  darkBg: "#121212",
+  darkSurface: "#1a1a1a",
+  darkCard: "#202020",
+  darkHover: "#2a2a2a",
+  darkBorder: "#2d2d2d",
+  darkText: "#ffffff",
+  darkMuted: "#b8dce8",
+
+  primary: "#0077b6",
+  primaryHover: "#0096c7",
+  danger: "#d62828",
+};
+
 const styleSheet = {
   page: {
     height: "100vh",
-    background: "#f8fdff",
     position: "relative",
     overflow: "hidden",
   },
 
+  pageLight: {
+    background: COLORS.lightBg,
+  },
+
+  pageDark: {
+    background: COLORS.darkBg,
+  },
+
   bgLogo: {
-    height: "50%",
-    opacity: "30%",
-    position: "absolute",
-    top: "30%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    pointerEvents: "none",
-    zIndex: 0,
+    display: "none",
   },
 
   bgLogoMobile: {
@@ -372,10 +425,17 @@ const styleSheet = {
   title: {
     fontSize: "1.8rem",
     fontWeight: "700",
-    color: "#023047",
     cursor: "pointer",
     userSelect: "none",
     margin: 0,
+  },
+
+  titleLight: {
+    color: COLORS.lightText,
+  },
+
+  titleDark: {
+    color: COLORS.darkText,
   },
 
   titleMobile: {
@@ -385,13 +445,23 @@ const styleSheet = {
   monthNavigate: {
     fontSize: "1rem",
     fontWeight: "bold",
-    color: "#0077b6",
     cursor: "pointer",
     userSelect: "none",
-    border: "1px solid #caf0f8",
-    background: "#ffffff",
     borderRadius: "10px",
     padding: "8px 12px",
+    transition: "all 0.2s ease",
+  },
+
+  monthNavigateLight: {
+    color: COLORS.primary,
+    border: `1px solid ${COLORS.lightBorder}`,
+    background: COLORS.lightSurface,
+  },
+
+  monthNavigateDark: {
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+    background: COLORS.darkCard,
   },
 
   tableWrapper: {
@@ -408,16 +478,30 @@ const styleSheet = {
     height: "100%",
     borderCollapse: "collapse",
     tableLayout: "fixed",
+  },
+
+  tableLight: {
     background: "rgba(255,255,255,0.85)",
+  },
+
+  tableDark: {
+    background: COLORS.darkSurface,
   },
 
   th: {
     height: "32px",
     textAlign: "center",
-    color: "#6c757d",
     fontWeight: "600",
     fontSize: "0.8rem",
     border: "none",
+  },
+
+  thLight: {
+    color: COLORS.lightMuted,
+  },
+
+  thDark: {
+    color: COLORS.darkMuted,
   },
 
   thMobile: {
@@ -427,14 +511,49 @@ const styleSheet = {
   },
 
   dateContainer: {
-    border: "1px solid #e6f7fc",
     padding: "0.25rem",
     textAlign: "center",
     position: "relative",
     fontWeight: "600",
-    transition: "0.2s",
+    transition: "all 0.2s ease",
     verticalAlign: "top",
     height: "calc((100vh - 190px) / 6)",
+  },
+
+  dateContainerLight: {
+    background: COLORS.lightSurface,
+    color: COLORS.lightText,
+    border: `1px solid ${COLORS.lightAccent}`,
+  },
+
+  dateContainerDark: {
+    background: COLORS.darkSurface,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+  },
+
+  dateContainerTodayLight: {
+    background: "#e6f7fc",
+    color: COLORS.primary,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerTodayDark: {
+    background: "rgba(0,119,182,0.18)",
+    color: COLORS.darkText,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerSelectedLight: {
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerSelectedDark: {
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    border: `2px solid ${COLORS.primary}`,
   },
 
   dateContainerMobile: {
@@ -446,7 +565,8 @@ const styleSheet = {
   overlay: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.65)",
+    backdropFilter: "blur(3px)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -455,12 +575,23 @@ const styleSheet = {
   },
 
   modal: {
-    background: "#ffffff",
     padding: "2rem",
     borderRadius: "14px",
     minWidth: "260px",
     textAlign: "center",
-    boxShadow: "0 12px 30px rgba(0,0,0,0.2)",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+  },
+
+  modalLight: {
+    background: COLORS.lightSurface,
+    color: COLORS.lightText,
+    border: `1px solid ${COLORS.lightBorder}`,
+  },
+
+  modalDark: {
+    background: COLORS.darkSurface,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
   },
 
   modalMobile: {
@@ -484,7 +615,7 @@ const styleSheet = {
     fontSize: "1rem",
     padding: "0.5rem",
     borderRadius: "10px",
-    border: "1px solid #caf0f8",
+    outline: "none",
   },
 
   yearInput: {
@@ -492,7 +623,19 @@ const styleSheet = {
     padding: "0.5rem",
     fontSize: "1rem",
     borderRadius: "10px",
-    border: "1px solid #caf0f8",
+    outline: "none",
+  },
+
+  inputLight: {
+    background: COLORS.lightSurface,
+    color: COLORS.lightText,
+    border: `1px solid ${COLORS.lightBorder}`,
+  },
+
+  inputDark: {
+    background: COLORS.darkCard,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
   },
 
   buttonRow: {
@@ -503,23 +646,49 @@ const styleSheet = {
   },
 
   primaryButton: {
-    background: "#0077b6",
-    color: "#ffffff",
-    border: "none",
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.primary}`,
     borderRadius: "10px",
     padding: "10px 16px",
     fontWeight: "600",
     cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+
+  primaryButtonHover: {
+    background: COLORS.primaryHover,
+    borderColor: COLORS.primaryHover,
   },
 
   secondaryButton: {
-    background: "#e6f7fc",
-    color: "#0077b6",
-    border: "1px solid #caf0f8",
     borderRadius: "10px",
     padding: "10px 16px",
     fontWeight: "600",
     cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+
+  secondaryButtonLight: {
+    background: COLORS.lightAccent,
+    color: COLORS.primary,
+    border: `1px solid ${COLORS.lightBorder}`,
+  },
+
+  secondaryButtonDark: {
+    background: COLORS.darkCard,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+  },
+
+  secondaryButtonHoverLight: {
+    background: "#d8f3ff",
+    borderColor: COLORS.primary,
+  },
+
+  secondaryButtonHoverDark: {
+    background: COLORS.darkHover,
+    borderColor: COLORS.primary,
   },
 
   eventDot: {
@@ -530,7 +699,7 @@ const styleSheet = {
     width: "5px",
     height: "5px",
     borderRadius: "50%",
-    backgroundColor: "#0077b6",
+    backgroundColor: COLORS.primary,
   },
 
   eventCount: {
@@ -538,8 +707,8 @@ const styleSheet = {
     bottom: "5px",
     right: "6px",
     fontSize: "0.6rem",
-    backgroundColor: "#0077b6",
-    color: "white",
+    backgroundColor: COLORS.primary,
+    color: COLORS.darkText,
     borderRadius: "999px",
     padding: "1px 5px",
   },
@@ -547,71 +716,5 @@ const styleSheet = {
   eventCountMobile: {
     fontSize: "0.6rem",
     padding: "1px 5px",
-  },
-
-  bgLogo: {
-    display: "none",
-  },
-
-  pageLight: {
-    background: "#f8fdff",
-  },
-
-  pageDark: {
-    background: "#071923",
-  },
-
-  monthNavigateLight: {
-    color: "#0077b6",
-    border: "1px solid #caf0f8",
-    background: "#ffffff",
-  },
-
-  monthNavigateDark: {
-    color: "#eaf8fc",
-    border: "1px solid #16425b",
-    background: "#12384c",
-  },
-
-  tableLight: {
-    background: "rgba(255,255,255,0.85)",
-  },
-
-  tableDark: {
-    background: "#0b2635",
-  },
-
-  modalLight: {
-    background: "#ffffff",
-    color: "#023047",
-  },
-
-  modalDark: {
-    background: "#0b2635",
-    color: "#ffffff",
-  },
-
-  inputLight: {
-    background: "#ffffff",
-    color: "#023047",
-    border: "1px solid #caf0f8",
-  },
-
-  inputDark: {
-    background: "#071923",
-    color: "#ffffff",
-    border: "1px solid #16425b",
-  },
-
-  secondaryButtonLight: {
-    background: "#e6f7fc",
-    color: "#0077b6",
-    border: "1px solid #caf0f8",
-  },
-
-  secondaryButtonDark: {
-    background: "#12384c",
-    color: "#ffffff",
-    border: "1px solid #16425b",
   },
 };
