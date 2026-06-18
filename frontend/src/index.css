@@ -73,7 +73,10 @@ html.dark {
 
 @keyframes typing {
     from {
-        width: 0px;
+        width: 0;
+    }
+    to {
+        width: 100%;
     }
 }
 
@@ -82,14 +85,14 @@ html.dark {
     font-weight: bold;
     letter-spacing: 9px;
     border-right: 4px solid;
-    width: 100%;
+    width: 0;
+    max-width: max-content;
     overflow: hidden;
     white-space: nowrap;
     animation:
-        typing 3s steps(16, end) infinite,
+        typing 3s steps(30, end) infinite,
         cursor 0.4s step-end infinite alternate;
 }
-
 /* Login and SignUp Sections */
 
 

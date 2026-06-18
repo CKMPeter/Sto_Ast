@@ -19,7 +19,7 @@ export default function FolderBreadcrumbs({ currentFolder, darkMode }) {
   return (
     <Breadcrumb
       className={`flex-grow-1 ${
-        darkMode ? "bg-dark text-white" : "bg-white text-dark"
+        darkMode ? "text-white" : "text-dark"
       }`}
       listProps={{
         className: "pl-0 m-0",

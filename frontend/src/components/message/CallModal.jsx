@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-
+import { ImPhoneHangUp } from "react-icons/im";
+import { FiCameraOff, FiCamera } from "react-icons/fi";
+import { FaMicrophone} from "react-icons/fa6";
+import { FaPhoneAlt, FaRegUser, FaMicrophoneAltSlash } from "react-icons/fa";
+import { MdOutlineVideoCameraFront } from "react-icons/md";
 // ============================================================
 // SHARED — nút tròn dùng chung
 // ============================================================
@@ -115,19 +119,31 @@ export function IncomingCallNotification({ incomingCall, onAccept, onReject }) {
           fontSize: "32px", animation: "pulse 1.5s infinite",
         }}
       >
-        📹
+        <MdOutlineVideoCameraFront
+          style={{
+            color: "#aaa"
+          }}
+        />
       </div>
 
       <div style={{ textAlign: "center", color: "white" }}>
         <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "4px" }}>
           {incomingCall.callerName || incomingCall.callerId}
         </div>
-        <div style={{ fontSize: "13px", color: "#aaa" }}>Đang gọi video cho bạn...</div>
+        <div style={{ fontSize: "13px", color: "#aaa" }}>Is Calling You...</div>
       </div>
 
       <div style={{ display: "flex", gap: "20px" }}>
-        <RoundBtn onClick={onReject} title="Từ chối" danger>📵</RoundBtn>
-        <RoundBtn onClick={onAccept} title="Chấp nhận" active>📞</RoundBtn>
+        <RoundBtn onClick={onReject} title="Từ chối" danger>
+          <ImPhoneHangUp style={{
+            color: "#aaa"
+          }}/>
+        </RoundBtn>
+        <RoundBtn onClick={onAccept} title="Chấp nhận" active>
+          <FaPhoneAlt style={{
+            color: "#aaa"
+          }}/>
+        </RoundBtn>
       </div>
     </div>
   );
@@ -165,9 +181,11 @@ export default function CallModal({ localStream, remoteStream, onEnd, callerName
           display: "flex", flexDirection: "column", alignItems: "center",
           justifyContent: "center", color: "white", gap: "16px",
         }}>
-          <div style={{ fontSize: "72px" }}>👤</div>
-          <div style={{ fontSize: "20px", fontWeight: 600 }}>{callerName || "Đang kết nối..."}</div>
-          <div style={{ color: "#aaa", fontSize: "14px" }}>Đang chờ phản hồi...</div>
+          <div style={{ fontSize: "72px" }}>
+            <FaRegUser/>
+          </div>
+          <div style={{ fontSize: "20px", fontWeight: 600 }}>{callerName || "Connecting..."}</div>
+          <div style={{ color: "#aaa", fontSize: "14px" }}>Connecting...</div>
         </div>
       )}
 
@@ -192,7 +210,9 @@ export default function CallModal({ localStream, remoteStream, onEnd, callerName
           alignItems: "center", justifyContent: "center",
           border: "2px solid rgba(255,255,255,0.15)",
         }}>
-          <span style={{ fontSize: "32px" }}>🚫</span>
+          <span style={{ fontSize: "32px" }}>
+            <ImPhoneHangUp style={{color: "#aaa"}}/>
+          </span>
         </div>
       )}
 
@@ -202,14 +222,26 @@ export default function CallModal({ localStream, remoteStream, onEnd, callerName
         display: "flex", justifyContent: "center", gap: "20px", zIndex: 3,
       }}>
         <RoundBtn onClick={toggleMic} title={micOn ? "Tắt mic" : "Bật mic"} active={micOn}>
-          {micOn ? "🎤" : "🔇"}
+          {micOn ? <>
+            <FaMicrophone
+            style={{color: "#aaa"}}/>
+          </> : 
+          <>
+            <FaMicrophoneAltSlash style={{color: "#aaa"}}/>
+          </>}
         </RoundBtn>
 
         <RoundBtn onClick={toggleCam} title={camOn ? "Tắt cam" : "Bật cam"} active={camOn}>
-          {camOn ? "📷" : "🚫"}
+          {camOn ? <>
+            <FiCamera style={{color: "#aaa"}}/>
+          </> : <>
+            <FiCameraOff style={{color: "#aaa"}}/>
+          </>}
         </RoundBtn>
 
-        <RoundBtn onClick={onEnd} title="Kết thúc" danger>📵</RoundBtn>
+        <RoundBtn onClick={onEnd} title="Kết thúc" danger>
+          <ImPhoneHangUp style={{color: "#aaa"}}/>
+        </RoundBtn>
       </div>
     </div>
   );

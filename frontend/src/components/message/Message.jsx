@@ -319,7 +319,7 @@ export function Message() {
               <FaUsers
                 style={{
                   fontSize: "25px",
-                  color: darkMode ? "#ffffff" : "#0077b6",
+                  color: darkMode ? "#0077b6": "#ffffff" ,
                 }}
               />
             </button>
@@ -332,7 +332,7 @@ export function Message() {
               <FaUserPlus
                 style={{
                   fontSize: "25px",
-                  color: darkMode ? "#ffffff" : "#0077b6",
+                  color: darkMode ?"#0077b6": "#ffffff",
                 }}
               />
             </button>
@@ -409,7 +409,7 @@ export function Message() {
                 <FaVideo
                   style={{
                     fontSize: "25px",
-                    color: darkMode ? "#ffffff" : "#0077b6",
+                    color: darkMode ? "#0077b6": "#ffffff",
                   }}
                 />
               </CallBtn>
@@ -428,7 +428,7 @@ export function Message() {
                 <FaVideo
                   style={{
                     fontSize: "25px",
-                    color: darkMode ? "#ffffff" : "#0077b6",
+                    color: darkMode ? "#0077b6": "#ffffff",
                   }}
                 />
               </CallBtn>
@@ -491,7 +491,7 @@ export function Message() {
                                   color: darkMode ? "#ffffff" : "#0077b6",
                                 }}
                               />{" "}
-                              Voice message (không thể phát)
+                              Voice message (Cannot Be Played)
                             </span>
                           ))}
 
@@ -607,7 +607,7 @@ export function Message() {
               <FaPaperPlane
                 style={{
                   fontSize: "20px",
-                  color: darkMode ? "#ffffff" : "#0077b6",
+                  color: "#fffff",
                 }}
               />
             </SendBtn>

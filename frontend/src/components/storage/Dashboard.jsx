@@ -12,6 +12,9 @@ import File from "./File";
 import Chatbot from "./ChatBot";
 import { FolderClass } from "../../classes/storageClass/FolderClass";
 
+import { IoMdClose } from "react-icons/io";
+import { IoChatboxEllipses } from "react-icons/io5";
+
 export default function Dashboard() {
   const { folderId } = useParams();
 
@@ -193,17 +196,6 @@ export default function Dashboard() {
     <>
       <Navbar />
 
-      <img
-        src="./Sto_Ast_Logo_Title.png"
-        alt=""
-        className="dashboard-bg-logo"
-        style={{
-          ...styleSheet.bgLogo,
-          ...(isTablet ? styleSheet.bgLogoTablet : {}),
-          ...(isMobile ? styleSheet.bgLogoMobile : {}),
-        }}
-      />
-
       <Container
         fluid
         className={darkMode ? "dark-mode" : "light-mode"}
@@ -213,6 +205,17 @@ export default function Dashboard() {
           backgroundColor: darkMode ? "#121212" : "#f8fdff",
         }}
       >
+        <img
+          src={darkMode? "./Sto_Ast_Logo_Title_Dark.png" : "./Sto_Ast_Logo_Title.png"} 
+          alt=""
+          className="dashboard-bg-logo"
+          style={{
+            ...styleSheet.bgLogo,
+            ...(isTablet ? styleSheet.bgLogoTablet : {}),
+            ...(isMobile ? styleSheet.bgLogoMobile : {}),
+          }}
+        />
+
         <div
           className="d-flex align-items-center justify-content-between flex-wrap"
           style={isMobile ? styleSheet.toolbarMobile : {}}
@@ -330,7 +333,25 @@ export default function Dashboard() {
             ...(showChatbot ? styleSheet.chatButtonOpen : {}),
           }}
         >
-          {showChatbot ? "✖" : "💬"}
+          {showChatbot ? (
+            <>
+              <IoMdClose
+                style={{
+                  fontSize: "20px",
+                  marginLeft: "2px",
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <IoChatboxEllipses
+                style={{
+                  fontSize: "25px",
+                  marginLeft: "2px",
+                }}
+              />
+            </>
+          )}
         </button>
 
         {showChatbot && (
@@ -352,9 +373,9 @@ export default function Dashboard() {
 const styleSheet = {
   bgLogo: {
     height: "50%",
-    opacity: "30%",
+    opacity: "20%",
     position: "absolute",
-    top: "30%",
+    top: "20%",
     left: "50%",
     transform: "translateX(-50%)",
     pointerEvents: "none",
@@ -447,12 +468,18 @@ const styleSheet = {
     cursor: "pointer",
     zIndex: 2000,
     fontSize: "22px",
+    transition: "all 0.3s ease",
   },
 
   chatButtonOpen: {
     marginBottom: "0",
     right: "38px",
     zIndex: 2001,
+
+    transform: "scale(0.75)", // shrink to 75%
+    width: "44px",
+    height: "44px",
+    fontSize: "16px",
   },
 
   chatbot: {

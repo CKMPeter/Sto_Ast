@@ -467,7 +467,16 @@ export default function Task() {
     <div style={darkStyles.page}>
       <NavbarComponent />
 
-      <h1 style={{ paddingLeft: "20px" }}>Task</h1>
+      <h1 
+        style={{ 
+          paddingLeft: "20px",
+          fontWeight: "bold",
+          marginTop: "10px",
+          marginBottom: "5px",
+          fontSize: "40px",
+        }}>
+          Task
+      </h1>
 
       <div
         style={{

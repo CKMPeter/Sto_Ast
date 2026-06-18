@@ -283,13 +283,14 @@ export default Chatbot;
 
 const styleSheet = {
   chatbot: {
-    height: "100%",
+    height: "90%",
     minHeight: "520px",
     display: "flex",
     flexDirection: "column",
     borderRadius: "20px",
     overflow: "hidden",
     position: "relative",
+    marginTop: "45px",
     zIndex: 5000,
   },
 
