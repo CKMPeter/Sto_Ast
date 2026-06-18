@@ -158,17 +158,28 @@ export function Message() {
 
   const startRecording = async () => {
     try {
+      if (!selectedUserId && !selectedGroupId) {
+        alert("Please select a conversation first");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      let mimeType = "";
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-      });
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus";
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        mimeType = "audio/webm";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
+      }
+
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
 
       chunksRef.current = [];
       recordStartRef.current = Date.now();
@@ -180,26 +191,36 @@ export function Message() {
       };
 
       recorder.onstop = async () => {
-        if (chunksRef.current.length === 0) return;
+        try {
+          const finalType = recorder.mimeType || mimeType || "audio/webm";
 
-        const blob = new Blob(chunksRef.current, {
-          type: mimeType,
-        });
+          const blob = new Blob(chunksRef.current, {
+            type: finalType,
+          });
 
-        const duration = Date.now() - recordStartRef.current;
+          stream.getTracks().forEach((track) => track.stop());
 
-        stream.getTracks().forEach((t) => t.stop());
+          if (!blob.size) {
+            alert("Voice recording is empty");
+            return;
+          }
 
-        await sendVoiceMessage(blob, duration);
+          const duration = Date.now() - recordStartRef.current;
+
+          await sendVoiceMessage(blob, duration);
+        } catch (err) {
+          console.error("Send voice error:", err);
+          alert("Cannot send voice message");
+        }
       };
 
-      recorder.start(100);
+      recorder.start(250);
 
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch (err) {
-      console.error(err);
-      alert("Không bật được micro");
+      console.error("Microphone error:", err);
+      alert("Cannot enable microphone");
     }
   };
 
@@ -304,6 +325,23 @@ export function Message() {
     setSearchResults([]);
   };
 
+  const isVoiceMessage = (msg) => {
+    return (
+      msg.type === "voice" ||
+      msg.type === "audio" ||
+      msg.type === "voiceMessage" ||
+      msg.voiceDataUrl ||
+      msg.voiceUrl ||
+      msg.audioUrl
+    );
+  };
+
+  const getVoiceSrc = (msg) => {
+    return (
+      msg.voiceDataUrl || msg.voiceUrl || msg.audioUrl || msg.fileUrl || ""
+    );
+  };
+
   return (
     <div>
       <Navbar />
@@ -319,7 +357,7 @@ export function Message() {
               <FaUsers
                 style={{
                   fontSize: "25px",
-                  color: darkMode ? "#0077b6": "#ffffff" ,
+                  color: darkMode ? "#0077b6" : "#ffffff",
                 }}
               />
             </button>
@@ -332,7 +370,7 @@ export function Message() {
               <FaUserPlus
                 style={{
                   fontSize: "25px",
-                  color: darkMode ?"#0077b6": "#ffffff",
+                  color: darkMode ? "#0077b6" : "#ffffff",
                 }}
               />
             </button>
@@ -409,7 +447,7 @@ export function Message() {
                 <FaVideo
                   style={{
                     fontSize: "25px",
-                    color: darkMode ? "#0077b6": "#ffffff",
+                    color: darkMode ? "#0077b6" : "#ffffff",
                   }}
                 />
               </CallBtn>
@@ -428,7 +466,7 @@ export function Message() {
                 <FaVideo
                   style={{
                     fontSize: "25px",
-                    color: darkMode ? "#0077b6": "#ffffff",
+                    color: darkMode ? "#0077b6" : "#ffffff",
                   }}
                 />
               </CallBtn>
@@ -476,22 +514,30 @@ export function Message() {
                       <Bubble isMe={isMe} darkMode={darkMode}>
                         {msg.text && <div>{msg.text}</div>}
 
-                        {msg.type === "voice" &&
-                          (msg.voiceDataUrl ? (
+                        {isVoiceMessage(msg) &&
+                          (getVoiceSrc(msg) ? (
                             <audio
                               controls
-                              src={msg.voiceDataUrl}
+                              preload="metadata"
+                              src={getVoiceSrc(msg)}
                               style={styleSheet.audio}
+                              onError={(e) => {
+                                console.error(
+                                  "Voice audio cannot play:",
+                                  msg,
+                                  e,
+                                );
+                              }}
                             />
                           ) : (
                             <span style={{ fontSize: "12px", opacity: 0.7 }}>
                               <FaMicrophone
                                 style={{
-                                  fontSize: "25px",
+                                  fontSize: "20px",
                                   color: darkMode ? "#ffffff" : "#0077b6",
                                 }}
                               />{" "}
-                              Voice message (Cannot Be Played)
+                              Voice message cannot be played
                             </span>
                           ))}
 
@@ -870,9 +916,10 @@ const styleSheet = {
 
   audio: {
     width: "100%",
-    maxWidth: "220px",
-  },
-
+    minWidth: "180px",
+    height: "40px",
+    display: "block",
+  },  
   senderName: {
     fontSize: "12px",
     fontWeight: "600",
@@ -1041,11 +1088,7 @@ const Bubble = styled("div")(({ isMe, darkMode }) => ({
     : darkMode
       ? COLORS.darkCard
       : COLORS.lightSurface,
-  color: isMe
-    ? COLORS.darkText
-    : darkMode
-      ? COLORS.darkText
-      : COLORS.lightText,
+  color: isMe ? COLORS.darkText : darkMode ? COLORS.darkText : COLORS.lightText,
   padding: "12px 16px",
   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
   maxWidth: "100%",
