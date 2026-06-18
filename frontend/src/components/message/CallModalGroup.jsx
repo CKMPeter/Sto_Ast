@@ -1,65 +1,138 @@
-import React from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { styled } from "@mui/material/styles";
 
-export default function CallModalGroup({
-  localStream,
-  remoteStreams,
-  endCall,
-}) {
+// ============================================================
+// HOOK — tắt/bật mic & cam (dùng chung cho cả 2 modal)
+// ============================================================
+function useMediaControls(localStream) {
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
 
-  // convert object -> array
-  const remoteStreamList = Object.values(remoteStreams || {});
+  useEffect(() => {
+    setMicOn(true);
+    setCamOn(true);
+  }, [localStream]);
+
+  const toggleMic = useCallback(() => {
+    if (!localStream) return;
+    localStream.getAudioTracks().forEach((t) => { t.enabled = !t.enabled; });
+    setMicOn((v) => !v);
+  }, [localStream]);
+
+  const toggleCam = useCallback(() => {
+    if (!localStream) return;
+    localStream.getVideoTracks().forEach((t) => { t.enabled = !t.enabled; });
+    setCamOn((v) => !v);
+  }, [localStream]);
+
+  return { micOn, camOn, toggleMic, toggleCam };
+}
+
+// ============================================================
+// REMOTE VIDEO ITEM
+// ============================================================
+function RemoteVideoItem({ stream }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !stream) return;
+    if (video.srcObject !== stream) video.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <VideoCard>
+      <RemoteVideo ref={videoRef} autoPlay playsInline />
+    </VideoCard>
+  );
+}
+
+// ============================================================
+// LOCAL VIDEO ITEM
+// ============================================================
+function LocalVideoItem({ stream, camOn }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !stream) return;
+    if (video.srcObject !== stream) video.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <LocalVideoWrapper>
+      <LocalVideo
+        ref={videoRef} autoPlay muted playsInline
+        style={{ display: camOn ? "block" : "none" }}
+      />
+      {!camOn && (
+        <CamOffPlaceholder>🚫</CamOffPlaceholder>
+      )}
+    </LocalVideoWrapper>
+  );
+}
+
+// ============================================================
+// CONTROL BUTTON
+// ============================================================
+function CtrlBtn({ onClick, title, active, danger, children }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: "60px", height: "60px", borderRadius: "50%", cursor: "pointer",
+        fontSize: "24px", display: "flex", alignItems: "center", justifyContent: "center",
+        border: active && !danger ? "2px solid rgba(255,255,255,0.5)" : "2px solid transparent",
+        background: danger ? "#e53935" : active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
+        transform: hover ? "scale(1.1)" : "scale(1)",
+        transition: "transform 0.15s, background 0.15s",
+        boxShadow: danger ? "0 4px 16px rgba(229,57,53,0.45)" : "none",
+        color: "white",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ============================================================
+// MAIN
+// ============================================================
+export default function CallModalGroup({ localStream, remoteStreams, endCall }) {
+  const remoteEntries = Object.entries(remoteStreams || {});
+  const { micOn, camOn, toggleMic, toggleCam } = useMediaControls(localStream);
 
   return (
     <Overlay>
       <CallContainer>
 
-        {/* ===== REMOTE VIDEOS ===== */}
-        <Grid>
-
-          {remoteStreamList.length === 0 && (
-            <WaitingText>
-              Waiting for participants...
-            </WaitingText>
+        <Grid count={remoteEntries.length}>
+          {remoteEntries.length === 0 && (
+            <WaitingText>Đang chờ người tham gia...</WaitingText>
           )}
-
-          {remoteStreamList.map((stream, index) => (
-            <VideoCard key={index}>
-              <RemoteVideo
-                autoPlay
-                playsInline
-                ref={(video) => {
-                  if (video && stream) {
-                    video.srcObject = stream;
-                  }
-                }}
-              />
-            </VideoCard>
+          {remoteEntries.map(([uid, stream]) => (
+            <RemoteVideoItem key={uid} stream={stream} />
           ))}
-
         </Grid>
 
-        {/* ===== LOCAL VIDEO ===== */}
-        {localStream && (
-          <LocalVideo
-            autoPlay
-            muted
-            playsInline
-            ref={(video) => {
-              if (video && localStream) {
-                video.srcObject = localStream;
-              }
-            }}
-          />
-        )}
+        {localStream && <LocalVideoItem stream={localStream} camOn={camOn} />}
 
-        {/* ===== CONTROL ===== */}
         <ControlBar>
+          <CtrlBtn onClick={toggleMic} title={micOn ? "Tắt mic" : "Bật mic"} active={micOn}>
+            {micOn ? "🎤" : "🔇"}
+          </CtrlBtn>
 
-          <EndButton onClick={endCall}>
-            ⛔ End
-          </EndButton>
+          <CtrlBtn onClick={toggleCam} title={camOn ? "Tắt cam" : "Bật cam"} active={camOn}>
+            {camOn ? "📷" : "🚫"}
+          </CtrlBtn>
 
+          <CtrlBtn onClick={endCall} title="Rời cuộc gọi" danger>
+            📵
+          </CtrlBtn>
         </ControlBar>
 
       </CallContainer>
@@ -67,26 +140,21 @@ export default function CallModalGroup({
   );
 }
 
-/* ================= STYLE ================= */
+/* ── STYLES ─────────────────────────────────────────────── */
 
 const Overlay = styled("div")(() => ({
-  position: "fixed",
-  inset: 0,
-  background: "#000",
-  zIndex: 9999,
+  position: "fixed", inset: 0, background: "#000", zIndex: 9999,
 }));
 
 const CallContainer = styled("div")(() => ({
-  position: "relative",
-  width: "100%",
-  height: "100%",
+  position: "relative", width: "100%", height: "100%",
 }));
 
-const Grid = styled("div")(() => ({
+const Grid = styled("div")(({ count }) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gridTemplateColumns: count <= 1 ? "1fr" : count <= 4 ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
   gap: "12px",
-  padding: "20px",
+  padding: "20px 20px 100px 20px", // bottom padding cho control bar
   width: "100%",
   height: "100%",
   overflowY: "auto",
@@ -94,60 +162,38 @@ const Grid = styled("div")(() => ({
 }));
 
 const VideoCard = styled("div")(() => ({
-  background: "#111",
-  borderRadius: "14px",
-  overflow: "hidden",
-  position: "relative",
-  minHeight: "240px",
+  background: "#111", borderRadius: "14px", overflow: "hidden",
+  position: "relative", minHeight: "240px",
 }));
 
 const RemoteVideo = styled("video")(() => ({
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  background: "#222",
+  width: "100%", height: "100%", objectFit: "cover", background: "#222", display: "block",
+}));
+
+const LocalVideoWrapper = styled("div")(() => ({
+  position: "absolute", right: "20px", bottom: "100px",
+  width: "200px", height: "130px", zIndex: 10000,
+  borderRadius: "14px", overflow: "hidden",
+  border: "2px solid rgba(255,255,255,0.25)",
+  background: "#111",
 }));
 
 const LocalVideo = styled("video")(() => ({
-  position: "absolute",
-  bottom: "90px",
-  right: "20px",
-  width: "220px",
-  height: "140px",
-  borderRadius: "14px",
-  border: "2px solid white",
-  objectFit: "cover",
-  background: "#111",
-  zIndex: 10000,
+  width: "100%", height: "100%", objectFit: "cover", display: "block",
+}));
+
+const CamOffPlaceholder = styled("div")(() => ({
+  width: "100%", height: "100%", display: "flex",
+  alignItems: "center", justifyContent: "center", fontSize: "36px",
 }));
 
 const ControlBar = styled("div")(() => ({
-  position: "absolute",
-  bottom: "20px",
-  left: 0,
-  width: "100%",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-}));
-
-const EndButton = styled("button")(() => ({
-  padding: "14px 28px",
-  borderRadius: "999px",
-  background: "#ff3b30",
-  color: "white",
-  fontSize: "18px",
-  border: "none",
-  cursor: "pointer",
-  fontWeight: "bold",
+  position: "absolute", bottom: "20px", left: 0, width: "100%",
+  display: "flex", justifyContent: "center", alignItems: "center", gap: "20px",
 }));
 
 const WaitingText = styled("div")(() => ({
-  color: "white",
-  fontSize: "22px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  height: "100%",
+  color: "white", fontSize: "20px",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  width: "100%", height: "100%",
 }));

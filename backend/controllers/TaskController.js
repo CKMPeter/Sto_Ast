@@ -230,6 +230,28 @@ class TaskController {
       })
     }
   }
+
+  async addSubTaskTimeLog(req, res) {
+    try {
+      const { taskId, subTaskId } = req.params
+      const { time } = req.body
+
+      await taskDAO.addSubTaskTimeLog(taskId, subTaskId, time)
+
+      // update main task progress
+      await taskDAO.updateTaskProgress(taskId)
+      res.status(200).json({
+        success: true,
+        message: 'Time log added'
+      })
+    }
+    catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
 }
 
 module.exports = new TaskController()

@@ -12,6 +12,7 @@ module.exports = function (app) {
       origin: [
         "https://localhost:3000",
         "http://localhost:3000",
+        "https://192.168.1.6:3000",
         process.env.FRONTEND_URL,
       ],
       credentials: false,

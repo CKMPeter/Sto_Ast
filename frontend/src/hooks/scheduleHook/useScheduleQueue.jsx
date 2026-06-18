@@ -17,7 +17,7 @@ export function useScheduleQueue() {
     }
 
     // ==========================
-    // ➕ ADD EVENT (Firestore + RTDB via backend)
+    // ADD EVENT (Firestore + RTDB via backend)
     // ==========================
     const addEvent = async (date, { title, start, duration }) => {
         const headers = await getAuthHeaders()
@@ -50,7 +50,7 @@ export function useScheduleQueue() {
     }
 
     // ==========================
-    // 📥 FETCH ( FIRESTORE ONLY)
+    // FETCH ( FIRESTORE ONLY)
     // ==========================
     const getEventsByDate = async (date) => {
         if (!currentUser) return []
@@ -79,7 +79,7 @@ export function useScheduleQueue() {
     }
 
     // ==========================
-    // ❌ DELETE (Firestore + RTDB)
+    // DELETE (Firestore + RTDB)
     // ==========================
     const deleteEvent = async (eventId) => {
         const headers = await getAuthHeaders()
@@ -101,7 +101,7 @@ export function useScheduleQueue() {
     }
 
     // ==========================
-    // ✏️ UPDATE (Firestore + RTDB)
+    //  UPDATE (Firestore + RTDB)
     // ==========================
     const updateEvent = async (eventId, updateData) => {
         const headers = await getAuthHeaders()

@@ -7,20 +7,39 @@ import { useAuth } from "../../contexts/AuthContext";
 import useFriends from "../../hooks/messageHook/useFriends";
 import useChat from "../../hooks/messageHook/useChat";
 import useGroups from "../../hooks/messageHook/useGroups";
-import CallModal from "./CallModal";
+import CallModal, { IncomingCallNotification } from "./CallModal";
 import { styled } from "@mui/material/styles";
 import useCallGroup from "../../webrtc/useCallGroup";
 import CallModalGroup from "./CallModalGroup";
 
+import {
+  FaUserPlus,
+  FaUsers,
+  FaVideo,
+  FaPaperclip,
+  FaMicrophone,
+  FaStop,
+  FaPaperPlane,
+  FaFile,
+  FaCheckCircle,
+  FaRegCircle,
+  FaTimes,
+} from "react-icons/fa";
+
+import { useDarkMode } from "../../hooks/useDarkMode";
+
 export function Message() {
   const { currentUser } = useAuth();
+  const { darkMode } = useDarkMode();
 
   // CALL
   const {
     startCall,
-    incomingCall,
     acceptCall,
+    rejectCall,
     endCall,
+    incomingCall,
+    callState,
     localStream,
     remoteStream,
   } = useCall(currentUser?.uid);
@@ -28,10 +47,12 @@ export function Message() {
   // GROUP CALL
   const {
     startGroupCall,
-    listenIncoming: listenGroupIncoming,
-    acceptCall: acceptGroupCall,
+    acceptGroupCall,
+    rejectGroupCall,
+    endGroupCall,
+    listenGroupInvites,
     incomingCall: incomingGroupCall,
-    endCall: endGroupCall,
+    callState: groupCallState,
     localStream: groupLocalStream,
     remoteStreams: groupRemoteStreams,
   } = useCallGroup(currentUser?.uid);
@@ -63,7 +84,12 @@ export function Message() {
     sendFile,
     sendVoiceMessage,
     uploading,
-  } = useChat(currentUser?.uid, selectedUserId, selectedGroupId);
+  } = useChat(
+    currentUser?.uid,
+    selectedUserId,
+    selectedGroupId,
+    currentUser?.displayName || currentUser?.email,
+  );
 
   const selectedFriend = friends.find((f) => f.uid === selectedUserId);
 
@@ -79,17 +105,19 @@ export function Message() {
   // }, [messages]);
 
   // GROUP CALL LISTENER
+  // Dùng groupIds string làm dep để tránh re-subscribe mỗi khi groups object thay đổi
+  const groupIdsKey = groups.map((g) => g.id).join(",");
+
   useEffect(() => {
-    if (!currentUser?.uid || groups.length === 0) return;
+    if (!currentUser?.uid || !groupIdsKey) return;
 
-    const allMembers = [...new Set(groups.flatMap((g) => g.members || []))];
-
-    listenGroupIncoming(allMembers);
+    const groupIds = groupIdsKey.split(",");
+    const cleanup = listenGroupInvites(groupIds);
 
     return () => {
-      endGroupCall();
+      cleanup?.();
     };
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, groupIdsKey]);
 
   // SEND TEXT
   const handleSend = async () => {
@@ -130,17 +158,28 @@ export function Message() {
 
   const startRecording = async () => {
     try {
+      if (!selectedUserId && !selectedGroupId) {
+        alert("Please select a conversation first");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      let mimeType = "";
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-      });
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus";
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        mimeType = "audio/webm";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
+      }
+
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
 
       chunksRef.current = [];
       recordStartRef.current = Date.now();
@@ -152,26 +191,36 @@ export function Message() {
       };
 
       recorder.onstop = async () => {
-        if (chunksRef.current.length === 0) return;
+        try {
+          const finalType = recorder.mimeType || mimeType || "audio/webm";
 
-        const blob = new Blob(chunksRef.current, {
-          type: mimeType,
-        });
+          const blob = new Blob(chunksRef.current, {
+            type: finalType,
+          });
 
-        const duration = Date.now() - recordStartRef.current;
+          stream.getTracks().forEach((track) => track.stop());
 
-        stream.getTracks().forEach((t) => t.stop());
+          if (!blob.size) {
+            alert("Voice recording is empty");
+            return;
+          }
 
-        await sendVoiceMessage(blob, duration);
+          const duration = Date.now() - recordStartRef.current;
+
+          await sendVoiceMessage(blob, duration);
+        } catch (err) {
+          console.error("Send voice error:", err);
+          alert("Cannot send voice message");
+        }
       };
 
-      recorder.start(100);
+      recorder.start(250);
 
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch (err) {
-      console.error(err);
-      alert("Không bật được micro");
+      console.error("Microphone error:", err);
+      alert("Cannot enable microphone");
     }
   };
 
@@ -276,27 +325,54 @@ export function Message() {
     setSearchResults([]);
   };
 
+  const isVoiceMessage = (msg) => {
+    return (
+      msg.type === "voice" ||
+      msg.type === "audio" ||
+      msg.type === "voiceMessage" ||
+      msg.voiceDataUrl ||
+      msg.voiceUrl ||
+      msg.audioUrl
+    );
+  };
+
+  const getVoiceSrc = (msg) => {
+    return (
+      msg.voiceDataUrl || msg.voiceUrl || msg.audioUrl || msg.fileUrl || ""
+    );
+  };
+
   return (
     <div>
       <Navbar />
-      <Container>
+      <Container darkMode={darkMode}>
         {/* SIDEBAR */}
-        <Sidebar>
+        <Sidebar darkMode={darkMode}>
           <div style={styleSheet.buttonArea}>
             <button
               className="btn btn-warning"
-              style={styleSheet.flexButton}
+              style={styleSheet.flexButton(darkMode)}
               onClick={() => setShowCreateGroup(true)}
             >
-              + Group
+              <FaUsers
+                style={{
+                  fontSize: "25px",
+                  color: darkMode ? "#0077b6" : "#ffffff",
+                }}
+              />
             </button>
 
             <button
               className="btn btn-success"
-              style={styleSheet.flexButton}
+              style={styleSheet.flexButton(darkMode)}
               onClick={() => setShowAddFriend(true)}
             >
-              + Add
+              <FaUserPlus
+                style={{
+                  fontSize: "25px",
+                  color: darkMode ? "#0077b6" : "#ffffff",
+                }}
+              />
             </button>
           </div>
 
@@ -318,9 +394,15 @@ export function Message() {
               }
             }}
             selectedUserId={selectedUserId}
+            darkMode={darkMode}
           />
 
-          <div style={styleSheet.groupsContainer}>
+          <div
+            style={{
+              ...styleSheet.groupsContainer,
+              color: darkMode ? "#ffffff" : "#023047",
+            }}
+          >
             <strong>Groups</strong>
 
             {groups.map((g) => (
@@ -330,98 +412,171 @@ export function Message() {
                   setSelectedGroupId(g.id);
                   setSelectedUserId(null);
                 }}
-                style={styleSheet.groupItem(selectedGroupId === g.id)}
+                style={styleSheet.groupItem(selectedGroupId === g.id, darkMode)}
               >
-                👥 {g.name}
+                <FaUsers
+                  style={{
+                    fontSize: "30px",
+                    color: darkMode ? "#ffffff" : "#0077b6",
+                    marginBottom: "3px",
+                    paddingRight: "5px",
+                  }}
+                />
+                {g.name}
               </div>
             ))}
           </div>
         </Sidebar>
 
         {/* CHAT */}
-        <ChatArea>
-          <Header>
+        <ChatArea darkMode={darkMode}>
+          <Header darkMode={darkMode}>
             <div>
               {selectedGroup
-                ? `👥 ${selectedGroup.name}`
+                ? ` ${selectedGroup.name}`
                 : selectedFriend
                   ? selectedFriend.email
                   : "Select a conversation"}
             </div>
 
             {selectedGroupId && (
-              <CallBtn onClick={() => startGroupCall(selectedGroup)}>
-                👥 Call Group
+              <CallBtn
+                darkMode={darkMode}
+                onClick={() => startGroupCall(selectedGroup)}
+              >
+                <FaVideo
+                  style={{
+                    fontSize: "25px",
+                    color: darkMode ? "#0077b6" : "#ffffff",
+                  }}
+                />
               </CallBtn>
             )}
 
             {selectedUserId && (
-              <CallBtn onClick={() => startCall(selectedUserId)}>
-                📹 Call
+              <CallBtn
+                darkMode={darkMode}
+                onClick={() =>
+                  startCall(
+                    selectedUserId,
+                    currentUser?.displayName || currentUser?.email,
+                  )
+                }
+              >
+                <FaVideo
+                  style={{
+                    fontSize: "25px",
+                    color: darkMode ? "#0077b6" : "#ffffff",
+                  }}
+                />
               </CallBtn>
             )}
           </Header>
 
-          {/* INCOMING CALL */}
-          {incomingCall && (
-            <IncomingBox>
-              <p>📞 {incomingCall.callerId}</p>
-
-              <button onClick={acceptCall}>Accept</button>
-
-              <button onClick={endCall}>Reject</button>
-            </IncomingBox>
-          )}
-
-          {/* INCOMING GROUP CALL */}
-          {incomingGroupCall && (
-            <IncomingBox>
-              <p>📞 Group call incoming</p>
-
-              <button onClick={acceptGroupCall}>Accept</button>
-
-              <button onClick={endGroupCall}>Reject</button>
-            </IncomingBox>
-          )}
-
           {/* CHAT BODY */}
-          <ChatBody>
+          <ChatBody darkMode={darkMode}>
             {selectedUserId || selectedGroupId ? (
               messages.map((msg) => {
                 const isMe = msg.senderId === currentUser.uid;
+                const timeLabel = msg.createdAt
+                  ? new Date(msg.createdAt).toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "";
+
+                // Tra tên người gửi từ members của group (fallback về senderName, rồi senderId)
+                const memberMap = selectedGroup?.members
+                  ? Object.fromEntries(
+                      selectedGroup.members.map((m) => [
+                        m.uid,
+                        m.name || m.email,
+                      ]),
+                    )
+                  : {};
+                const displayName =
+                  msg.senderName || memberMap[msg.senderId] || msg.senderId;
 
                 return (
                   <Row key={msg.id} isMe={isMe}>
-                    <Bubble isMe={isMe}>
-                      {msg.text && <div>{msg.text}</div>}
-
-                      {msg.type === "voice" && msg.voiceDataUrl && (
-                        <audio
-                          controls
-                          src={msg.voiceDataUrl}
-                          style={styleSheet.audio}
-                        />
+                    <div
+                      style={{
+                        maxWidth: "65%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: isMe ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      {/* Tên người gửi: chỉ hiện trong group chat và không phải tin của mình */}
+                      {selectedGroupId && !isMe && (
+                        <span style={styleSheet.senderName}>{displayName}</span>
                       )}
+                      <Bubble isMe={isMe} darkMode={darkMode}>
+                        {msg.text && <div>{msg.text}</div>}
 
-                      {msg.fileUrl && msg.fileType?.startsWith("image") && (
-                        <img
-                          src={msg.fileUrl}
-                          alt="shared-file"
-                          style={styleSheet.imageMessage}
-                        />
-                      )}
+                        {isVoiceMessage(msg) &&
+                          (getVoiceSrc(msg) ? (
+                            <audio
+                              controls
+                              preload="metadata"
+                              src={getVoiceSrc(msg)}
+                              style={styleSheet.audio}
+                              onError={(e) => {
+                                console.error(
+                                  "Voice audio cannot play:",
+                                  msg,
+                                  e,
+                                );
+                              }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: "12px", opacity: 0.7 }}>
+                              <FaMicrophone
+                                style={{
+                                  fontSize: "20px",
+                                  color: darkMode ? "#ffffff" : "#0077b6",
+                                }}
+                              />{" "}
+                              Voice message cannot be played
+                            </span>
+                          ))}
 
-                      {msg.fileUrl && !msg.fileType?.startsWith("image") && (
-                        <a href={msg.fileUrl} target="_blank" rel="noreferrer">
-                          📎 {msg.fileName}
-                        </a>
+                        {msg.fileUrl && msg.fileType?.startsWith("image") && (
+                          <img
+                            src={msg.fileUrl}
+                            alt="shared-file"
+                            style={styleSheet.imageMessage}
+                          />
+                        )}
+
+                        {msg.fileUrl && !msg.fileType?.startsWith("image") && (
+                          <a
+                            href={msg.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <FaPaperclip
+                              style={{
+                                fontSize: "25px",
+                                color: darkMode ? "#ffffff" : "#0077b6",
+                              }}
+                            />{" "}
+                            {msg.fileName}
+                          </a>
+                        )}
+                      </Bubble>
+                      {/* Thời gian */}
+                      {timeLabel && (
+                        <span style={styleSheet.timestamp(darkMode)}>
+                          {timeLabel}
+                        </span>
                       )}
-                    </Bubble>
+                    </div>
                   </Row>
                 );
               })
             ) : (
-              <Empty>Select a conversation</Empty>
+              <Empty darkMode={darkMode}>Select a conversation</Empty>
             )}
 
             <div ref={bottomRef} />
@@ -429,7 +584,7 @@ export function Message() {
 
           {/* FILE PREVIEW */}
           {filePreview && (
-            <PreviewBox>
+            <PreviewBox darkMode={darkMode}>
               {filePreview.file.type.startsWith("image") ? (
                 <img
                   src={filePreview.url}
@@ -449,10 +604,21 @@ export function Message() {
           {uploading && <Uploading>Uploading...</Uploading>}
 
           {/* FOOTER */}
-          <Footer>
-            <FileBtn onClick={() => fileInputRef.current.click()}>📎</FileBtn>
+          <Footer darkMode={darkMode}>
+            <FileBtn
+              darkMode={darkMode}
+              onClick={() => fileInputRef.current.click()}
+            >
+              <FaPaperclip
+                style={{
+                  fontSize: "20px",
+                  color: darkMode ? "#ffffff" : "#0077b6",
+                }}
+              />
+            </FileBtn>
 
             <input
+              darkMode={darkMode}
               type="file"
               hidden
               ref={fileInputRef}
@@ -461,33 +627,72 @@ export function Message() {
 
             <button
               onClick={isRecording ? stopRecording : startRecording}
-              style={styleSheet.recordButton(isRecording)}
+              style={styleSheet.recordButton(isRecording, darkMode)}
             >
-              {isRecording ? "⏹" : "🎤"}
+              {isRecording ? (
+                "⏹"
+              ) : (
+                <FaMicrophone
+                  style={{
+                    fontSize: "20px",
+                    color: darkMode ? "#ffffff" : "#0077b6",
+                  }}
+                />
+              )}
             </button>
 
             <Input
+              darkMode={darkMode}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Type a message..."
             />
 
-            <SendBtn onClick={handleSend}>Send</SendBtn>
+            <SendBtn darkMode={darkMode} onClick={handleSend}>
+              <FaPaperPlane
+                style={{
+                  fontSize: "20px",
+                  color: "#fffff",
+                }}
+              />
+            </SendBtn>
           </Footer>
         </ChatArea>
       </Container>
-      {/* CALL MODAL */}
-      {((localStream && localStream.current) || remoteStream) && (
-        <CallModal
-          localStream={localStream?.current}
-          remoteStream={remoteStream}
-          endCall={endCall}
+      {/* INCOMING CALL NOTIFICATION (popup góc phải, như Messenger) */}
+      {callState === "incoming" && incomingCall && (
+        <IncomingCallNotification
+          incomingCall={incomingCall}
+          onAccept={acceptCall}
+          onReject={rejectCall}
         />
       )}
+
+      {/* INCOMING GROUP CALL NOTIFICATION */}
+      {groupCallState === "incoming" && incomingGroupCall && (
+        <IncomingCallNotification
+          incomingCall={{
+            callerName: `${incomingGroupCall.callerName} · ${incomingGroupCall.groupName}`,
+            callerId: incomingGroupCall.callerId,
+          }}
+          onAccept={acceptGroupCall}
+          onReject={rejectGroupCall}
+        />
+      )}
+
+      {/* ACTIVE 1-1 CALL MODAL */}
+      {(callState === "active" || callState === "calling") && (
+        <CallModal
+          localStream={localStream}
+          remoteStream={remoteStream}
+          onEnd={endCall}
+          callerName={selectedFriend?.email}
+        />
+      )}
+
       {/* GROUP CALL MODAL */}
-      {(groupLocalStream ||
-        Object.keys(groupRemoteStreams || {}).length > 0) && (
+      {(groupCallState === "calling" || groupCallState === "active") && (
         <CallModalGroup
           localStream={groupLocalStream}
           remoteStreams={groupRemoteStreams}
@@ -502,6 +707,7 @@ export function Message() {
 
             <div style={modalStyles.searchRow}>
               <input
+                darkMode={darkMode}
                 type="text"
                 placeholder="Search email..."
                 value={friendSearch}
@@ -564,6 +770,7 @@ export function Message() {
             {/* GROUP NAME */}
             <div style={{ marginBottom: "16px" }}>
               <input
+                darkMode={darkMode}
                 type="text"
                 placeholder="Group name..."
                 value={groupName}
@@ -632,293 +839,424 @@ export function Message() {
   );
 }
 
+const COLORS = {
+  lightBg: "#f8fdff",
+  lightSurface: "#ffffff",
+  lightAccentSoft: "#e6f7fc",
+  lightBorder: "#caf0f8",
+  lightText: "#023047",
+  lightMuted: "#6c757d",
+
+  darkBg: "#121212",
+  darkSurface: "#1a1a1a",
+  darkCard: "#202020",
+  darkHover: "#2a2a2a",
+  darkBorder: "#2d2d2d",
+  darkText: "#ffffff",
+  darkMuted: "#b8dce8",
+
+  primary: "#0077b6",
+  primaryHover: "#0096c7",
+  danger: "#d62828",
+  dangerHover: "#ef4444",
+  success: "#28a745",
+};
+
 const styleSheet = {
   buttonArea: {
     display: "flex",
-    gap: "8px",
-    marginBottom: "10px",
+    gap: "10px",
+    marginBottom: "12px",
+    flexWrap: "wrap",
   },
 
-  flexButton: {
+  flexButton: (darkMode) => ({
     flex: 1,
-  },
+    background: darkMode ? COLORS.darkCard : COLORS.primary,
+    color: COLORS.darkText,
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.primary}`,
+    borderRadius: "12px",
+    padding: "10px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  }),
 
   groupsContainer: {
-    marginTop: "10px",
-    color: "#222",
+    marginTop: "15px",
   },
 
-  groupItem: (isSelected) => ({
-    padding: "8px",
+  groupItem: (selected, darkMode) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 12px",
+    borderRadius: "12px",
+    marginTop: "6px",
     cursor: "pointer",
-    borderRadius: "8px",
-    background: isSelected ? "#e3f2fd" : "transparent",
-    color: "#222",
+    transition: "all 0.2s ease",
+    background: selected
+      ? COLORS.primary
+      : darkMode
+        ? COLORS.darkSurface
+        : COLORS.lightSurface,
+    color: selected
+      ? COLORS.darkText
+      : darkMode
+        ? COLORS.darkText
+        : COLORS.lightText,
+    border: selected
+      ? `1px solid ${COLORS.primary}`
+      : darkMode
+        ? `1px solid ${COLORS.darkBorder}`
+        : `1px solid ${COLORS.lightBorder}`,
   }),
 
   audio: {
-    width: "220px",
+    width: "100%",
+    minWidth: "180px",
+    height: "40px",
+    display: "block",
+  },  
+  senderName: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginBottom: "3px",
+    paddingLeft: "4px",
   },
 
+  timestamp: (darkMode) => ({
+    fontSize: "11px",
+    color: darkMode ? COLORS.darkMuted : "#90aab8",
+    marginTop: "3px",
+    paddingRight: "4px",
+    paddingLeft: "4px",
+  }),
+
   imageMessage: {
-    maxWidth: "200px",
-    borderRadius: "10px",
+    maxWidth: "100%",
+    width: "220px",
+    borderRadius: "12px",
   },
 
   previewImage: {
-    width: "80px",
-    borderRadius: "8px",
+    width: "100%",
+    maxWidth: "120px",
+    borderRadius: "12px",
   },
 
-  recordButton: (isRecording) => ({
-    marginRight: "8px",
-    background: isRecording ? "#ff4d4f" : "#eeeeee",
-    color: isRecording ? "white" : "#222",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    padding: "6px 10px",
+  icon: (darkMode) => ({
+    color: darkMode ? COLORS.darkText : COLORS.primary,
+  }),
+
+  iconWhite: {
+    color: COLORS.darkText,
+  },
+
+  recordButton: (recording, darkMode) => ({
+    background: recording
+      ? COLORS.danger
+      : darkMode
+        ? COLORS.darkCard
+        : COLORS.lightAccentSoft,
+    color: recording
+      ? COLORS.darkText
+      : darkMode
+        ? COLORS.darkText
+        : COLORS.primary,
+    border: recording
+      ? `1px solid ${COLORS.danger}`
+      : darkMode
+        ? `1px solid ${COLORS.darkBorder}`
+        : `1px solid ${COLORS.lightBorder}`,
+    borderRadius: "12px",
+    padding: "8px 12px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  }),
+
+  previewActionButton: (darkMode) => ({
+    border: `1px solid ${COLORS.primary}`,
+    borderRadius: "10px",
+    padding: "8px 12px",
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    cursor: "pointer",
+    fontWeight: 600,
+  }),
+
+  previewCloseButton: (darkMode) => ({
+    border: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+    borderRadius: "10px",
+    padding: "8px 12px",
+    background: darkMode ? COLORS.darkCard : COLORS.lightAccentSoft,
+    color: darkMode ? COLORS.darkText : COLORS.primary,
     cursor: "pointer",
   }),
 };
-/* STYLES */
 
-// const Container = styled("div")(() => ({
-//   display: "flex",
-//   height: "calc(100vh - 64px)",
-//   background: "#0f0f0f",
-// }));
-
-// const Sidebar = styled("div")(() => ({
-//   width: "260px",
-//   borderRight: "1px solid #222",
-//   padding: "10px",
-// }));
-
-// const ChatArea = styled("div")(() => ({
-//   flex: 1,
-//   display: "flex",
-//   flexDirection: "column",
-// }));
-
-// const Header = styled("div")(() => ({
-//   height: "60px",
-//   padding: "0 15px",
-//   display: "flex",
-//   justifyContent: "space-between",
-//   alignItems: "center",
-//   borderBottom: "1px solid #222",
-//   color: "white",
-// }));
-
-// const ChatBody = styled("div")(() => ({
-//   flex: 1,
-//   overflowY: "auto",
-//   padding: "15px",
-//   background: "#121212",
-// }));
-
-// const Row = styled("div")(({ isMe }) => ({
-//   display: "flex",
-//   justifyContent: isMe
-//     ? "flex-end"
-//     : "flex-start",
-// }));
-
-// const Bubble = styled("div")(({ isMe }) => ({
-//   background: isMe
-//     ? "#0084ff"
-//     : "#2a2a2a",
-//   color: "white",
-//   padding: "10px",
-//   borderRadius: "16px",
-//   maxWidth: "60%",
-//   marginBottom: "8px",
-// }));
-
-// const Footer = styled("div")(() => ({
-//   display: "flex",
-//   padding: "10px",
-//   background: "#181818",
-// }));
-
-// const Input = styled("input")(() => ({
-//   flex: 1,
-//   borderRadius: "20px",
-//   padding: "10px",
-// }));
-
-// const SendBtn = styled("button")(() => ({
-//   marginLeft: "10px",
-//   background: "#0084ff",
-//   color: "white",
-// }));
-
-// const FileBtn = styled("button")(() => ({
-//   background: "transparent",
-//   color: "white",
-// }));
-
-// const PreviewBox = styled("div")(() => ({
-//   padding: "10px",
-//   background: "#222",
-//   color: "white",
-// }));
-
-// const Uploading = styled("div")(() => ({
-//   color: "white",
-// }));
-
-// const IncomingBox = styled("div")(() => ({
-//   color: "white",
-// }));
-
-// const Empty = styled("p")(() => ({
-//   color: "#aaa",
-// }));
-
-// const CallBtn = styled("button")(() => ({
-//   background: "#1f8f5f",
-//   color: "white",
-// }));
-const Container = styled("div")(() => ({
+const Container = styled("div")(({ darkMode }) => ({
   display: "flex",
   height: "calc(100vh - 64px)",
-  background: "#f5f5f5",
+  background: darkMode ? COLORS.darkBg : COLORS.lightBg,
+
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    height: "auto",
+    minHeight: "calc(100vh - 64px)",
+  },
 }));
 
-const Sidebar = styled("div")(() => ({
-  width: "260px",
-  borderRight: "1px solid #ddd",
-  padding: "10px",
-  background: "#ffffff",
+const Sidebar = styled("div")(({ darkMode }) => ({
+  width: "280px",
+  padding: "16px",
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  borderRight: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
+  boxShadow: darkMode
+    ? "2px 0 10px rgba(0,0,0,0.35)"
+    : "2px 0 10px rgba(0,119,182,0.08)",
+  overflowY: "auto",
+
+  "@media (max-width: 768px)": {
+    width: "100%",
+    maxHeight: "250px",
+    borderRight: "none",
+    borderBottom: darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+  },
 }));
 
-const ChatArea = styled("div")(() => ({
+const ChatArea = styled("div")(({ darkMode }) => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  background: "#fafafa",
+  background: darkMode ? COLORS.darkBg : COLORS.lightBg,
   height: "88vh",
+
+  "@media (max-width: 768px)": {
+    height: "calc(100vh - 314px)",
+  },
 }));
 
-const Header = styled("div")(() => ({
-  height: "60px",
-  padding: "0 15px",
+const Header = styled("div")(({ darkMode }) => ({
+  minHeight: "65px",
+  padding: "12px 20px",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  borderBottom: "1px solid #ddd",
-  background: "#ffffff",
-  color: "#222",
+  gap: "10px",
+  flexWrap: "wrap",
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  borderBottom: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
+
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    alignItems: "stretch",
+    textAlign: "center",
+  },
 }));
 
-const ChatBody = styled("div")(() => ({
+const ChatBody = styled("div")(({ darkMode }) => ({
   flex: 1,
   overflowY: "auto",
-  padding: "15px",
-  background: "#f3f4f6",
+  padding: "20px",
+  background: darkMode ? COLORS.darkBg : COLORS.lightBg,
 }));
 
 const Row = styled("div")(({ isMe }) => ({
   display: "flex",
   justifyContent: isMe ? "flex-end" : "flex-start",
+  marginBottom: "10px",
+  width: "100%",
 }));
 
-const Bubble = styled("div")(({ isMe }) => ({
-  background: isMe ? "#1976d2" : "#ffffff",
-  color: isMe ? "#ffffff" : "#222",
-  padding: "10px",
-  borderRadius: "16px",
-  maxWidth: "60%",
-  marginBottom: "8px",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+const Bubble = styled("div")(({ isMe, darkMode }) => ({
+  background: isMe
+    ? COLORS.primary
+    : darkMode
+      ? COLORS.darkCard
+      : COLORS.lightSurface,
+  color: isMe ? COLORS.darkText : darkMode ? COLORS.darkText : COLORS.lightText,
+  padding: "12px 16px",
+  borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+  maxWidth: "100%",
+  wordBreak: "break-word",
+  border: isMe
+    ? `1px solid ${COLORS.primary}`
+    : darkMode
+      ? `1px solid ${COLORS.darkBorder}`
+      : `1px solid ${COLORS.lightBorder}`,
+
+  "@media (max-width: 768px)": {
+    maxWidth: "100%",
+  },
 }));
 
-const Footer = styled("div")(() => ({
+const Footer = styled("div")(({ darkMode }) => ({
   display: "flex",
-  padding: "10px",
-  background: "#ffffff",
-  borderTop: "1px solid #ddd",
+  alignItems: "center",
+  gap: "10px",
+  padding: "14px",
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  borderTop: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
+
+  "@media (max-width: 768px)": {
+    flexWrap: "wrap",
+  },
 }));
 
-const Input = styled("input")(() => ({
+const Input = styled("input")(({ darkMode }) => ({
   flex: 1,
-  borderRadius: "20px",
-  padding: "10px 14px",
-  border: "1px solid #ccc",
+  minWidth: 0,
+  padding: "12px 16px",
+  borderRadius: "25px",
+  border: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
+  background: darkMode ? COLORS.darkCard : COLORS.lightBg,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
   outline: "none",
-  background: "#fff",
+
+  "&::placeholder": {
+    color: darkMode ? COLORS.darkMuted : COLORS.lightMuted,
+  },
+
+  "&:focus": {
+    borderColor: COLORS.primary,
+    boxShadow: `0 0 0 3px ${darkMode ? "rgba(0,119,182,0.22)" : "rgba(0,119,182,0.15)"}`,
+  },
+
+  "@media (max-width: 768px)": {
+    width: "100%",
+    order: 1,
+  },
 }));
 
 const SendBtn = styled("button")(() => ({
-  marginLeft: "10px",
-  background: "#1976d2",
-  color: "white",
-  border: "none",
-  borderRadius: "10px",
-  padding: "0 16px",
+  background: COLORS.primary,
+  color: COLORS.darkText,
+  border: `1px solid ${COLORS.primary}`,
+  borderRadius: "14px",
+  padding: "10px 18px",
+  fontWeight: "600",
   cursor: "pointer",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    background: COLORS.primaryHover,
+    borderColor: COLORS.primaryHover,
+    transform: "translateY(-1px)",
+  },
 }));
 
-const FileBtn = styled("button")(() => ({
-  background: "transparent",
-  color: "#333",
-  border: "none",
+const FileBtn = styled("button")(({ darkMode }) => ({
+  background: darkMode ? COLORS.darkCard : COLORS.lightAccentSoft,
+  color: darkMode ? COLORS.darkText : COLORS.primary,
+  border: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
+  borderRadius: "12px",
+  padding: "8px 12px",
   cursor: "pointer",
   fontSize: "18px",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    background: darkMode ? COLORS.darkHover : "#d8f3ff",
+    borderColor: COLORS.primary,
+  },
 }));
 
-const PreviewBox = styled("div")(() => ({
-  padding: "10px",
-  background: "#ffffff",
-  color: "#222",
-  borderTop: "1px solid #ddd",
+const PreviewBox = styled("div")(({ darkMode }) => ({
+  padding: "12px",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  borderTop: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
 }));
 
-const Uploading = styled("div")(() => ({
-  color: "#333",
-  padding: "6px 10px",
+const Uploading = styled("div")(({ darkMode }) => ({
+  padding: "8px 12px",
+  color: COLORS.primary,
+  background: darkMode ? COLORS.darkSurface : COLORS.lightSurface,
+  fontWeight: "600",
 }));
 
-const IncomingBox = styled("div")(() => ({
-  color: "#222",
-  background: "#fff3cd",
-  padding: "10px",
-  borderBottom: "1px solid #ffe69c",
+const IncomingBox = styled("div")(({ darkMode }) => ({
+  background: darkMode ? COLORS.darkCard : COLORS.lightAccentSoft,
+  color: darkMode ? COLORS.darkText : COLORS.lightText,
+  padding: "12px",
+  borderBottom: darkMode
+    ? `1px solid ${COLORS.darkBorder}`
+    : `1px solid ${COLORS.lightBorder}`,
 }));
 
-const Empty = styled("p")(() => ({
-  color: "#777",
+const Empty = styled("p")(({ darkMode }) => ({
+  color: darkMode ? COLORS.darkMuted : COLORS.lightMuted,
+  textAlign: "center",
+  marginTop: "40px",
 }));
 
-const CallBtn = styled("button")(() => ({
-  background: "#2e7d32",
-  color: "white",
-  border: "none",
-  borderRadius: "10px",
-  padding: "8px 14px",
+const CallBtn = styled("button")(({ darkMode }) => ({
+  background: darkMode ? COLORS.darkCard : "#005f91",
+  color: COLORS.darkText,
+  border: darkMode ? `1px solid ${COLORS.darkBorder}` : "none",
+  borderRadius: "12px",
+  padding: "10px 16px",
   cursor: "pointer",
+  transition: "all 0.2s ease",
+
+  "&:hover": {
+    background: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+
+  "@media (max-width: 768px)": {
+    width: "100%",
+  },
 }));
 
 const modalStyles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.4)",
+    background: "rgba(0,0,0,0.65)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
+    backdropFilter: "blur(3px)",
   },
 
   modal: {
-    width: "400px",
+    width: "90%",
+    maxWidth: "450px",
     maxHeight: "80vh",
     overflowY: "auto",
-    background: "#fff",
+    background: COLORS.darkSurface,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
     borderRadius: "16px",
     padding: "20px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
   },
 
   searchRow: {
@@ -931,17 +1269,20 @@ const modalStyles = {
     flex: 1,
     padding: "10px",
     borderRadius: "10px",
-    border: "1px solid #ccc",
+    background: COLORS.darkCard,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
     outline: "none",
   },
 
   searchButton: {
-    border: "none",
+    border: `1px solid ${COLORS.primary}`,
     borderRadius: "10px",
     padding: "10px 14px",
-    background: "#1976d2",
-    color: "white",
+    background: COLORS.primary,
+    color: COLORS.darkText,
     cursor: "pointer",
+    fontWeight: 600,
   },
 
   results: {
@@ -955,39 +1296,41 @@ const modalStyles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "12px",
-    border: "1px solid #eee",
+    border: `1px solid ${COLORS.darkBorder}`,
     borderRadius: "12px",
-    background: "#fafafa",
+    background: COLORS.darkCard,
   },
 
   userName: {
     fontWeight: 600,
-    color: "#222",
+    color: COLORS.darkText,
   },
 
   userEmail: {
     fontSize: "14px",
-    color: "#666",
+    color: COLORS.darkMuted,
   },
 
   addButton: {
-    background: "#2e7d32",
-    color: "white",
+    background: COLORS.success,
+    color: COLORS.darkText,
     border: "none",
     borderRadius: "8px",
     padding: "8px 12px",
     cursor: "pointer",
+    fontWeight: 600,
   },
 
   closeButton: {
     marginTop: "18px",
     width: "100%",
-    border: "none",
+    border: `1px solid ${COLORS.danger}`,
     borderRadius: "10px",
     padding: "10px",
-    background: "#e53935",
-    color: "white",
+    background: COLORS.danger,
+    color: COLORS.darkText,
     cursor: "pointer",
+    fontWeight: 600,
   },
 };
 
@@ -1003,7 +1346,7 @@ const groupStyles = {
 
   label: {
     fontWeight: 600,
-    color: "#222",
+    color: COLORS.darkText,
     marginBottom: "8px",
   },
 
@@ -1013,20 +1356,23 @@ const groupStyles = {
     alignItems: "center",
     padding: "12px",
     borderRadius: "12px",
-    border: selected ? "2px solid #1976d2" : "1px solid #ddd",
-    background: selected ? "#e3f2fd" : "#fafafa",
+    border: selected
+      ? `2px solid ${COLORS.primary}`
+      : `1px solid ${COLORS.darkBorder}`,
+    background: selected ? "rgba(0,119,182,0.18)" : COLORS.darkCard,
+    color: COLORS.darkText,
     cursor: "pointer",
     transition: "0.2s",
   }),
 
   memberName: {
     fontWeight: 600,
-    color: "#222",
+    color: COLORS.darkText,
   },
 
   memberEmail: {
     fontSize: "14px",
-    color: "#666",
+    color: COLORS.darkMuted,
   },
 
   actions: {
@@ -1036,22 +1382,22 @@ const groupStyles = {
 
   createButton: {
     flex: 1,
-    border: "none",
+    border: `1px solid ${COLORS.primary}`,
     borderRadius: "10px",
     padding: "12px",
-    background: "#1976d2",
-    color: "white",
+    background: COLORS.primary,
+    color: COLORS.darkText,
     cursor: "pointer",
     fontWeight: 600,
   },
 
   cancelButton: {
     flex: 1,
-    border: "none",
+    border: `1px solid ${COLORS.danger}`,
     borderRadius: "10px",
     padding: "12px",
-    background: "#e53935",
-    color: "white",
+    background: COLORS.danger,
+    color: COLORS.darkText,
     cursor: "pointer",
     fontWeight: 600,
   },

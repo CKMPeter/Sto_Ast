@@ -49,7 +49,7 @@ export const updateMainTaskService = async (getIdToken, taskId, updateData) => {
   return await response.json();
 };
 
-export const deleteMainTaskService = async (getIdToken, taskId) => {
+export const deleteMainTaskService = async (getIdToken, taskId, formattedDate, uid) => {
   const token = await getIdToken();
 
   const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}`, {
@@ -205,5 +205,67 @@ export const fetchGroupMembersService = async (getIdToken, groupId) => {
       Authorization: `Bearer ${token}`,
     },
   });
+  return await response.json();
+};
+
+export const addSubTaskTimeLogService = async (
+  getIdToken,
+  taskId,
+  subTaskId,
+  timeLogData,
+) => {
+  const token = await getIdToken();
+  const response = await fetch(
+    `${BACKEND_URL}/api/tasks/${taskId}/subtasks/${subTaskId}/log-time`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(timeLogData),
+    },
+  );
+  return await response.json();
+}
+
+export const updateScheduleService = async (getIdToken, title, formattedDate, startMinutes, userId) => {
+  const token = await getIdToken();
+  const response = await fetch(
+    `${BACKEND_URL}/api/schedules`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title,
+        date: formattedDate,
+        startMinutes,
+        duration: 60, // Default duration in minutes
+        userId,
+      }),
+    },
+  );
+  return await response.json();
+}
+
+export const deleteScheduleService = async (
+  getIdToken,
+  scheduleId,
+) => {
+  const token = await getIdToken();
+
+  const response = await fetch(
+    `${BACKEND_URL}/api/schedules/${scheduleId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
   return await response.json();
 };

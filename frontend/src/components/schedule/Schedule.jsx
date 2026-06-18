@@ -1,314 +1,258 @@
-import React, { useEffect, useState } from 'react'
-import Navbar from '../shared/Navbar';
-import SchedulePopUp from './SchedulePopUp';
-import { useScheduleRealtime } from '../../hooks/scheduleHook/useScheduleRealtime';
+import React, { useEffect, useState } from "react";
+import Navbar from "../shared/Navbar";
+import SchedulePopUp from "./SchedulePopUp";
+import { useScheduleRealtime } from "../../hooks/scheduleHook/useScheduleRealtime";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
-const styleSheet = {
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    padding: "1rem",
-    tableLayout: "fixed",
-  },
-  titleContainer: {
-    padding: "1rem 2rem 0rem",
-    display: "flex",
-    gap: "1rem",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: "2rem",
-    fontWeight: "bold",
-    color: "#333",
-    cursor: "pointer",
-    userSelect: "none",
-  },
-  th: {
-    border: "1px solid #ddd",
-    padding: "0.5rem",
-    textAlign: "center",
-    borderBottom: "transparent",
-    borderTop: "transparent",
-    color: "#555",
-    fontWeight: "bold",
-  },
-  dateContainer: {
-    border: "1px solid #ddd",
-    padding: "2rem",
-    textAlign: "center",
-    cursor: "pointer",
-  },
-  monthNavigate: {
-    fontSize: "1rem",
-    fontWeight: "bold",
-    color: "#00b4d8",
-    cursor: "pointer",
-    userSelect: "none",
-  },
+import {
+  MONTHS,
+  getDaysInMonth,
+  getStartOfMonth,
+  getNextMonth,
+  getPreviousMonth,
+  hasEventOnDay,
+  getEventCount,
+} from "../../services/scheduleService/scheduleService";
 
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1000,
-  },
-
-  modal: {
-    background: "white",
-    padding: "2rem",
-    borderRadius: "10px",
-    minWidth: "260px",
-    textAlign: "center",
-  },
-
-  selectRow: {
-    display: "flex",
-    gap: "1rem",
-    justifyContent: "center",
-    margin: "1rem 0",
-  },
-
-  select: {
-    fontSize: "1rem",
-    padding: "0.5rem",
-  },
-
-  yearInput: {
-    width: "90px",
-    padding: "0.5rem",
-    fontSize: "1rem",
-  },
-
-  buttonRow: {
-    display: "flex",
-    gap: "1rem",
-    justifyContent: "center",
-    marginTop: "1rem"
-  },
-
-  eventDot: {
-    position: "absolute",
-    bottom: "6px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    backgroundColor: "#db8d17",
-  },
-
-  eventCount: {
-    position: "absolute",
-    top: "4px",
-    right: "6px",
-    fontSize: "0.7rem",
-    backgroundColor: "#1976d2",
-    color: "white",
-    borderRadius: "10px",
-    padding: "2px 6px",
-  },
-}
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 
 export default function Schedule() {
+  const todayDate = new Date();
 
-  const todayDate = new Date()
+  const [month, setMonth] = useState(todayDate.getMonth());
+  const [year, setYear] = useState(todayDate.getFullYear());
 
-  const [month, setMonth] = useState(todayDate.getMonth())
-  const [year, setYear] = useState(todayDate.getFullYear())
+  const [showPicker, setShowPicker] = useState(false);
+  const [tempMonth, setTempMonth] = useState(month);
+  const [tempYear, setTempYear] = useState(year);
 
-  const [showPicker, setShowPicker] = useState(false)
-  const [tempMonth, setTempMonth] = useState(month)
-  const [tempYear, setTempYear] = useState(year)
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  //POP UPS Stats
-  const [showSchedule, setShowSchedule] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  //For icon notification
-  const  eventList  = useScheduleRealtime()
+  const { darkMode } = useDarkMode();
+  const eventList = useScheduleRealtime();
 
-  const today = todayDate.getDate()
+  const today = todayDate.getDate();
+  const selectedMonthName = MONTHS[month];
+  const startOfMonth = getStartOfMonth(month, year);
+  const daysInMonth = getDaysInMonth(month, year);
 
-  const months = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
-  ]
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
 
-  const selectedMonthName = months[month]
-
-  const startOfMonth = new Date(year, month, 1).getDay()
-
-  function getDaysInMonth(month, year) {
-    return new Date(year, month + 1, 0).getDate()
-  }
-
-  const daysInMonth = getDaysInMonth(month, year)
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   function nextMonth() {
-    if (month === 11) {
-      setMonth(0)
-      setYear(year + 1)
-    } else {
-      setMonth(month + 1)
-    }
+    const result = getNextMonth(month, year);
+    setMonth(result.month);
+    setYear(result.year);
   }
 
   function prevMonth() {
-    if (month === 0) {
-      setMonth(11)
-      setYear(year - 1)
-    } else {
-      setMonth(month - 1)
-    }
+    const result = getPreviousMonth(month, year);
+    setMonth(result.month);
+    setYear(result.year);
   }
 
   function dropDownMonthSelection() {
-    setTempMonth(month)
-    setTempYear(year)
-    setShowPicker(true)
+    setTempMonth(month);
+    setTempYear(year);
+    setShowPicker(true);
   }
 
-   /* OPEN POPUP WHEN DAY CLICKED */
   function openSchedule(day) {
-    const date = new Date(year, month, day)
-    setSelectedDate(date)
-    setShowSchedule(true)
+    const date = new Date(year, month, day);
+    setSelectedDate(date);
+    setShowSchedule(true);
   }
 
   useEffect(() => {
-    console.log("Days in month:", daysInMonth)
-  }, [month, year])
-
-  function hasEventOnDay(day) {
-    if (!eventList || !day) return false;
-
-    const cellDate = new Date(year, month, day)
-      .toISOString()
-      .split("T")[0];
-
-    return eventList.some(e => {
-      const eventDate = new Date(e.date)
-        .toISOString()
-        .split("T")[0];
-
-      return eventDate === cellDate;
-    });
-  }
-
-  function getEventCount(day) {
-    if (!eventList || !day) return 0;
-
-    const cellDate = new Date(year, month, day)
-      .toISOString()
-      .split("T")[0];
-
-    return eventList.filter(e => {
-      const eventDate = new Date(e.date)
-        .toISOString()
-        .split("T")[0];
-
-      return eventDate === cellDate;
-    }).length;
-  }
+    console.log("Days in month:", daysInMonth);
+  }, [month, year, daysInMonth]);
 
   return (
-    <div>
+    <div
+      style={{
+        ...styleSheet.page,
+        ...(darkMode ? styleSheet.pageDark : styleSheet.pageLight),
+      }}
+    >
       <Navbar />
-      <img src="./Sto_Ast_Logo_Title.png" alt="" style={{height: '50%', opacity: '30%', position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)'}}/>
-      <div style={styleSheet.titleContainer}>
 
-        <label style={styleSheet.monthNavigate} onClick={prevMonth}>
-          &lt; Back
-        </label>
+      <img
+        src="./Sto_Ast_Logo_Title.png"
+        alt=""
+        style={{
+          ...styleSheet.bgLogo,
+          ...(isMobile ? styleSheet.bgLogoMobile : {}),
+        }}
+      />
+
+      <div
+        style={{
+          ...styleSheet.titleContainer,
+          ...(isMobile ? styleSheet.titleContainerMobile : {}),
+        }}
+      >
+        <button
+          style={{
+            ...styleSheet.monthNavigate,
+            ...(darkMode
+              ? styleSheet.monthNavigateDark
+              : styleSheet.monthNavigateLight),
+          }}
+          onClick={prevMonth}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkHover
+              : "#d8f3ff";
+            e.currentTarget.style.borderColor = COLORS.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkCard
+              : COLORS.lightSurface;
+            e.currentTarget.style.borderColor = darkMode
+              ? COLORS.darkBorder
+              : COLORS.lightBorder;
+          }}
+        >
+          <FaArrowLeft />
+        </button>
 
         <h2
-          style={styleSheet.title}
+          style={{
+            ...styleSheet.title,
+            ...(darkMode ? styleSheet.titleDark : styleSheet.titleLight),
+            ...(isMobile ? styleSheet.titleMobile : {}),
+          }}
           onClick={dropDownMonthSelection}
         >
           {selectedMonthName} {year}
         </h2>
 
-        <label style={styleSheet.monthNavigate} onClick={nextMonth}>
-          Next &gt;
-        </label>
+        <button
+          style={{
+            ...styleSheet.monthNavigate,
+            ...(darkMode
+              ? styleSheet.monthNavigateDark
+              : styleSheet.monthNavigateLight),
+          }}
+          onClick={nextMonth}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkHover
+              : "#d8f3ff";
+            e.currentTarget.style.borderColor = COLORS.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = darkMode
+              ? COLORS.darkCard
+              : COLORS.lightSurface;
+            e.currentTarget.style.borderColor = darkMode
+              ? COLORS.darkBorder
+              : COLORS.lightBorder;
+          }}
+        >
+          <FaArrowRight />
+        </button>
       </div>
-      <div style={styleSheet.table}>
-        <table style={styleSheet.table}>
+
+      <div style={styleSheet.tableWrapper}>
+        <table
+          style={{
+            ...styleSheet.table,
+            ...(darkMode ? styleSheet.tableDark : styleSheet.tableLight),
+          }}
+        >
           <thead>
             <tr>
-              <td style={styleSheet.th}>Sunday</td>
-              <td style={styleSheet.th}>Monday</td>
-              <td style={styleSheet.th}>Tuesday</td>
-              <td style={styleSheet.th}>Wednesday</td>
-              <td style={styleSheet.th}>Thursday</td>
-              <td style={styleSheet.th}>Friday</td>
-              <td style={styleSheet.th}>Saturday</td>
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                <td
+                  key={day}
+                  style={{
+                    ...styleSheet.th,
+                    ...(isMobile ? styleSheet.thMobile : {}),
+                    color: darkMode ? "#b8dce8" : "#6c757d",
+                  }}
+                >
+                  {isMobile ? day : getFullDayName(day)}
+                </td>
+              ))}
             </tr>
           </thead>
+
           <tbody>
             {Array.from({ length: 6 }, (_, i) => (
               <tr key={i}>
                 {Array.from({ length: 7 }, (_, j) => {
-                  const day = i * 7 + j - startOfMonth + 1
+                  const day = i * 7 + j - startOfMonth + 1;
+                  const isCurrentMonth = day > 0 && day <= daysInMonth;
 
-                  const isCurrentMonth =
-                    day > 0 && day <= daysInMonth
+                  const hasEvent =
+                    isCurrentMonth &&
+                    hasEventOnDay(eventList, day, month, year);
+
+                  const eventCount = isCurrentMonth
+                    ? getEventCount(eventList, day, month, year)
+                    : 0;
 
                   const isToday =
                     day === today &&
                     month === todayDate.getMonth() &&
-                    year === todayDate.getFullYear()
+                    year === todayDate.getFullYear();
 
                   return (
                     <td
                       key={j}
                       style={{
                         ...styleSheet.dateContainer,
-                        backgroundColor: isToday
-                          ? "#00b4d8"
-                          : hasEventOnDay(day)
-                          ? "#e3f2fd" //  light highlight if has event
-                          : "transparent",
-                        color: isToday ? "white" : "black",
-                        position: "relative"
+                        ...(isMobile ? styleSheet.dateContainerMobile : {}),
+                        ...(darkMode
+                          ? styleSheet.dateContainerDark
+                          : styleSheet.dateContainerLight),
+
+                        ...(isToday
+                          ? darkMode
+                            ? styleSheet.dateContainerTodayDark
+                            : styleSheet.dateContainerTodayLight
+                          : {}),
+
+                        ...(hasEvent && !isToday
+                          ? {
+                              background: darkMode
+                                ? "rgba(0,119,182,0.12)"
+                                : "#e3f2fd",
+                            }
+                          : {}),
+
+                        opacity: isCurrentMonth ? 1 : 0.25,
+                        cursor: isCurrentMonth ? "pointer" : "default",
                       }}
-                      onClick={() => {
-                        if (isCurrentMonth) openSchedule(day)
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isToday)
-                          e.target.style.backgroundColor = "#f0f0f0"
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor =
-                          isToday
-                            ? "#00b4d8"
-                            : hasEventOnDay(day)
-                            ? "#e3f2fd"
-                            : "transparent"
-                      }}
+                      onClick={() => isCurrentMonth && openSchedule(day)}
                     >
                       {isCurrentMonth ? day : ""}
 
-                      {/* ✅ DOT indicator */}
-                      {isCurrentMonth && hasEventOnDay(day) && (
-                        <div style={styleSheet.eventDot}></div>
-                      )}
+                      {hasEvent && <div style={styleSheet.eventDot}></div>}
 
-                      {/* ✅ COUNT badge (optional) */}
-                      {isCurrentMonth && getEventCount(day) > 1 && (
-                        <div style={styleSheet.eventCount}>
-                          {getEventCount(day)}
+                      {eventCount > 1 && (
+                        <div
+                          style={{
+                            ...styleSheet.eventCount,
+                            ...(isMobile ? styleSheet.eventCountMobile : {}),
+                          }}
+                        >
+                          {eventCount}
                         </div>
                       )}
                     </td>
-                  )
+                  );
                 })}
               </tr>
             ))}
@@ -317,52 +261,70 @@ export default function Schedule() {
       </div>
 
       {showPicker && (
-        <div
-          style={styleSheet.overlay}
-          onClick={() => setShowPicker(false)}
-        >
+        <div style={styleSheet.overlay} onClick={() => setShowPicker(false)}>
           <div
-            style={styleSheet.modal}
+            style={{
+              ...styleSheet.modal,
+              ...(isMobile ? styleSheet.modalMobile : {}),
+              ...(darkMode ? styleSheet.modalDark : styleSheet.modalLight),
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3>Select Month & Year</h3>
-            <div style={styleSheet.selectRow}>
+
+            <div
+              style={{
+                ...styleSheet.selectRow,
+                ...(isMobile ? styleSheet.selectRowMobile : {}),
+              }}
+            >
               <select
                 value={tempMonth}
-                onChange={(e) =>
-                  setTempMonth(Number(e.target.value))
-                }
-                style={styleSheet.select}
+                onChange={(e) => setTempMonth(Number(e.target.value))}
+                style={{
+                  ...styleSheet.select,
+                  ...(darkMode ? styleSheet.inputDark : styleSheet.inputLight),
+                }}
               >
-                {months.map((m, i) => (
+                {MONTHS.map((m, i) => (
                   <option key={i} value={i}>
                     {m}
                   </option>
                 ))}
               </select>
+
               <input
                 type="number"
                 min="1970"
                 max="2100"
                 value={tempYear}
-                onChange={(e) =>
-                  setTempYear(Number(e.target.value))
-                }
-                style={styleSheet.yearInput}
+                onChange={(e) => setTempYear(Number(e.target.value))}
+                style={{
+                  ...styleSheet.yearInput,
+                  ...(darkMode ? styleSheet.inputDark : styleSheet.inputLight),
+                }}
               />
             </div>
+
             <div style={styleSheet.buttonRow}>
               <button
+                style={styleSheet.primaryButton}
                 onClick={() => {
-                  setMonth(tempMonth)
-                  setYear(tempYear)
-                  setShowPicker(false)
+                  setMonth(tempMonth);
+                  setYear(tempYear);
+                  setShowPicker(false);
                 }}
               >
                 Apply
               </button>
 
               <button
+                style={{
+                  ...styleSheet.secondaryButton,
+                  ...(darkMode
+                    ? styleSheet.secondaryButtonDark
+                    : styleSheet.secondaryButtonLight),
+                }}
                 onClick={() => setShowPicker(false)}
               >
                 Cancel
@@ -372,7 +334,6 @@ export default function Schedule() {
         </div>
       )}
 
-       {/* SCHEDULE POPUP */}
       {showSchedule && (
         <SchedulePopUp
           date={selectedDate}
@@ -380,5 +341,380 @@ export default function Schedule() {
         />
       )}
     </div>
-  )
+  );
 }
+
+function getFullDayName(shortName) {
+  const names = {
+    Sun: "Sunday",
+    Mon: "Monday",
+    Tue: "Tuesday",
+    Wed: "Wednesday",
+    Thu: "Thursday",
+    Fri: "Friday",
+    Sat: "Saturday",
+  };
+
+  return names[shortName];
+}
+
+const COLORS = {
+  lightBg: "#f8fdff",
+  lightSurface: "#ffffff",
+  lightAccent: "#e6f7fc",
+  lightBorder: "#caf0f8",
+  lightText: "#023047",
+  lightMuted: "#6c757d",
+
+  darkBg: "#121212",
+  darkSurface: "#1a1a1a",
+  darkCard: "#202020",
+  darkHover: "#2a2a2a",
+  darkBorder: "#2d2d2d",
+  darkText: "#ffffff",
+  darkMuted: "#b8dce8",
+
+  primary: "#0077b6",
+  primaryHover: "#0096c7",
+  danger: "#d62828",
+};
+
+const styleSheet = {
+  page: {
+    height: "100vh",
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  pageLight: {
+    background: COLORS.lightBg,
+  },
+
+  pageDark: {
+    background: COLORS.darkBg,
+  },
+
+  bgLogo: {
+    display: "none",
+  },
+
+  bgLogoMobile: {
+    height: "22%",
+    top: "45%",
+    opacity: "18%",
+  },
+
+  titleContainer: {
+    height: "80px",
+    padding: "0 1rem",
+    display: "flex",
+    gap: "1rem",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+
+  titleContainerMobile: {
+    height: "70px",
+    padding: "0 0.75rem",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  title: {
+    fontSize: "1.8rem",
+    fontWeight: "700",
+    cursor: "pointer",
+    userSelect: "none",
+    margin: 0,
+  },
+
+  titleLight: {
+    color: COLORS.lightText,
+  },
+
+  titleDark: {
+    color: COLORS.darkText,
+  },
+
+  titleMobile: {
+    fontSize: "1.15rem",
+  },
+
+  monthNavigate: {
+    fontSize: "1rem",
+    fontWeight: "bold",
+    cursor: "pointer",
+    userSelect: "none",
+    borderRadius: "10px",
+    padding: "8px 12px",
+    transition: "all 0.2s ease",
+  },
+
+  monthNavigateLight: {
+    color: COLORS.primary,
+    border: `1px solid ${COLORS.lightBorder}`,
+    background: COLORS.lightSurface,
+  },
+
+  monthNavigateDark: {
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+    background: COLORS.darkCard,
+  },
+
+  tableWrapper: {
+    width: "100%",
+    height: "calc(100vh - 152px)",
+    padding: "0 0.75rem 0.75rem",
+    position: "relative",
+    zIndex: 1,
+    overflow: "hidden",
+  },
+
+  table: {
+    width: "100%",
+    height: "100%",
+    borderCollapse: "collapse",
+    tableLayout: "fixed",
+  },
+
+  tableLight: {
+    background: "rgba(255,255,255,0.85)",
+  },
+
+  tableDark: {
+    background: COLORS.darkSurface,
+  },
+
+  th: {
+    height: "32px",
+    textAlign: "center",
+    fontWeight: "600",
+    fontSize: "0.8rem",
+    border: "none",
+  },
+
+  thLight: {
+    color: COLORS.lightMuted,
+  },
+
+  thDark: {
+    color: COLORS.darkMuted,
+  },
+
+  thMobile: {
+    height: "24px",
+    fontSize: "0.7rem",
+    padding: 0,
+  },
+
+  dateContainer: {
+    padding: "0.25rem",
+    textAlign: "center",
+    position: "relative",
+    fontWeight: "600",
+    transition: "all 0.2s ease",
+    verticalAlign: "top",
+    height: "calc((100vh - 190px) / 6)",
+  },
+
+  dateContainerLight: {
+    background: COLORS.lightSurface,
+    color: COLORS.lightText,
+    border: `1px solid ${COLORS.lightAccent}`,
+  },
+
+  dateContainerDark: {
+    background: COLORS.darkSurface,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+  },
+
+  dateContainerTodayLight: {
+    background: "#e6f7fc",
+    color: COLORS.primary,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerTodayDark: {
+    background: "rgba(0,119,182,0.18)",
+    color: COLORS.darkText,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerSelectedLight: {
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerSelectedDark: {
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    border: `2px solid ${COLORS.primary}`,
+  },
+
+  dateContainerMobile: {
+    height: "calc((100vh - 160px) / 6)",
+    padding: "0.25rem",
+    fontSize: "0.8rem",
+  },
+
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    backdropFilter: "blur(3px)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 5000,
+    padding: "1rem",
+  },
+
+  modal: {
+    padding: "2rem",
+    borderRadius: "14px",
+    minWidth: "260px",
+    textAlign: "center",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+  },
+
+  modalLight: {
+    background: COLORS.lightSurface,
+    color: COLORS.lightText,
+    border: `1px solid ${COLORS.lightBorder}`,
+  },
+
+  modalDark: {
+    background: COLORS.darkSurface,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+  },
+
+  modalMobile: {
+    width: "100%",
+    maxWidth: "360px",
+    padding: "1.25rem",
+  },
+
+  selectRow: {
+    display: "flex",
+    gap: "1rem",
+    justifyContent: "center",
+    margin: "1rem 0",
+  },
+
+  selectRowMobile: {
+    flexDirection: "column",
+  },
+
+  select: {
+    fontSize: "1rem",
+    padding: "0.5rem",
+    borderRadius: "10px",
+    outline: "none",
+  },
+
+  yearInput: {
+    width: "90px",
+    padding: "0.5rem",
+    fontSize: "1rem",
+    borderRadius: "10px",
+    outline: "none",
+  },
+
+  inputLight: {
+    background: COLORS.lightSurface,
+    color: COLORS.lightText,
+    border: `1px solid ${COLORS.lightBorder}`,
+  },
+
+  inputDark: {
+    background: COLORS.darkCard,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+  },
+
+  buttonRow: {
+    display: "flex",
+    gap: "1rem",
+    justifyContent: "center",
+    marginTop: "1rem",
+  },
+
+  primaryButton: {
+    background: COLORS.primary,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.primary}`,
+    borderRadius: "10px",
+    padding: "10px 16px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+
+  primaryButtonHover: {
+    background: COLORS.primaryHover,
+    borderColor: COLORS.primaryHover,
+  },
+
+  secondaryButton: {
+    borderRadius: "10px",
+    padding: "10px 16px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+
+  secondaryButtonLight: {
+    background: COLORS.lightAccent,
+    color: COLORS.primary,
+    border: `1px solid ${COLORS.lightBorder}`,
+  },
+
+  secondaryButtonDark: {
+    background: COLORS.darkCard,
+    color: COLORS.darkText,
+    border: `1px solid ${COLORS.darkBorder}`,
+  },
+
+  secondaryButtonHoverLight: {
+    background: "#d8f3ff",
+    borderColor: COLORS.primary,
+  },
+
+  secondaryButtonHoverDark: {
+    background: COLORS.darkHover,
+    borderColor: COLORS.primary,
+  },
+
+  eventDot: {
+    position: "absolute",
+    bottom: "8px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "5px",
+    height: "5px",
+    borderRadius: "50%",
+    backgroundColor: COLORS.primary,
+  },
+
+  eventCount: {
+    position: "absolute",
+    bottom: "5px",
+    right: "6px",
+    fontSize: "0.6rem",
+    backgroundColor: COLORS.primary,
+    color: COLORS.darkText,
+    borderRadius: "999px",
+    padding: "1px 5px",
+  },
+
+  eventCountMobile: {
+    fontSize: "0.6rem",
+    padding: "1px 5px",
+  },
+};

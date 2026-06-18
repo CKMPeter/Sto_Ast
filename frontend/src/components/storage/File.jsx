@@ -12,305 +12,221 @@ import {
   faTrash,
   faEdit,
   faSave,
+  faDownload,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Modal, Button, Form, Row, Col } from "react-bootstrap";
-//import { ref, remove, update } from "../../../src/firebase";
-//import { getDatabase } from "firebase/database";
+import { Modal, Button, Form, Row, Col, Badge, Spinner } from "react-bootstrap";
+
 import { useAuth } from "../../contexts/AuthContext";
 import { FileClass } from "../../classes/storageClass/FileClass";
-//darkmode
-import { useDarkMode } from "../../hooks/useDarkMode"; // Adjust path if needed
 
-export default function File({ file, onChange }) {
+import {
+  sanitizeFileName,
+  fetchAIWithTaskService,
+  deleteFileService,
+  updateFileService,
+  runAIFileService,
+} from "../../services/storageService/fileActionService";
+
+export default function File({ file, onChange, darkMode }) {
   const { currentUser, getIdToken } = useAuth();
+
   const fileObj = useMemo(
     () => new FileClass({ ...file, user: currentUser }),
-    [file, currentUser]
+    [file, currentUser],
   );
 
   const [showMainModal, setShowMainModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [fileContent, setFileContent] = useState(fileObj.decodeContent());
+  const [fileContent, setFileContent] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [updatedFileName, setUpdatedFileName] = useState(fileObj.name);
-  //darkmode context
-  const { darkMode } = useDarkMode(); // Use dark mode context
-
-  // Rename/Preview states
   const [aiReName, setAiReName] = useState("");
   const [reName, setReName] = useState("");
   const [isFetchingAIRename, setIsFetchingAIRename] = useState(false);
-  const isContentEdited = useRef(false);
-
-
-  //DateTime State for Date Linked Files
   const [linkedDates, setLinkedDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
 
-  // Fetch AI rename/preview result based on task and file content
+  const isContentEdited = useRef(false);
+
+  const modalClass = darkMode ? "bg-dark text-light" : "bg-white text-dark";
+  const inputClass = darkMode ? "bg-dark text-light border-light" : "";
+  const neutralButton = darkMode ? "outline-light" : "outline-dark";
+  const mainButton = darkMode ? "light" : "dark";
+
   const fetchAIWithTask = useCallback(
-    async (base64Input, task, isImage = true) => {
-      const token = await getIdToken();
-      if (!token) {
-        throw new Error("User not authenticated");
-      }
-
-      const api = task === "rename" ? "/api/aiRename" : "/api/aiPreview";
+    async (input, task, isImage = true) => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_BACKEND_URL + api}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              input: base64Input,
-              isImage,
-              mimeType: isImage ? "image/jpeg" : "text/plain",
-              fileName: fileObj.name,
-            }),
-          }
-        );
-
-        const data = await response.json();
-        return data.result || null;
+        return await fetchAIWithTaskService({
+          getIdToken,
+          fileObj,
+          input,
+          task,
+          isImage,
+        });
       } catch (error) {
-        console.error("Error fetching AI response:", error);
+        console.error("AI task error:", error);
         return null;
       }
     },
-    [getIdToken, fileObj.name]
+    [getIdToken, fileObj],
   );
 
-  // Fetch AI rename when editing starts
   useEffect(() => {
     if (!isEditing) return;
 
-    const fetchAIRename = async () => {
+    async function fetchAIRename() {
       setIsFetchingAIRename(true);
 
       try {
-        const base64Content = fileObj.isImage
+        const content = fileObj.isImage
           ? fileObj.content
           : fileObj.decodeContent();
 
-        // Fetch AI rename
-        const aiRenameResult = await fetchAIWithTask(
-          base64Content,
-          "rename",
-          fileObj.isImage
-        );
-        if (aiRenameResult && typeof aiRenameResult === "string") {
-          let newName = aiRenameResult.trim();
-          newName = newName.replace(/[^a-zA-Z0-9_.-]/g, "_"); // Sanitize name
-          setAiReName(newName);
+        const result = await fetchAIWithTask(content, "rename", fileObj.isImage);
+
+        if (result && typeof result === "string") {
+          setAiReName(sanitizeFileName(result.trim()));
         }
       } catch (error) {
-        console.error("AI fetch failed:", error.message);
+        console.error("AI rename failed:", error);
       } finally {
         setIsFetchingAIRename(false);
       }
-    };
+    }
 
     fetchAIRename();
   }, [isEditing, fileObj, fetchAIWithTask]);
 
-  const handleFileClick = () => {
+  function openMainModal() {
     setFileContent(fileObj.isText ? fileObj.decodeContent() : fileObj.content);
     setUpdatedFileName(fileObj.name);
     setShowMainModal(true);
-  };
+  }
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this file?")) {
-      const token = await getIdToken();
-      if (!token) {
-        alert("User not authenticated");
-        return;
-      }
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/${fileObj.id}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              filePath: fileObj.path,
-            }),
-          }
-        );
-        if (response.ok) {
-          alert("File deleted successfully.");
-          setShowMainModal(false);
-          onChange();
-        } else {
-          alert("Error deleting file.");
-        }
-      } catch (error) {
-        console.error("Error deleting file:", error);
-        alert("Error deleting file.");
-      }
-    }
-  };
+  function closeMainModal() {
+    setShowMainModal(false);
+    setIsEditing(false);
+    setAiResponse("");
+    setReName("");
+    setAiReName("");
+    setSelectedDate("");
+    setIsFetchingAIRename(false);
+    isContentEdited.current = false;
+  }
 
-  const handleUpdate = () => setIsEditing(true);
+  function handleRename(useAI = false) {
+    const selectedName = useAI ? aiReName : reName;
 
-  // Handle AI rename
-  async function handleRename(ai = false) {
-    if (!aiReName && !reName) {
+    if (!selectedName.trim()) {
       alert("Please provide a name using AI rename or custom rename.");
       return;
     }
-    const name = ai ? aiReName : reName + fileObj.fileExtension;
-    setUpdatedFileName(name);
+
+    const finalName = useAI
+      ? selectedName
+      : `${selectedName}${fileObj.fileExtension}`;
+
+    setUpdatedFileName(finalName);
   }
 
-  const handleSaveUpdate = async () => {
-    if (!updatedFileName.trim()) return alert("File name cannot be empty.");
-    if (!fileContent.trim()) return alert("File content cannot be empty.");
+  async function handleDelete() {
+    if (!window.confirm("Are you sure you want to delete this file?")) return;
 
-    const token = await getIdToken();
-    if (!token) {
-      alert("User not authenticated");
+    try {
+      await deleteFileService({ getIdToken, fileObj });
+      alert("File deleted successfully.");
+      setShowMainModal(false);
+      onChange();
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert(error.message || "Error deleting file.");
+    }
+  }
+
+  async function handleSaveUpdate() {
+    if (!updatedFileName.trim()) {
+      alert("File name cannot be empty.");
+      return;
+    }
+
+    if (fileObj.isText && !fileContent.trim()) {
+      alert("File content cannot be empty.");
       return;
     }
 
     try {
-      let aiPreviewResult = fileObj.preview;
+      let preview = fileObj.preview;
 
       if (isContentEdited.current) {
+        const previewInput = fileObj.isImage
+          ? fileObj.content
+          : btoa(fileContent);
+
         const newPreview = await fetchAIWithTask(
-          fileObj.content,
+          previewInput,
           "preview",
-          fileObj.isImage
+          fileObj.isImage,
         );
+
         if (newPreview && typeof newPreview === "string") {
-          aiPreviewResult = newPreview;
+          preview = newPreview;
         }
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/files/${fileObj.id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: updatedFileName.trim(),
-            content: fileObj.isImage ? fileContent : btoa(fileContent),
-            preview: aiPreviewResult,
-            filePath: fileObj.path,
-            linkedDates, // include linked dates in update
-          }),
-        }
-      );
+      await updateFileService({
+        getIdToken,
+        fileObj,
+        updatedFileName,
+        fileContent,
+        preview,
+        linkedDates,
+      });
 
-      if (response.ok) {
-        setIsEditing(false);
-        setShowMainModal(false);
-        onChange();
-      } else {
-        alert("Error updating file.");
-      }
+      setIsEditing(false);
+      setShowMainModal(false);
+      onChange();
     } catch (error) {
-      console.error("Error updating file:", error);
-      alert("Error updating file.");
+      console.error("Update error:", error);
+      alert(error.message || "Error updating file.");
     }
-  };
+  }
 
-  const handleCancelEdit = () => {
+  function handleCancelEdit() {
     setIsEditing(false);
-
-    // reset everything back to original
     setUpdatedFileName(fileObj.name);
     setFileContent(fileObj.decodeContent());
     setAiReName("");
     setReName("");
-    setLinkedDates([]); // optional: or reload from backend if you support it
+    setLinkedDates([]);
     isContentEdited.current = false;
-  };
-  const fetchAIResponse = async (task, isImage = false) => {
-    const token = await getIdToken();
-    if (!token) {
-      throw new Error("User not authenticated");
-    }
+  }
 
-    let result = "Processing...";
+  async function handleRunAI(task, isImage = false, endpoint = "/api/ai") {
     setLoading(true);
+
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/ai`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            input: isImage ? fileObj.content : fileObj.decodeContent(),
-            task,
-            isImage,
-            mimeType: fileObj.mimeType,
-          }),
-        }
-      );
-      const data = await response.json();
-      result = data.result || "No result returned.";
+      const result = await runAIFileService({
+        getIdToken,
+        fileObj,
+        task,
+        isImage,
+        endpoint,
+      });
+
+      setAiResponse(result);
     } catch (error) {
-      console.error("Error fetching AI response:", error);
-      result = "Error processing content with AI.";
+      console.error("AI error:", error);
+      setAiResponse("Error processing content with AI.");
+    } finally {
+      setLoading(false);
     }
-    setAiResponse(result);
-    setLoading(false);
-  };
+  }
 
-  const fetchAIDesrcibe = async (task, isImage = true) => {
-    const token = await getIdToken();
-    if (!token) {
-      throw new Error("User not authenticated");
-    }
-
-    let result = "Processing...";
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_APP_BACKEND_URL}/api/describe-image`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            input: isImage ? fileObj.content : fileObj.decodeContent(),
-            task,
-            isImage,
-            mimeType: fileObj.mimeType,
-          }),
-        }
-      );
-      const data = await response.json();
-      result = data.result || "No result returned.";
-    } catch (error) {
-      console.error("Error fetching AI response:", error);
-      result = "Error processing content with AI.";
-    }
-    setAiResponse(result);
-    setLoading(false);
-  };
-
-  //for date linked files
-  const handleAddDate = () => {
+  function handleAddDate() {
     if (!selectedDate) return;
 
     if (!linkedDates.includes(selectedDate)) {
@@ -318,73 +234,57 @@ export default function File({ file, onChange }) {
     }
 
     setSelectedDate("");
-  };
+  }
 
-  const handleRemoveDate = (date) => {
-    setLinkedDates((prev) => prev.filter((d) => d !== date));
-  };
+  function handleRemoveDate(date) {
+    setLinkedDates((prev) => prev.filter((item) => item !== date));
+  }
 
-  const closeModal = () => {
-    setShowMainModal(false);
-    setUpdatedFileName("");
-    setFileContent("");
-    setAiResponse("");
-    setReName("");
-    setAiReName("");
-    setIsFetchingAIRename(false);
-    setIsEditing(false);
-  };
-
-  const handleDownload = () => {
+  function handleDownload() {
     const element = document.createElement("a");
     const originalName = fileObj.name;
 
-    // Extract file type from right to left until "_"
     const parts = originalName.split("_");
-    const inferredExtension = parts.length > 1 ? parts.at(-1) : "txt"; // fallback to txt
-
+    const inferredExtension = parts.length > 1 ? parts.at(-1) : "txt";
     const baseName =
       originalName.substring(0, originalName.lastIndexOf("_")) || "download";
-    const fileName = `${baseName}.${inferredExtension}`;
+
+    element.download = `${baseName}.${inferredExtension}`;
 
     if (fileObj.isText) {
-      const fileBlob = new Blob([fileContent], {
+      const blob = new Blob([fileContent], {
         type: fileObj.mimeType || "text/plain",
       });
-      element.href = URL.createObjectURL(fileBlob);
+
+      element.href = URL.createObjectURL(blob);
     } else if (fileObj.isImage) {
       element.href = `data:${fileObj.mimeType};base64,${fileObj.content}`;
     } else {
-      const fileBlob = new Blob([fileObj.content], {
+      const blob = new Blob([fileObj.content], {
         type: fileObj.mimeType || "application/octet-stream",
       });
-      element.href = URL.createObjectURL(fileBlob);
+
+      element.href = URL.createObjectURL(blob);
     }
 
-    element.download = fileName;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-  };
+  }
 
   return (
     <>
       <Button
-        onClick={handleFileClick}
-        variant={darkMode ? "outline-light" : "outline-dark"}
-        className={`text-truncate w-100 invert-hover`}
-        style={{ cursor: "pointer", fontWeight: "bold" }}
+        onClick={openMainModal}
         onContextMenu={(e) => {
-          // Right-click to open preview modal
           e.preventDefault();
           setShowPreviewModal(true);
         }}
+        variant={neutralButton}
+        className="text-truncate w-100 invert-hover"
+        style={styleSheet.fileButton}
       >
-        <FontAwesomeIcon
-          icon={faFile}
-          className="me-2 invert-hover"
-          style={{ color: "inherit" }}
-        />
+        <FontAwesomeIcon icon={faFile} className="me-2" />
         <span
           dangerouslySetInnerHTML={{
             __html:
@@ -395,284 +295,277 @@ export default function File({ file, onChange }) {
         />
       </Button>
 
-      {/* Modal for file details */}
-      <Modal show={showMainModal}>
-        <Modal.Header>
-          <Modal.Title>
-            {isEditing ? (
-              <>
-                <Form.Label className="form-label">
-                  Current File name:{" "}
-                  <span
-                    style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
-                  >
-                    {updatedFileName}
-                  </span>
-                </Form.Label>
-
-                {/* Rename Options */}
-                <Row>
-                  <Col md="auto">
-                    {/* AI Rename Option */}
-                    <Form.Group>
-                      <Form.Label>AI Rename</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={aiReName}
-                        placeholder="AI will suggest a name..."
-                        readOnly
-                      />
-                      <Button
-                        variant="outline-primary"
-                        onClick={() => handleRename(true)}
-                        disabled={!file || isFetchingAIRename}
-                        style={{ marginTop: "10px" }}
-                      >
-                        Use AI Rename
-                      </Button>
-                    </Form.Group>
-                  </Col>
-
-                  <Col md="auto" offset={1}>
-                    {/* Custom Rename Option */}
-                    <Form.Group>
-                      <Form.Label>Custom Rename</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={reName}
-                        placeholder="Enter custom name"
-                        onChange={(e) => setReName(e.target.value)}
-                        disabled={!file}
-                      />
-                      <Button
-                        variant="outline-primary"
-                        type="button"
-                        onClick={() => handleRename()}
-                        disabled={!reName}
-                        style={{ marginTop: "10px" }}
-                      >
-                        Use Custom Name
-                      </Button>
-                    </Form.Group>
-
-                    {/* Date Picker Section */}
-                    <hr />
-                    <Form.Group>
-                      <Form.Label>Link Dates</Form.Label>
-
-                      <div className="d-flex gap-2">
-                        <Form.Control
-                          type="date"
-                          value={selectedDate}
-                          onChange={(e) => setSelectedDate(e.target.value)}
-                        />
-                        <Button variant="primary" onClick={handleAddDate}>
-                          Add Date
-                        </Button>
-                      </div>
-
-                      {/* Selected Dates List */}
-                      <div className="mt-2 d-flex flex-wrap gap-2">
-                        {linkedDates.map((date) => (
-                          <span
-                            key={date}
-                            className={`badge ${
-                              darkMode ? "bg-light text-dark" : "bg-dark text-light"
-                            }`}
-                            style={{ cursor: "pointer" }}
-                            onClick={() => handleRemoveDate(date)}
-                          >
-                            {date} ✕
-                          </span>
-                        ))}
-                      </div>
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </>
-            ) : (
-              <Form.Label className="form-label">
-                File name:{" "}
-                <span
-                  style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
-                >
-                  {fileObj.name}
-                </span>
-              </Form.Label>
-            )}
+      <Modal show={showMainModal} onHide={closeMainModal} size="lg" centered>
+        <Modal.Header closeButton className={modalClass}>
+          <Modal.Title style={styleSheet.modalTitle}>
+            <div className="d-flex flex-column gap-1">
+              <span>{isEditing ? "Edit File" : "File Details"}</span>
+              <small style={styleSheet.fileNameText}>{updatedFileName}</small>
+            </div>
           </Modal.Title>
         </Modal.Header>
 
-        <Modal.Body>
+        <Modal.Body className={modalClass}>
+          {isEditing && (
+            <div
+              className={`p-3 mb-3 rounded border ${
+                darkMode ? "border-light" : ""
+              }`}
+            >
+              <h6>Rename File</h6>
+
+              <Row className="g-3">
+                <Col md={6}>
+                  <Form.Label>AI Rename</Form.Label>
+                  <Form.Control
+                    className={inputClass}
+                    value={aiReName}
+                    readOnly
+                    placeholder={
+                      isFetchingAIRename
+                        ? "Generating name..."
+                        : "AI suggested name"
+                    }
+                  />
+
+                  <Button
+                    variant={neutralButton}
+                    className="mt-2"
+                    onClick={() => handleRename(true)}
+                    disabled={!aiReName || isFetchingAIRename}
+                  >
+                    Use AI Rename
+                  </Button>
+                </Col>
+
+                <Col md={6}>
+                  <Form.Label>Custom Rename</Form.Label>
+                  <Form.Control
+                    className={inputClass}
+                    value={reName}
+                    placeholder="Enter custom file name"
+                    onChange={(e) => setReName(e.target.value)}
+                  />
+
+                  <Button
+                    variant={neutralButton}
+                    className="mt-2"
+                    onClick={() => handleRename(false)}
+                    disabled={!reName}
+                  >
+                    Use Custom Name
+                  </Button>
+                </Col>
+              </Row>
+
+              <hr />
+
+              <Form.Label>Link Dates</Form.Label>
+
+              <div className="d-flex gap-2">
+                <Form.Control
+                  type="date"
+                  className={inputClass}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+
+                <Button variant={neutralButton} onClick={handleAddDate}>
+                  Add
+                </Button>
+              </div>
+
+              <div className="mt-2 d-flex flex-wrap gap-2">
+                {linkedDates.map((date) => (
+                  <Badge
+                    key={date}
+                    bg={darkMode ? "light" : "dark"}
+                    text={darkMode ? "dark" : "light"}
+                    style={styleSheet.badge}
+                    onClick={() => handleRemoveDate(date)}
+                  >
+                    {date} ✕
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
           {loading ? (
-            <p>Loading...</p>
+            <div style={styleSheet.loadingBox}>
+              <Spinner animation="border" />
+              <p className="mt-2">Processing...</p>
+            </div>
           ) : (
             <>
-              {fileObj.isImage ? (
+              {fileObj.isImage && (
                 <>
-                  <img
-                    src={`data:${fileObj.mimeType};base64,${fileObj.content}`}
-                    alt="file"
-                    style={{ maxWidth: "100%", maxHeight: "400px" }}
-                  />
+                  <div className="text-center">
+                    <img
+                      src={`data:${fileObj.mimeType};base64,${fileObj.content}`}
+                      alt={fileObj.name}
+                      style={styleSheet.imagePreview}
+                    />
+                  </div>
+
                   <div className="mt-3 d-flex flex-wrap gap-2">
                     <Button
-                      variant="primary"
-                      onClick={() => fetchAIDesrcibe("describe", true)}
+                      variant={neutralButton}
                       disabled={isEditing}
+                      onClick={() =>
+                        handleRunAI("describe", true, "/api/describe-image")
+                      }
                     >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Describe Image
                     </Button>
+
                     <Button
-                      variant="secondary"
-                      onClick={() => fetchAIDesrcibe("main_objects", true)}
+                      variant={neutralButton}
                       disabled={isEditing}
+                      onClick={() =>
+                        handleRunAI("main_objects", true, "/api/describe-image")
+                      }
                     >
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Identify Objects
                     </Button>
                   </div>
                 </>
-              ) : fileObj.isText ? (
+              )}
+
+              {fileObj.isText && (
                 <>
-                  <Modal.Title>
-                    <Form.Label>Content:</Form.Label>
-                  </Modal.Title>
-                  <pre>{fileObj.decodeContent()}</pre>
-                  {isEditing && (
-                    <>
-                      <Modal.Title>
-                        <Form.Label>Edit Content:</Form.Label>
-                      </Modal.Title>
-                      <textarea
-                        className={`form-control ${
-                          darkMode ? "bg-dark text-light border-light" : ""
-                        }`}
-                        value={fileContent}
-                        onChange={(e) => {
-                          setFileContent(e.target.value);
-                          isContentEdited.current = true; // Track content changes
-                        }}
-                        rows="10"
-                        disabled={!isEditing}
-                        style={{
-                          resize: "none",
-                        }}
-                      />
-                    </>
+                  <h6>Content</h6>
+
+                  {!isEditing ? (
+                    <pre
+                      className={`p-3 rounded border ${
+                        darkMode
+                          ? "bg-dark text-light border-light"
+                          : "bg-white text-dark"
+                      }`}
+                      style={styleSheet.contentPreview}
+                    >
+                      {fileObj.decodeContent()}
+                    </pre>
+                  ) : (
+                    <textarea
+                      className={`form-control ${inputClass}`}
+                      value={fileContent}
+                      rows="10"
+                      onChange={(e) => {
+                        setFileContent(e.target.value);
+                        isContentEdited.current = true;
+                      }}
+                      style={styleSheet.textArea}
+                    />
                   )}
+
                   <div className="mt-3 d-flex flex-wrap gap-2">
                     <Button
-                      variant="primary"
-                      onClick={() => fetchAIResponse("summarize")}
+                      variant={neutralButton}
                       disabled={isEditing}
+                      onClick={() => handleRunAI("summarize")}
                     >
                       <FontAwesomeIcon icon={faFileAlt} className="me-2" />
                       Summarize
                     </Button>
+
                     <Button
-                      variant="secondary"
-                      onClick={() => fetchAIResponse("keywords")}
+                      variant={neutralButton}
                       disabled={isEditing}
+                      onClick={() => handleRunAI("keywords")}
                     >
                       <FontAwesomeIcon icon={faSearch} className="me-2" />
                       Find Keywords
                     </Button>
                   </div>
                 </>
-              ) : (
-                <p>{fileContent}</p>
               )}
+
+              {!fileObj.isText && !fileObj.isImage && (
+                <p className="text-muted">Preview is not available.</p>
+              )}
+
               {aiResponse && (
                 <div
-                  className={`mt-3 p-3 rounded ${
-                    darkMode ? "bg-secondary text-light" : "bg-light"
+                  className={`mt-3 p-3 rounded border ${
+                    darkMode
+                      ? "bg-dark text-light border-light"
+                      : "bg-white text-dark"
                   }`}
                 >
-                  <h5>AI Response:</h5>
-                  <p>{aiResponse}</p>
+                  <h6>AI Response</h6>
+                  <p style={styleSheet.aiResponse}>{aiResponse}</p>
                 </div>
               )}
-              <div className="mt-3 d-flex flex-wrap gap-2">
-                {isEditing ? (
-                  <>
-                    <Button variant="success" onClick={handleSaveUpdate}>
-                      <FontAwesomeIcon icon={faSave} className="me-2" />
-                      Save Changes
-                    </Button>
-
-                    <Button variant="secondary" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="warning" onClick={handleUpdate}>
-                    <FontAwesomeIcon icon={faEdit} className="me-2" />
-                    Edit
-                  </Button>
-                )}
-                <Button
-                  variant="info"
-                  onClick={handleDownload}
-                  disabled={isEditing}
-                >
-                  <FontAwesomeIcon icon={faFileAlt} className="me-2" />
-                  Download
-                </Button>
-              </div>
             </>
           )}
         </Modal.Body>
 
-        <Modal.Footer>
-          <Button variant="danger" onClick={handleDelete} disabled={isEditing}>
-            <FontAwesomeIcon icon={faTrash} className="me-2" />
-            Delete
-          </Button>
-          <Button
-            variant={darkMode ? "light" : "secondary"}
-            onClick={closeModal}
-            disabled={isEditing}
-          >
-            Close
-          </Button>
+        <Modal.Footer className={modalClass}>
+          {isEditing ? (
+            <>
+              <Button variant={mainButton} onClick={handleSaveUpdate}>
+                <FontAwesomeIcon icon={faSave} className="me-2" />
+                Save Changes
+              </Button>
+
+              <Button variant={neutralButton} onClick={handleCancelEdit}>
+                <FontAwesomeIcon icon={faTimes} className="me-2" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant={neutralButton} onClick={() => setIsEditing(true)}>
+                <FontAwesomeIcon icon={faEdit} className="me-2" />
+                Edit
+              </Button>
+
+              <Button variant={neutralButton} onClick={handleDownload}>
+                <FontAwesomeIcon icon={faDownload} className="me-2" />
+                Download
+              </Button>
+
+              <Button variant={neutralButton} onClick={handleDelete}>
+                <FontAwesomeIcon icon={faTrash} className="me-2" />
+                Delete
+              </Button>
+
+              <Button variant={mainButton} onClick={closeMainModal}>
+                Close
+              </Button>
+            </>
+          )}
         </Modal.Footer>
       </Modal>
 
-      {/* Right-click preview modal */}
-      <Modal show={showPreviewModal}>
-        <Modal.Header>
-          <Modal.Title>
-            <Form.Label className="form-label">
-              File name:{" "}
-              <span style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}>
-                {fileObj.name}
-              </span>
-            </Form.Label>
-          </Modal.Title>
+      <Modal
+        show={showPreviewModal}
+        onHide={() => setShowPreviewModal(false)}
+        centered
+      >
+        <Modal.Header closeButton className={modalClass}>
+          <Modal.Title>File Preview</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Modal.Title>
-            <Form.Label>File Preview</Form.Label>
-          </Modal.Title>
+
+        <Modal.Body className={modalClass}>
+          <p style={styleSheet.previewFileName}>{fileObj.name}</p>
+
           <textarea
-            className={`form-control ${
-              darkMode ? "bg-dark text-light border-light" : ""
-            }`}
-            style={{
-              width: "100%",
-              height: "100px",
-              resize: "none",
-            }}
-            value={fileObj.preview}
+            className={`form-control ${inputClass}`}
+            value={fileObj.preview || ""}
             readOnly
             placeholder="No preview available"
+            style={styleSheet.previewTextArea}
           />
         </Modal.Body>
-        <Modal.Footer>
+
+        <Modal.Footer className={modalClass}>
           <Button
-            variant="secondary"
+            variant={mainButton}
             onClick={() => setShowPreviewModal(false)}
           >
             Close
@@ -682,3 +575,63 @@ export default function File({ file, onChange }) {
     </>
   );
 }
+
+const styleSheet = {
+  fileButton: {
+    cursor: "pointer",
+    fontWeight: "bold",
+    borderRadius: "10px",
+    padding: "10px",
+  },
+
+  modalTitle: {
+    width: "100%",
+  },
+
+  fileNameText: {
+    wordBreak: "break-all",
+    whiteSpace: "pre-wrap",
+    fontSize: "0.85rem",
+    opacity: 0.8,
+  },
+
+  badge: {
+    cursor: "pointer",
+  },
+
+  loadingBox: {
+    textAlign: "center",
+    padding: "1.5rem",
+  },
+
+  imagePreview: {
+    maxWidth: "100%",
+    maxHeight: "420px",
+    borderRadius: "10px",
+  },
+
+  contentPreview: {
+    maxHeight: "300px",
+    overflowY: "auto",
+    whiteSpace: "pre-wrap",
+  },
+
+  textArea: {
+    resize: "none",
+  },
+
+  aiResponse: {
+    whiteSpace: "pre-wrap",
+  },
+
+  previewFileName: {
+    wordBreak: "break-all",
+    fontWeight: "bold",
+  },
+
+  previewTextArea: {
+    width: "100%",
+    height: "120px",
+    resize: "none",
+  },
+};

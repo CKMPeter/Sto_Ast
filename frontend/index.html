@@ -24,7 +24,7 @@
     <link rel="apple-touch-icon" href="/Sto_Ast_Logo_No_Title.png" />
     <link rel="manifest" href="/manifest.json" />
 
-    <title>Sto_Ast</title>
+    <title>Storange & Assistance</title>
   </head>
 
   <body>
@@ -32,6 +32,14 @@
     <div id="root"></div>
 
     <!-- Vite entry -->
-    <script type="module" src="/src/index.jsx"></script>
+    <script type="module" src="/src/index.jsx">
+
+      const dark =
+        localStorage.getItem("darkMode") === "true";
+
+      if (dark) {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
   </body>
 </html>

@@ -1,178 +1,275 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useDarkMode } from '../../hooks/useDarkMode';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { runChatbotService } from "../../services/storageService/chatbotService";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
-const KEYWORDS = ["find", "locate", "get"];
-
-const buildPrompt = (input, allUserFiles) => {
-  const inputLower = input.toLowerCase();
-  const containsKeyword = KEYWORDS.some(keyword => inputLower.includes(keyword));
-
-  if (containsKeyword) {
-    const filesSummary = JSON.stringify(
-    allUserFiles.map(file => ({
-        name: file.name,
-        path: file.path
-      }))
-    );
-    return `You are a file path assistant. Below is a list of files with their names and paths (in JSON format). Some files may have the same name but different paths.
-
-Files:
-${filesSummary}
-
-User Query:
-${input}
-
-Instructions:
-If multiple files share the same name, return all matching paths in plain text, each on a new line. Do not include extra commentary or formatting. Only output the file paths.`;
-  }
-
-  return input;
-};
-
-const runGeminiAI = async (input, token, allUserFiles) => {
-  try {
-    const fullPrompt = buildPrompt(input, allUserFiles);
-
-    const response = await fetch(`${import.meta.env.VITE_APP_BACKEND_URL}/api/chatbot`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ input: fullPrompt }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-
-    const data = await response.json();
-    return data.result;
-  } catch (error) {
-    console.error("Error interacting with backend:", error);
-    return "Sorry, an error occurred while processing your request.";
-  }
-};
-
-const Chatbot = ({ allUserFiles }) => {
+const Chatbot = ({ allUserFiles, darkMode }) => {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
   const { getIdToken } = useAuth();
-  const { darkMode, loading: darkModeLoading } = useDarkMode();
+
+  const { loading: darkModeLoading } = useDarkMode();
+
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
   }, [messages]);
 
-  const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-    setMessages(prev => [...prev, { text: input, sender: 'user' }]);
-    setLoading(true);
+      if (!input.trim() || loading) return;
 
-    try {
-      const token = await getIdToken();
-      if (!token) throw new Error("User not authenticated");
+      const userMessage = input.trim();
 
-      const aiResponse = await runGeminiAI(input, token, allUserFiles);
-      setMessages(prev => [...prev, { text: aiResponse, sender: 'bot' }]);
-    } catch (error) {
-      setMessages(prev => [...prev, {
-        text: "Sorry, I couldn't get a response at the moment.",
-        sender: 'bot'
-      }]);
-    } finally {
-      setLoading(false);
-      setInput('');
-    }
-  }, [input, getIdToken, allUserFiles]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: userMessage,
+          sender: "user",
+        },
+      ]);
 
-  if (darkModeLoading) {
-    return null; // or <LoadingSpinner />
-  }
+      setLoading(true);
+      setInput("");
+
+      console.log(allUserFiles);
+
+      try {
+        const aiResponse = await runChatbotService({
+          input: userMessage,
+          getIdToken,
+          allUserFiles: allUserFiles || [],
+        });
+
+        const formatBotResponse = (response) => {
+          if (!response) return "No response.";
+
+          if (typeof response === "string") return response;
+
+          if (Array.isArray(response)) {
+            return response
+              .map((item) => {
+                if (typeof item === "string") return item;
+                return item.readablePath || item.name || JSON.stringify(item);
+              })
+              .join("\n");
+          }
+
+          if (
+            response.type === "search" ||
+            response.type === "search_ai_nearest"
+          ) {
+            if (!response.result || response.result.length === 0) {
+              return "No matching files found.";
+            }
+
+            return response.result
+              .map((file) => {
+                if (typeof file === "string") return file;
+                return file.readablePath || file.name || JSON.stringify(file);
+              })
+              .join("\n");
+          }
+
+          if (typeof response.result === "string") {
+            return response.result;
+          }
+
+          if (Array.isArray(response.result)) {
+            return response.result
+              .map((item) => {
+                if (typeof item === "string") return item;
+                return item.readablePath || item.name || JSON.stringify(item);
+              })
+              .join("\n");
+          }
+
+          return JSON.stringify(response, null, 2);
+        };
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: formatBotResponse(aiResponse),
+            sender: "bot",
+          },
+        ]);
+      } catch (error) {
+        console.error("Chatbot error:", error);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: "Sorry, I couldn't get a response at the moment.",
+            sender: "bot",
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [input, loading, getIdToken, allUserFiles],
+  );
+
+  if (darkModeLoading) return null;
 
   return (
     <div
       className={`chatbot ${darkMode ? "dark-mode" : "light-mode"}`}
       style={{
-        padding: '10px',
-        borderRadius: '8px',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column'
+        ...styleSheet.chatbot,
+        ...(darkMode ? styleSheet.chatbotDark : styleSheet.chatbotLight),
       }}
     >
-      <div style={{ flex: 1, overflowY: 'auto', marginBottom: '10px' }}>
-        {messages.map((message, index) => (
-          <div key={index} style={{ textAlign: message.sender === 'user' ? 'right' : 'left' }}>
-            <p style={{
-              backgroundColor: message.sender === 'user'
-                ? (darkMode ? '#264a8a' : '#d1e7ff')
-                : (darkMode ? '#333' : '#f0f0f0'),
-              padding: '8px',
-              borderRadius: '8px',
-              display: 'inline-block',
-              maxWidth: '80%',
-              color: darkMode ? '#eee' : '#222',
-              wordWrap: 'break-word',        // 🟢 Ensures long words/URLs break
-              overflowWrap: 'anywhere',      // 🟢 Breaks long unbreakable content (like file paths)
-              whiteSpace: 'pre-wrap',        // 🟢 Preserves line breaks from Gemini and wraps content
-            }}>
-              {message.text}
-            </p>
+      <div style={styleSheet.header}>
+        <div>
+          <div style={styleSheet.headerTitle}>AI Assistant</div>
+          <div style={styleSheet.headerSubtitle}>
+            Ask about your files and storage
           </div>
-        ))}
-        {loading && (
-          <div style={{ textAlign: 'left', marginTop: '10px' }}>
-            <p style={{
-              backgroundColor: darkMode ? '#333' : '#f0f0f0',
-              padding: '8px',
-              borderRadius: '8px',
-              display: 'inline-block',
-              color: darkMode ? '#eee' : '#222'
-            }}>
-              Thinking...
-            </p>
+        </div>
+
+        <div style={styleSheet.avatar}>AI</div>
+      </div>
+
+      <div
+        style={{
+          ...styleSheet.messagesContainer,
+          background: darkMode ? "#071923" : "#f8fdff",
+        }}
+      >
+        {messages.length === 0 && (
+          <div
+            style={{
+              ...styleSheet.emptyState,
+              color: darkMode ? "#b8dce8" : "#6c757d",
+            }}
+          >
+            <div>
+              <div style={styleSheet.emptyIcon}>💬</div>
+
+              <div
+                style={{
+                  ...styleSheet.emptyTitle,
+                  color: darkMode ? "#ffffff" : "#023047",
+                }}
+              >
+                Start a conversation
+              </div>
+
+              <div style={styleSheet.emptyText}>
+                Ask the assistant to summarize files, suggest names, or search
+                your stored content.
+              </div>
+            </div>
           </div>
         )}
+
+        {messages.map((message, index) => {
+          const isUser = message.sender === "user";
+
+          return (
+            <div
+              key={index}
+              style={{
+                ...styleSheet.messageRow,
+                justifyContent: isUser ? "flex-end" : "flex-start",
+              }}
+            >
+              <div
+                style={{
+                  ...styleSheet.messageBoxWrapper,
+                  alignItems: isUser ? "flex-end" : "flex-start",
+                }}
+              >
+                <span
+                  style={{
+                    ...styleSheet.senderLabel,
+                    color: darkMode ? "#90cce3" : "#0077b6",
+                  }}
+                >
+                  {isUser ? "You" : "Assistant"}
+                </span>
+
+                <p
+                  style={{
+                    ...styleSheet.messageBubble,
+                    ...(isUser
+                      ? styleSheet.userBubble
+                      : darkMode
+                        ? styleSheet.botBubbleDark
+                        : styleSheet.botBubbleLight),
+                    borderRadius: isUser
+                      ? "18px 18px 4px 18px"
+                      : "18px 18px 18px 4px",
+                  }}
+                >
+                  {message.text}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+
+        {loading && (
+          <div
+            style={{
+              ...styleSheet.messageRow,
+              justifyContent: "flex-start",
+            }}
+          >
+            <div
+              style={{
+                ...styleSheet.thinkingBubble,
+                ...(darkMode
+                  ? styleSheet.botBubbleDark
+                  : styleSheet.botBubbleLight),
+              }}
+            >
+              Thinking...
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       <form
         onSubmit={handleSubmit}
-        style={{ display: 'flex', alignItems: 'center' }}
+        style={{
+          ...styleSheet.inputForm,
+          background: darkMode ? "#0b2635" : "#ffffff",
+          borderTop: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
+        }}
       >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message"
-          className="form-control"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              handleSubmit(e);
-            }
-          }}
+          placeholder="Ask something about your files..."
           style={{
-            flex: 1,
-            borderRadius: '8px',
-            border: darkMode ? '1px solid #555' : '1px solid #ddd',
-            backgroundColor: darkMode ? '#333' : '#fff',
-            color: darkMode ? '#eee' : '#222',
-            padding: '8px'
+            ...styleSheet.input,
+            background: darkMode ? "#071923" : "#f8fdff",
+            color: darkMode ? "#ffffff" : "#023047",
+            border: darkMode ? "1px solid #16425b" : "1px solid #caf0f8",
           }}
         />
+
         <button
           type="submit"
-          className="btn btn-primary"
+          disabled={loading || !input.trim()}
           style={{
-            marginLeft: '8px',
-            padding: '8px 12px',
-            borderRadius: '8px'
+            ...styleSheet.sendButton,
+            ...(loading || !input.trim()
+              ? styleSheet.sendButtonDisabled
+              : styleSheet.sendButtonActive),
           }}
         >
           Send
@@ -183,3 +280,183 @@ const Chatbot = ({ allUserFiles }) => {
 };
 
 export default Chatbot;
+
+const styleSheet = {
+  chatbot: {
+    height: "90%",
+    minHeight: "520px",
+    display: "flex",
+    flexDirection: "column",
+    borderRadius: "20px",
+    overflow: "hidden",
+    position: "relative",
+    marginTop: "45px",
+    zIndex: 5000,
+  },
+
+  chatbotDark: {
+    background: "linear-gradient(180deg, #071923 0%, #0b2635 100%)",
+    border: "1px solid #16425b",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+  },
+
+  chatbotLight: {
+    background: "linear-gradient(180deg, #ffffff 0%, #f8fdff 100%)",
+    border: "1px solid #caf0f8",
+    boxShadow: "0 12px 30px rgba(0,119,182,0.15)",
+  },
+
+  header: {
+    padding: "16px 18px",
+    background: "#0077b6",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  headerTitle: {
+    fontSize: "18px",
+    fontWeight: "700",
+  },
+
+  headerSubtitle: {
+    fontSize: "13px",
+    opacity: 0.9,
+    marginTop: "2px",
+  },
+
+  avatar: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "50%",
+    background: "#caf0f8",
+    color: "#0077b6",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "22px",
+    fontWeight: "700",
+  },
+
+  messagesContainer: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "18px",
+  },
+
+  emptyState: {
+    height: "100%",
+    minHeight: "300px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    padding: "20px",
+  },
+
+  emptyIcon: {
+    fontSize: "42px",
+    marginBottom: "12px",
+  },
+
+  emptyTitle: {
+    fontSize: "18px",
+    fontWeight: "700",
+    marginBottom: "6px",
+  },
+
+  emptyText: {
+    fontSize: "14px",
+    maxWidth: "280px",
+  },
+
+  messageRow: {
+    display: "flex",
+    marginBottom: "14px",
+  },
+
+  messageBoxWrapper: {
+    maxWidth: "78%",
+    display: "flex",
+    flexDirection: "column",
+  },
+
+  senderLabel: {
+    fontSize: "12px",
+    fontWeight: "600",
+    marginBottom: "4px",
+  },
+
+  messageBubble: {
+    margin: 0,
+    padding: "12px 15px",
+    wordWrap: "break-word",
+    overflowWrap: "anywhere",
+    whiteSpace: "pre-wrap",
+    lineHeight: "1.5",
+    fontSize: "14px",
+  },
+
+  userBubble: {
+    background: "#0077b6",
+    color: "#ffffff",
+    border: "1px solid #0077b6",
+    boxShadow: "0 6px 18px rgba(0,119,182,0.25)",
+  },
+
+  botBubbleLight: {
+    background: "#ffffff",
+    color: "#023047",
+    border: "1px solid #caf0f8",
+    boxShadow: "0 6px 16px rgba(0,119,182,0.08)",
+  },
+
+  botBubbleDark: {
+    background: "#12384c",
+    color: "#eaf8fc",
+    border: "1px solid #16425b",
+    boxShadow: "0 6px 16px rgba(0,0,0,0.25)",
+  },
+
+  thinkingBubble: {
+    padding: "12px 15px",
+    borderRadius: "18px 18px 18px 4px",
+    fontSize: "14px",
+  },
+
+  inputForm: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "14px",
+  },
+
+  input: {
+    flex: 1,
+    borderRadius: "999px",
+    padding: "12px 16px",
+    outline: "none",
+    fontSize: "14px",
+  },
+
+  sendButton: {
+    padding: "12px 18px",
+    borderRadius: "999px",
+    border: "none",
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+
+  sendButtonActive: {
+    background: "#0077b6",
+    cursor: "pointer",
+    boxShadow: "0 6px 16px rgba(0,119,182,0.28)",
+  },
+
+  sendButtonDisabled: {
+    background: "#90cce3",
+    cursor: "not-allowed",
+    boxShadow: "none",
+  },
+};
